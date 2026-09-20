@@ -39,6 +39,20 @@ self.addEventListener('fetch', e => {
     );
     return;
   }
+  // 同一オリジン: HTML と sw.js は network-first(常に最新を取得)。それ以外は cache-first。
+  const p = url.pathname;
+  const netFirst = (e.request.mode === 'navigate') ||
+                   p.endsWith('/') || p.endsWith('index.html') || p.endsWith('sw.js');
+  if (netFirst) {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone)).catch(() => {});
+        return res;
+      }).catch(() => caches.match(e.request))
+    );
+    return;
+  }
   e.respondWith(
     caches.match(e.request).then(hit => hit || fetch(e.request))
   );

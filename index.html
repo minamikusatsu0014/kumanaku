@@ -112,7 +112,7 @@
 <div id="map"></div>
 
 <div id="stats" class="panel">
-  <div class="appname">全国くまなくウォーク <span style="font-weight:normal;color:#999">v34</span></div>
+  <div class="appname">全国くまなくウォーク <span style="font-weight:normal;color:#999">v36</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -2602,7 +2602,7 @@ var ob=el("kaidoBtn");
 if(ob){var nb=ob.cloneNode(true);ob.parentNode.replaceChild(nb,ob);nb.textContent="🥾 街道一覧";
  nb.addEventListener("click",openPanel);}
 
-/*---- kaido_diff auto-merge / generation manager (v34) ----*/
+/*---- kaido_diff auto-merge / generation manager (v36) ----*/
 var RAW=null, LS_DIFF="kumanaku_kaido_diffs_v1";
 var DIFF_STATE={loaded:[],applied:0,tomb:0,miss:0,last:0};
 var LS_TOMB="kumanaku_kaido_tomb_v1", TOMB=[];
@@ -2763,7 +2763,7 @@ function reloadDiffs(){
 loadDiffState();
 
 
-/*---- GitHub direct commit (Contents API) + tombstone history (v34) ----*/
+/*---- GitHub direct commit (Contents API) + tombstone history (v36) ----*/
 var LS_GH="kumanaku_gh_settings_v1", GH_STATE={ok:null,msg:"",last:null};
 function ghLoad(){ try{ var o=JSON.parse(localStorage.getItem(LS_GH)||"null"); return o||{}; }catch(e){ return {}; } }
 function ghSave(o){ try{ localStorage.setItem(LS_GH,JSON.stringify(o)); }catch(e){} return true; }
@@ -2926,7 +2926,7 @@ function ghCommitDiff(cb){
     return ghGetFile(cfg,manP).then(function(cur){
       var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v36",files:[]};
       if(cur.exists && cur.base64){ try{ var j=JSON.parse(unb64utf8(cur.base64)); if(j&&j.files) o=j; }catch(e){} }
-      o.files=o.files||[]; o.version="v34";
+      o.files=o.files||[]; o.version="v36";
       var nm=base.slice(dir.length);
       if(o.files.indexOf(nm)<0) o.files.push(nm);
       return ghPut(cfg,manP,JSON.stringify(o,null,2),"差分マニフェスト更新: "+nm);
@@ -3704,7 +3704,7 @@ function promotedData(){
   full.forEach(function(s){
     if(s.manual && s.geo && s.segs && s.segs.length){ out.push(s); ids.push(s.name); }
   });
-  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v34",
+  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v36",
     "generated":new Date().toISOString(), "base":"kaido_data.json", "mode":"promoted-only",
     "count":out.length, "ids":ids, "streets":out };
 }
