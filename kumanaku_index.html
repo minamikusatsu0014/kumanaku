@@ -1,0 +1,1775 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>全国くまなくウォーク</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#2e7d32">
+<meta name="description" content="日本全国を歩いた場所を100mメッシュで塗りつぶし、市町村・名所の踏破を記録する地図アプリ">
+<!-- iOS(iPhone/iPad)ホーム画面追加用 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="くまなくウォーク">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/png" href="./icon-192.png">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  html,body{margin:0;padding:0;height:100%;font-family:"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;overscroll-behavior:none;}
+  #map{position:absolute;top:0;bottom:0;left:0;right:0;}
+  .panel{position:absolute;z-index:1000;background:rgba(255,255,255,.95);border-radius:12px;
+    box-shadow:0 2px 10px rgba(0,0,0,.3);padding:10px 12px;}
+  #stats{top:calc(10px + env(safe-area-inset-top));left:8px;transform:none;text-align:center;width:calc(100vw - 118px);max-width:330px;box-sizing:border-box;}
+  #stats .appname{font-size:12px;font-weight:bold;color:#4a3b2a;letter-spacing:0;line-height:1.3;}
+  #stats .big{font-size:26px;font-weight:bold;color:#2e7d32;line-height:1.1;}
+  #stats .sub{font-size:11px;color:#555;}
+  #stats .sub2{font-size:10px;color:#777;margin-top:2px;}
+  #stats .row{display:flex;justify-content:space-around;margin-top:4px;font-size:10px;color:#444;}
+  #stats .row span{white-space:nowrap;}
+  #stats .row b{font-size:14px;color:#333;}
+  #btns{position:absolute;z-index:1100;bottom:calc(16px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:flex;gap:8px;background:transparent;box-shadow:none;padding:0;}
+  .btn{border:none;border-radius:28px;padding:12px 18px;font-size:15px;font-weight:bold;cursor:pointer;
+    box-shadow:0 2px 8px rgba(0,0,0,.35);white-space:nowrap;}
+  #recBtn{background:#e53935;color:#fff;}
+  #recBtn.recording{background:#fff;color:#e53935;animation:pulse 1.5s infinite;}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(229,57,53,.5);}50%{box-shadow:0 0 0 12px rgba(229,57,53,0);}}
+  .sub-btn{background:#fff;color:#333;padding:12px 14px;font-size:13px;}
+  #menu{position:absolute;z-index:1100;top:calc(10px + env(safe-area-inset-top));right:10px;display:flex;flex-direction:column;gap:6px;background:transparent;box-shadow:none;padding:0;}
+  .menu-btn{background:rgba(255,255,255,.95);border:none;border-radius:8px;padding:7px 8px;font-size:11px;
+    cursor:pointer;box-shadow:0 1px 6px rgba(0,0,0,.3);}
+  #notice{position:absolute;z-index:1100;bottom:calc(76px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);font-size:11px;color:#666;background:rgba(255,255,255,.9);
+    padding:4px 10px;border-radius:8px;white-space:nowrap;max-width:92vw;}
+  #installModal{position:absolute;z-index:2000;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);
+    display:none;align-items:center;justify-content:center;padding:20px;}
+  #installModal .card{background:#fff;border-radius:14px;padding:18px 20px;max-width:340px;font-size:13px;line-height:1.7;color:#333;}
+  #installModal h2{font-size:15px;margin:0 0 8px;color:#2e7d32;}
+  #installModal ol{padding-left:20px;margin:6px 0;}
+  #installModal .close{display:block;width:100%;margin-top:10px;padding:10px;border:none;border-radius:8px;
+    background:#2e7d32;color:#fff;font-weight:bold;font-size:14px;cursor:pointer;}
+  .cp{font-size:18px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6));line-height:1;}
+  .cp-done{opacity:.4;}
+  .cp-wrap{position:relative;display:inline-block;}
+  .cp-badge{position:absolute;top:-7px;right:-9px;font-size:10px;}
+  .memo-box{margin-top:6px;border-top:1px dashed #ccc;padding-top:6px;}
+  .memo-lbl{font-size:11px;color:#6d4c00;font-weight:bold;}
+  .memo-ta{width:100%;box-sizing:border-box;font-size:12px;border:1px solid #ccc;border-radius:6px;padding:5px;resize:vertical;font-family:inherit;}
+  .memo-row{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap;}
+  .memo-btn{border:none;border-radius:6px;padding:6px 9px;font-size:11px;font-weight:bold;background:#eee;color:#333;cursor:pointer;}
+  .memo-save{background:#2e7d32;color:#fff;}
+  .memo-del{background:#ef9a9a;}
+  .memo-note{font-size:9px;color:#888;margin-top:4px;line-height:1.5;}
+  .memo-has{font-size:10px;color:#e65100;font-weight:bold;}
+  .memo-sub{font-size:10px;color:#777;}
+  .memo-pin{background:#fff3e0;border-radius:50%;padding:1px 2px;}
+  #memoAddModal,#memoModal{position:absolute;z-index:2500;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px;}
+  #memoAddModal .card,#memoModal .card{background:#fff;border-radius:14px;padding:14px 16px;width:100%;max-width:360px;max-height:80vh;overflow:auto;font-size:12px;color:#333;line-height:1.6;}
+  #memoAddModal h2,#memoModal h2{font-size:15px;margin:0 0 8px;color:#2e7d32;}
+  #memoAddModal input,#memoAddModal textarea{width:100%;box-sizing:border-box;font-size:12px;border:1px solid #ccc;border-radius:6px;padding:6px;margin-top:5px;font-family:inherit;}
+  #memoAddPos{font-size:10px;color:#777;}
+  #memoModal .close{display:block;width:100%;margin-top:10px;padding:9px;border:none;border-radius:8px;background:#2e7d32;color:#fff;font-weight:bold;font-size:13px;cursor:pointer;}
+  .memo-item{border:1px solid #eee;border-radius:8px;padding:7px 9px;margin-bottom:7px;background:#fafafa;}
+  .memo-item .nm{font-weight:bold;font-size:12px;color:#333;}
+  .memo-item .tx{white-space:pre-wrap;font-size:12px;margin-top:3px;color:#444;}
+  .memo-item .dt{font-size:9px;color:#999;margin-top:3px;}
+  .leaflet-control-attribution{font-size:9px;}
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div id="stats" class="panel">
+  <div class="appname">全国くまなくウォーク <span style="font-weight:normal;color:#999">v17</span></div>
+  <div class="big"><b id="muni">0</b> 市町村</div>
+  <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
+  <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b></div>
+  <div class="row">
+    <span>歩行距離<br><b id="dist">0.0</b> km</span>
+    <span>訪問マス<br><b id="cells">0</b></span>
+    <span>今日<br><b id="today">0.0</b> km</span>
+  </div>
+</div>
+
+<div id="menu">
+  <button class="menu-btn" id="addBtn">📲 アプリ化</button>
+  <button class="menu-btn" id="locBtn">📍 現在地</button>
+  <button class="menu-btn" id="expBtn">💾 保存出力</button>
+  <button class="menu-btn" id="memoBtn">📝 メモ追加</button>
+  <button class="menu-btn" id="memoListBtn">🗒 メモ一覧</button>
+  <button class="menu-btn" id="impBtn">📂 読込</button>
+  <button class="menu-btn" id="clearBtn">🗑 消去</button>
+  <input type="file" id="impFile" accept=".json" style="display:none">
+</div>
+
+<div id="notice" class="panel">「▶ 記録開始」を押して歩き始めてください</div>
+
+<div id="btns">
+  <button class="btn sub-btn" id="baseBtn">🗺 地図</button>
+  <button class="btn sub-btn" id="kojikuBtn">📜 古地図</button>
+  <button class="btn sub-btn" id="cpBtn">⛩ 名所</button>
+  <button class="btn sub-btn" id="kaidoBtn">🥾 街道</button>
+  <button class="btn sub-btn" id="gridBtn">▦ グリッド</button>
+  <button class="btn" id="recBtn">▶ 記録開始</button>
+</div>
+
+<div id="installModal">
+  <div class="card">
+    <h2>📲 ホーム画面に追加してアプリ化</h2>
+    <div id="iosSteps">
+      <b>iPhone / iPad (Safari)</b>
+      <ol>
+        <li>このページを<b>Safari</b>で開く</li>
+        <li>画面下の「<b>共有</b>」ボタン(□↑)をタップ</li>
+        <li>「<b>ホーム画面に追加</b>」をタップ</li>
+        <li>右上の「<b>追加</b>」をタップ</li>
+      </ol>
+    </div>
+    <div id="androidSteps">
+      <b>Android (Chrome)</b>
+      <ol>
+        <li>右上のメニュー(⋮)をタップ</li>
+        <li>「<b>ホーム画面に追加</b>」または「<b>アプリをインストール</b>」をタップ</li>
+      </ol>
+    </div>
+    追加後はホーム画面のアイコンからフルスクリーンで起動できます。記録データはこの端末内に保存されます。
+    <button class="close" onclick="document.getElementById('installModal').style.display='none'">閉じる</button>
+  </div>
+</div>
+
+<div id="memoAddModal">
+  <div class="card">
+    <h2>📝 この地点にメモを追加</h2>
+    <div id="memoAddPos"></div>
+    <input id="memoAddName" placeholder="場所の名前(例: 草津宿本陣)">
+    <textarea id="memoAddText" rows="3" placeholder="見たもの・感想・日付など"></textarea>
+    <div class="memo-row">
+      <button id="memoAddSave" class="memo-btn memo-save">💾 保存</button>
+      <button id="memoAddCancel" class="memo-btn">キャンセル</button>
+    </div>
+    <div class="memo-note">※メモはこの端末のブラウザ内(localStorage)にのみ保存され、サーバーには送信されません。ブラウザのデータ消去・機種変更で消えるため、ときどき「💾 保存出力」でバックアップしてください。</div>
+  </div>
+</div>
+
+<div id="memoModal">
+  <div class="card">
+    <h2>🗒 訪問メモ一覧</h2>
+    <div class="memo-row">
+      <button id="memoExportBtn" class="memo-btn memo-save">💾 全記録を出力</button>
+      <button id="memoImportBtn" class="memo-btn">📂 バックアップ読込</button>
+    </div>
+    <div class="memo-note">メモは端末のブラウザ内に保存されます(サーバー送信なし)。「全記録を出力」でJSONに保存すると、機種変更やデータ消去のあとに「📂 バックアップ読込」で復元できます。</div>
+    <div id="memoList" style="margin-top:8px"></div>
+    <button class="close" id="memoModalClose">閉じる</button>
+  </div>
+</div>
+
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('./sw.js').catch(function(){});
+  });
+}
+</script>
+<script>
+if(typeof L==='undefined'){
+  document.getElementById('notice').textContent='⚠ 地図ライブラリを読み込めませんでした。インターネット接続を確認して再読み込みしてください';
+  document.getElementById('notice').style.color='#c62828';
+  throw new Error('Leaflet not loaded');
+}
+
+/* =========================================================
+   全国くまなくウォーク
+   - GPSで歩行軌跡を記録・100mメッシュ塗りつぶし(全国対応)
+   - 市町村/都道府県の踏破記録(国土地理院 逆ジオコーダ)
+   - 名所チェックポイント(京都+全国)
+   ========================================================= */
+const STORE_KEY = 'kyoto_kumanaku_v1';   // 京都版からデータ引き継ぎのため同一キー
+const CELL_LAT = 0.0009;
+const CELL_LON = 0.0011;
+const MIN_MOVE_M = 12;
+const GEOCODE_MIN_M = 300;   // この距離動いたら市町村を再判定
+
+/* 京都市の概形(京都版との互換・踏破率表示用) */
+const KYOTO_POLY = [
+  [35.345,135.700],[35.300,135.615],[35.230,135.605],[35.120,135.620],
+  [35.060,135.625],[35.010,135.635],[34.970,135.645],[34.935,135.660],
+  [34.895,135.690],[34.880,135.720],[34.900,135.745],[34.950,135.770],
+  [35.000,135.800],[35.030,135.855],[35.070,135.855],[35.150,135.850],
+  [35.250,135.830],[35.300,135.800]
+];
+
+let data = { cells: {}, track: [], cp: {}, muni: {}, totalDist: 0, todayDist: 0, todayDate: '', memo: {}, free: [] };
+try {
+  const s = localStorage.getItem(STORE_KEY);
+  if (s) data = Object.assign(data, JSON.parse(s));
+} catch(e) {}
+
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+if (data.todayDate !== todayStr()) { data.todayDate = todayStr(); data.todayDist = 0; }
+
+function save(){
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
+  catch(e){ notice('⚠ 保存容量がいっぱいです。保存出力でバックアップを'); }
+}
+
+function cellKey(lat, lon){
+  return Math.floor(lat/CELL_LAT) + '_' + Math.floor(lon/CELL_LON);
+}
+function cellBounds(key){
+  const p = key.split('_'), i = +p[0], j = +p[1];
+  return [[i*CELL_LAT, j*CELL_LON],[(i+1)*CELL_LAT,(j+1)*CELL_LON]];
+}
+function haversine(a, b){
+  const R=6371000, dLa=(b[0]-a[0])*Math.PI/180, dLo=(b[1]-a[1])*Math.PI/180;
+  const la1=a[0]*Math.PI/180, la2=b[0]*Math.PI/180;
+  const h=Math.sin(dLa/2)*Math.sin(dLa/2) + Math.cos(la1)*Math.cos(la2)*Math.sin(dLo/2)*Math.sin(dLo/2);
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+function pointInPoly(lat, lon, poly){
+  let inside=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const yi=poly[i][0], xi=poly[i][1], yj=poly[j][0], xj=poly[j][1];
+    if(((yi>lat)!==(yj>lat)) && (lon < (xj-xi)*(lat-yi)/(yj-yi)+xi)) inside=!inside;
+  }
+  return inside;
+}
+let cityCellTotal = 0;
+(function(){
+  const lats = KYOTO_POLY.map(function(p){return p[0];}), lons = KYOTO_POLY.map(function(p){return p[1];});
+  const minLa=Math.min.apply(null,lats), maxLa=Math.max.apply(null,lats);
+  const minLo=Math.min.apply(null,lons), maxLo=Math.max.apply(null,lons);
+  for(let i=Math.floor(minLa/CELL_LAT); i<=Math.floor(maxLa/CELL_LAT); i++)
+    for(let j=Math.floor(minLo/CELL_LON); j<=Math.floor(maxLo/CELL_LON); j++)
+      if(pointInPoly((i+0.5)*CELL_LAT,(j+0.5)*CELL_LON,KYOTO_POLY)) cityCellTotal++;
+})();
+
+/* 都道府県コード(市区町村コードの上2桁)→ 都道府県名 */
+const PREF_NAME = {1:'北海道',2:'青森県',3:'岩手県',4:'宮城県',5:'秋田県',6:'山形県',7:'福島県',8:'茨城県',9:'栃木県',10:'群馬県',11:'埼玉県',12:'千葉県',13:'東京都',14:'神奈川県',15:'新潟県',16:'富山県',17:'石川県',18:'福井県',19:'山梨県',20:'長野県',21:'岐阜県',22:'静岡県',23:'愛知県',24:'三重県',25:'滋賀県',26:'京都府',27:'大阪府',28:'兵庫県',29:'奈良県',30:'和歌山県',31:'鳥取県',32:'島根県',33:'岡山県',34:'広島県',35:'山口県',36:'徳島県',37:'香川県',38:'愛媛県',39:'高知県',40:'福岡県',41:'佐賀県',42:'長崎県',43:'熊本県',44:'大分県',45:'宮崎県',46:'鹿児島県',47:'沖縄県'};
+
+
+/* ---------- 明治期古地図(今昔マップ)データセット ---------- */
+const KOJIKU_DS = {"keihansin": {"url": "https://ktgis.net/kjmapw/kjtilemap/keihansin/2man/{z}/{x}/{y}.png", "name": "今昔マップ_京阪神圏_1892-1910", "c": [35.0, 135.7]}, "sendai": {"url": "https://ktgis.net/kjmapw/kjtilemap/sendai/00/{z}/{x}/{y}.png", "name": "今昔マップ_仙台_1928-1933", "c": [38.26, 140.88]}, "iga": {"url": "https://ktgis.net/kjmapw/kjtilemap/iga/00/{z}/{x}/{y}.png", "name": "今昔マップ_伊賀_1892", "c": [34.77, 136.13]}, "ina": {"url": "https://ktgis.net/kjmapw/kjtilemap/ina/00/{z}/{x}/{y}.png", "name": "今昔マップ_伊那_1911", "c": [35.83, 137.95]}, "sasebo": {"url": "https://ktgis.net/kjmapw/kjtilemap/sasebo/2man/{z}/{x}/{y}.png", "name": "今昔マップ_佐世保_1900-1901", "c": [33.16, 129.72]}, "saga": {"url": "https://ktgis.net/kjmapw/kjtilemap/saga/2man/{z}/{x}/{y}.png", "name": "今昔マップ_佐賀・久留米_1900-1911", "c": [33.26, 130.3]}, "yatsushiro": {"url": "https://ktgis.net/kjmapw/kjtilemap/yatsushiro/00/{z}/{x}/{y}.png", "name": "今昔マップ_八代_1913", "c": [32.51, 130.6]}, "hakodate": {"url": "https://ktgis.net/kjmapw/kjtilemap/hakodate/00/{z}/{x}/{y}.png", "name": "今昔マップ_函館_1915", "c": [41.77, 140.73]}, "shunan": {"url": "https://ktgis.net/kjmapw/kjtilemap/shunan/00/{z}/{x}/{y}.png", "name": "今昔マップ_周南_1899", "c": [34.05, 131.8]}, "wakayama": {"url": "https://ktgis.net/kjmapw/kjtilemap/wakayama/2man/{z}/{x}/{y}.png", "name": "今昔マップ_和歌山_1908-1912", "c": [34.23, 135.17]}, "oita": {"url": "https://ktgis.net/kjmapw/kjtilemap/oita/00/{z}/{x}/{y}.png", "name": "今昔マップ_大分_1914", "c": [33.23, 131.61]}, "omuta": {"url": "https://ktgis.net/kjmapw/kjtilemap/omuta/00/{z}/{x}/{y}.png", "name": "今昔マップ_大牟田・島原_1910", "c": [33.03, 130.45]}, "himeji": {"url": "https://ktgis.net/kjmapw/kjtilemap/himeji/2man/{z}/{x}/{y}.png", "name": "今昔マップ_姫路_1903-1910", "c": [34.84, 134.69]}, "muroran": {"url": "https://ktgis.net/kjmapw/kjtilemap/muroran/00/{z}/{x}/{y}.png", "name": "今昔マップ_室蘭_1896", "c": [42.32, 140.97]}, "miyazaki": {"url": "https://ktgis.net/kjmapw/kjtilemap/miyazaki/00/{z}/{x}/{y}.png", "name": "今昔マップ_宮崎_1902", "c": [31.91, 131.42]}, "yamaguchi": {"url": "https://ktgis.net/kjmapw/kjtilemap/yamaguchi/2man/{z}/{x}/{y}.png", "name": "今昔マップ_山口_1897-1909", "c": [34.18, 131.47]}, "yamagata": {"url": "https://ktgis.net/kjmapw/kjtilemap/yamagata/2man/{z}/{x}/{y}.png", "name": "今昔マップ_山形_1901-1903", "c": [38.25, 140.34]}, "okayama": {"url": "https://ktgis.net/kjmapw/kjtilemap/okayama/2man/{z}/{x}/{y}.png", "name": "今昔マップ_岡山・福山_1895-1898", "c": [34.66, 133.93]}, "iwatekennan": {"url": "https://ktgis.net/kjmapw/kjtilemap/iwatekennan/00/{z}/{x}/{y}.png", "name": "今昔マップ_岩手県南_1913", "c": [39.0, 141.1]}, "obihiro": {"url": "https://ktgis.net/kjmapw/kjtilemap/obihiro/00/{z}/{x}/{y}.png", "name": "今昔マップ_帯広_1896", "c": [42.92, 143.2]}, "hiroshima": {"url": "https://ktgis.net/kjmapw/kjtilemap/hiroshima/2man/{z}/{x}/{y}.png", "name": "今昔マップ_広島_1894-1899", "c": [34.39, 132.45]}, "syonai": {"url": "https://ktgis.net/kjmapw/kjtilemap/syonai/00/{z}/{x}/{y}.png", "name": "今昔マップ_庄内_1913", "c": [38.9, 139.9]}, "nobeoka": {"url": "https://ktgis.net/kjmapw/kjtilemap/nobeoka/00/{z}/{x}/{y}.png", "name": "今昔マップ_延岡_1901", "c": [32.58, 131.66]}, "hirosaki": {"url": "https://ktgis.net/kjmapw/kjtilemap/hirosaki/00/{z}/{x}/{y}.png", "name": "今昔マップ_弘前_1912", "c": [40.61, 140.47]}, "tokushima": {"url": "https://ktgis.net/kjmapw/kjtilemap/tokushima/2man/{z}/{x}/{y}.png", "name": "今昔マップ_徳島_1896-1909", "c": [34.07, 134.55]}, "niigata": {"url": "https://ktgis.net/kjmapw/kjtilemap/niigata/00/{z}/{x}/{y}.png", "name": "今昔マップ_新潟_1911", "c": [37.91, 139.04]}, "sapporo": {"url": "https://ktgis.net/kjmapw/kjtilemap/sapporo/00/{z}/{x}/{y}.png", "name": "今昔マップ_札幌_1916", "c": [43.06, 141.35]}, "toyo": {"url": "https://ktgis.net/kjmapw/kjtilemap/toyo/00/{z}/{x}/{y}.png", "name": "今昔マップ_東予_1898-1906", "c": [33.96, 133.29]}, "tohoku_pacific_coast": {"url": "https://ktgis.net/kjmapw/kjtilemap/tohoku_pacific_coast/00/{z}/{x}/{y}.png", "name": "今昔マップ_東北地方太平洋岸_1901-1913", "c": [38.5, 141.3]}, "matsuyama": {"url": "https://ktgis.net/kjmapw/kjtilemap/matsuyama/2man/{z}/{x}/{y}.png", "name": "今昔マップ_松山_1903", "c": [33.84, 132.77]}, "matsumoto": {"url": "https://ktgis.net/kjmapw/kjtilemap/matsumoto/00/{z}/{x}/{y}.png", "name": "今昔マップ_松本_1910", "c": [36.24, 137.97]}, "matsue": {"url": "https://ktgis.net/kjmapw/kjtilemap/matsue/00/{z}/{x}/{y}.png", "name": "今昔マップ_松江・米子_1915", "c": [35.47, 133.05]}, "okinawas": {"url": "https://ktgis.net/kjmapw/kjtilemap/okinawas/00/{z}/{x}/{y}.png", "name": "今昔マップ_沖縄本島南部_1919", "c": [26.21, 127.68]}, "tsu": {"url": "https://ktgis.net/kjmapw/kjtilemap/tsu/2man/{z}/{x}/{y}.png", "name": "今昔マップ_津_1892-1898", "c": [34.73, 136.51]}, "hamamatsu": {"url": "https://ktgis.net/kjmapw/kjtilemap/hamamatsu/2man/{z}/{x}/{y}.png", "name": "今昔マップ_浜松・豊橋_1889-1890", "c": [34.71, 137.73]}, "kumamoto": {"url": "https://ktgis.net/kjmapw/kjtilemap/kumamoto/2man/{z}/{x}/{y}.png", "name": "今昔マップ_熊本_1900-1901", "c": [32.8, 130.71]}, "morioka": {"url": "https://ktgis.net/kjmapw/kjtilemap/morioka/00/{z}/{x}/{y}.png", "name": "今昔マップ_盛岡_1811-1912", "c": [39.7, 141.15]}, "fukuoka": {"url": "https://ktgis.net/kjmapw/kjtilemap/fukuoka/00/{z}/{x}/{y}.png", "name": "今昔マップ_福岡・北九州_1922-1926", "c": [33.59, 130.4]}, "fukushima": {"url": "https://ktgis.net/kjmapw/kjtilemap/fukushima/00/{z}/{x}/{y}.png", "name": "今昔マップ_福島_1908", "c": [37.76, 140.47]}, "yonezawa": {"url": "https://ktgis.net/kjmapw/kjtilemap/yonezawa/00/{z}/{x}/{y}.png", "name": "今昔マップ_米沢_1908-1910", "c": [37.91, 140.12]}, "tomakomai": {"url": "https://ktgis.net/kjmapw/kjtilemap/tomakomai/00/{z}/{x}/{y}.png", "name": "今昔マップ_苫小牧_1896", "c": [42.63, 141.6]}, "omi": {"url": "https://ktgis.net/kjmapw/kjtilemap/omi/2man/{z}/{x}/{y}.png", "name": "今昔マップ_近江_1891-1909", "c": [35.15, 135.95]}, "miyakonojyou": {"url": "https://ktgis.net/kjmapw/kjtilemap/miyakonojyou/00/{z}/{x}/{y}.png", "name": "今昔マップ_都城_1902", "c": [31.72, 131.06]}, "kanazawa": {"url": "https://ktgis.net/kjmapw/kjtilemap/kanazawa/2man/{z}/{x}/{y}.png", "name": "今昔マップ_金沢・富山_1909-1910", "c": [36.56, 136.66]}, "kushiro": {"url": "https://ktgis.net/kjmapw/kjtilemap/kushiro/00/{z}/{x}/{y}.png", "name": "今昔マップ_釧路_1897", "c": [42.98, 144.38]}, "nagasaki": {"url": "https://ktgis.net/kjmapw/kjtilemap/nagasaki/2man/{z}/{x}/{y}.png", "name": "今昔マップ_長崎_1900-1901", "c": [32.75, 129.87]}, "nagano": {"url": "https://ktgis.net/kjmapw/kjtilemap/nagano/00/{z}/{x}/{y}.png", "name": "今昔マップ_長野_1912", "c": [36.66, 138.19]}, "kanto": {"url": "https://ktgis.net/kjmapw/kjtilemap/kanto/00/{z}/{x}/{y}.png", "name": "今昔マップ_関東_1894-1915", "c": [36.0, 139.8]}, "tokyo50": {"url": "https://ktgis.net/kjmapw/kjtilemap/tokyo50/2man/{z}/{x}/{y}.png", "name": "今昔マップ_首都圏_1896-1909", "c": [35.68, 139.77]}, "takamatsu": {"url": "https://ktgis.net/kjmapw/kjtilemap/takamatsu/2man/{z}/{x}/{y}.png", "name": "今昔マップ_高松_1896-1910", "c": [34.34, 134.05]}};
+
+const map = L.map('map',{center:[36.5,136.0], zoom:5, zoomControl:false});
+L.control.zoom({position:'bottomright'}).addTo(map);
+const baseGSI = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',{
+  attribution:'<a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a> | <a href="https://ktgis.net/kjmapw/">今昔マップ</a>', maxZoom:18
+}).addTo(map);
+const baseOSM = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | <a href="https://ktgis.net/kjmapw/">今昔マップ</a>', maxZoom:19
+});
+/* 旧道の表示名が確認しやすいOSMへの切替ボタン */
+let baseCur = 'gsi';
+function switchBase(){
+  if(baseCur==='gsi'){ map.removeLayer(baseGSI); baseOSM.addTo(map); baseCur='osm'; }
+  else { map.removeLayer(baseOSM); baseGSI.addTo(map); baseCur='gsi'; }
+}
+
+L.polygon(KYOTO_POLY,{color:'#8d6e63',weight:2,dashArray:'6 5',fill:false})
+ .bindTooltip('京都市の概形(簡易境界)',{sticky:true}).addTo(map);
+
+const cellLayer  = L.layerGroup().addTo(map);
+const gridLayer  = L.layerGroup();
+const trackLayer = L.layerGroup().addTo(map);
+const cpLayer    = L.layerGroup().addTo(map);
+
+/* ---------- 明治期古地図オーバーレイ ---------- */
+let kojikuLayer = null, kojikuOn = false, kojikuKey = null;
+function nearestKojiku(lat, lon){
+  let best=null, bd=1e9;
+  for(const k in KOJIKU_DS){
+    const c = KOJIKU_DS[k].c; if(!c) continue;
+    const d = (c[0]-lat)*(c[0]-lat) + (c[1]-lon)*(c[1]-lon);
+    if(d < bd){ bd=d; best=k; }
+  }
+  return best;
+}
+function setKojiku(){
+  if(!kojikuOn) return;
+  const c = map.getCenter();
+  const k = nearestKojiku(c.lat, c.lng);
+  if(k === kojikuKey) return;
+  kojikuKey = k;
+  if(kojikuLayer) map.removeLayer(kojikuLayer);
+  const ds = KOJIKU_DS[k];
+  kojikuLayer = L.tileLayer(ds.url, {tms:true, maxNativeZoom:16, maxZoom:18, opacity:0.6});
+  kojikuLayer.addTo(map);
+  kojikuLayer.bringToFront();
+  notice('🗺 古地図: '+ds.name.replace('今昔マップ_','')+'(明治〜大正)');
+}
+map.on('moveend', function(){ if(kojikuOn) setKojiku(); });
+
+const kaidoLayer = L.layerGroup().addTo(map);
+
+/* ---------- 旧街道ラインの描画 ---------- */
+const KAIDO_LINE_DATA = [];
+
+const drawnCells = {};
+function drawCell(key){
+  if(drawnCells[key]) return;
+  drawnCells[key]=true;
+  const inCity = data.cells[key];
+  L.rectangle(cellBounds(key),{
+    color: inCity ? '#2e7d32' : '#f9a825',
+    weight:0.5, fillColor: inCity ? '#4caf50' : '#ffca28', fillOpacity:0.45
+  }).addTo(cellLayer);
+}
+Object.keys(data.cells).forEach(drawCell);
+
+let trackLine = L.polyline(data.track.map(function(p){return [p[0],p[1]];}),{color:'#e53935',weight:3,opacity:.8}).addTo(trackLayer);
+
+/* ---------- チェックポイント ---------- */
+const CP_RADIUS = 100;
+/* 京都版(社寺) */
+const CHECKPOINTS = [
+['清水寺','寺',34.9949,135.7847,'清水の舞台と音羽の滝。世界遺産'],
+['金閣寺(鹿苑寺)','寺',35.0394,135.7292,'金箔の舎利殿。世界遺産'],
+['銀閣寺(慈照寺)','寺',35.0268,135.7982,'東山文化の象徴。世界遺産'],
+['龍安寺','寺',35.0345,135.7183,'石庭で有名。世界遺産'],
+['仁和寺','寺',35.0311,135.7139,'御室桜。世界遺産'],
+['妙心寺','寺',35.0228,135.7197,'広大な塔頭群'],
+['大徳寺','寺',35.0437,135.7455,'一休さんゆかりの禅寺'],
+['今宮神社','社',35.0446,135.7467,'あぶり餅とやすらい祭'],
+['平野神社','社',35.0319,135.7397,'桜の名所'],
+['北野天満宮','社',35.0308,135.7352,'学問の神。梅と紅葉'],
+['上賀茂神社','社',35.0603,135.7528,'世界遺産・葵祭'],
+['下鴨神社','社',35.0389,135.7729,'糺の森。世界遺産'],
+['相国寺','寺',35.0344,135.7625,'京都五山'],
+['晴明神社','社',35.0269,135.7561,'陰陽師・安倍晴明'],
+['白峯神宮','社',35.0239,135.7514,'球技の神'],
+['廬山寺','寺',35.0200,135.7642,'紫式部の邸宅跡'],
+['梨木神社','社',35.0186,135.7672,'萩の名所'],
+['聖護院','寺',35.0181,135.7736,'修験道の本山'],
+['吉田神社','社',35.0264,135.7822,'節分祭で賑わう'],
+['真如堂','寺',35.0236,135.7914,'紅葉の名所'],
+['金戒光明寺','寺',35.0208,135.7903,'くろ谷さん'],
+['南禅寺','寺',35.0112,135.7936,'三門と水路閣'],
+['永観堂(禅林寺)','寺',35.0150,135.7953,'紅葉の永観堂'],
+['法然院','寺',35.0214,135.7977,'茅葺山門'],
+['安楽寺','寺',35.0197,135.7950,'哲学の道の古刹'],
+['平安神宮','社',35.0159,135.7822,'大鳥居と神苑'],
+['八坂神社','社',35.0036,135.7785,'祇園祭の本宮'],
+['知恩院','寺',35.0044,135.7832,'大鐘楼。浄土宗総本山'],
+['青蓮院','寺',35.0081,135.7861,'門跡寺院'],
+['高台寺','寺',35.0006,135.7811,'寧々の寺'],
+['法観寺(八坂の塔)','寺',34.9986,135.7792,'東山のシンボル'],
+['建仁寺','寺',34.9999,135.7753,'風神雷神図'],
+['六角堂(頂法寺)','寺',35.0072,135.7603,'いけばな発祥'],
+['本能寺','寺',35.0103,135.7647,'本能寺の変の舞台(秀吉の移築地)'],
+['御金神社','社',35.0117,135.7628,'金運の金色鳥居'],
+['錦天満宮','社',35.0050,135.7647,'錦市場の東端'],
+['行願寺(革堂)','寺',35.0172,135.7619,'西国三十三所第19番'],
+['護王神社','社',35.0233,135.7603,'いのしし神社'],
+['菅原院天満宮神社','社',35.0189,135.7600,'天神さん発祥の地'],
+['火除天満宮','社',35.0117,135.7486,'火難除け'],
+['神泉苑','寺',35.0158,135.7486,'空海の祈雨の池'],
+['千本釈迦堂(大報恩寺)','寺',35.0303,135.7447,'おかめ信仰'],
+['東本願寺','寺',34.9914,135.7594,'世界最大級の木造御影堂'],
+['西本願寺','寺',34.9922,135.7517,'世界遺産'],
+['東寺(教王護国寺)','寺',34.9814,135.7478,'五重塔。世界遺産'],
+['三十三間堂','寺',34.9878,135.7717,'千一体の千手観音'],
+['東福寺','寺',34.9767,135.7736,'通天橋の紅葉'],
+['泉涌寺','寺',34.9756,135.7794,'皇室の菩提寺'],
+['雲龍院','寺',34.9739,135.7817,'蓮華の窓'],
+['勝林寺','寺',34.9717,135.7661,'花手水'],
+['伏見稲荷大社','社',34.9671,135.7727,'千本鳥居'],
+['藤森神社','社',34.9575,135.7703,'勝負運・紫陽花'],
+['城南宮','社',34.9486,135.7472,'しだれ梅'],
+['醍醐寺','寺',34.9517,135.8194,'醍醐の花見。世界遺産'],
+['随心院','寺',34.9614,135.8164,'極彩色の襖絵'],
+['勧修寺','寺',34.9589,135.8125,'氷室の池'],
+['御香宮神社','社',34.9289,135.7639,'伏見の産土神'],
+['大原野神社','社',34.9642,135.6708,'千眼の桜'],
+['鈴虫寺(華厳寺)','寺',35.0008,135.6842,'鈴虫の説法'],
+['松尾大社','社',34.9997,135.6853,'酒造の神'],
+['西芳寺(苔寺)','寺',34.9919,135.6831,'苔の庭。要予約'],
+['車折神社','社',35.0133,135.6914,'芸能の神'],
+['野宮神社','社',35.0173,135.6678,'竹林の黒木鳥居'],
+['天龍寺','寺',35.0157,135.6744,'曹源池。世界遺産'],
+['常寂光寺','寺',35.0224,135.6687,'嵯峨野の紅葉'],
+['二尊院','寺',35.0225,135.6664,'紅葉の馬場'],
+['祇王寺','寺',35.0247,135.6633,'平家物語の苔の庵'],
+['化野念仏寺','寺',35.0264,135.6572,'八千の石仏'],
+['愛宕念仏寺','寺',35.0300,135.6578,'千二百体の羅漢'],
+['高山寺','寺',35.0606,135.6775,'鳥獣戯画。世界遺産'],
+['神護寺','寺',35.0600,135.6667,'かわらけ投げ'],
+['西明寺','寺',35.0681,135.6667,'清滝川の紅葉'],
+['広隆寺','寺',35.0158,135.7078,'弥勒菩薩半跏像'],
+['大覚寺','寺',35.0300,135.7128,'大沢池'],
+['清凉寺(嵯峨釈迦堂)','寺',35.0233,135.6967,'生身の如来'],
+['木島神社(蚕ノ社)','社',35.0119,135.7167,'三柱鳥居'],
+['等持院','寺',35.0269,135.7328,'足利将軍家の菩提寺'],
+['上御霊神社','社',35.0347,135.7567,'出雲路の古社'],
+['詩仙堂','寺',35.0450,135.7967,'ししおどし'],
+['圓光寺','寺',35.0522,135.8019,'十牛の庭'],
+['曼殊院','寺',35.0547,135.8072,'門跡寺院'],
+['大原三千院','寺',35.1197,135.8344,'わらべ地蔵'],
+['寂光院','寺',35.1339,135.8319,'建礼門院ゆかり'],
+['貴船神社','社',35.1222,135.7617,'水の神・縁結び'],
+['鞍馬寺','寺',35.1139,135.7700,'天狗と牛若丸'],
+['平等院','寺',34.8892,135.8076,'鳳凰堂。世界遺産(宇治)'],
+['萬福寺','寺',34.9136,135.8058,'中国式寺院(宇治)'],
+['三室戸寺','寺',34.8997,135.8183,'紫陽花寺(宇治)'],
+['石清水八幡宮','社',34.8797,135.7000,'日本三大八幡宮(八幡市)'],
+['長岡天満宮','社',34.9264,135.6994,'キリシマツツジ(長岡京市)'],
+['向日神社','社',34.9456,135.7008,'火祭り(向日市)'],
+['光明寺','寺',34.9364,135.6572,'もみじ参道(長岡京市)'],
+['善峯寺','寺',34.9447,135.6503,'遊龍の松・あじさい'],
+/* 京都版(史跡・旧道・墓) */
+['二条城','城',35.0142,135.7482,'大政奉還の舞台。世界遺産'],
+['京都御所','史',35.0254,135.7621,'平安遷都以降の皇居。京都御苑内'],
+['蛤御門','史',35.0197,135.7547,'禁門の変(1864)の激戦地。弾痕が残る'],
+['本能寺跡碑','史',35.00594,135.75367,'1582年当時の本能寺は蛸薬師通の西洞院〜油小路にあった(現在の本能寺は秀吉の移築)。石碑は小川通蛸薬師に立つ'],
+['聚楽第跡(聚楽公園)','史',35.0339,135.7425,'豊臣秀吉の城郭邸宅跡'],
+['室町第跡(花の御所)','史',35.0222,135.7531,'室町幕府将軍の邸宅跡碑'],
+['平安宮朱雀門跡','史',35.0203,135.7408,'平安京大内裏の正門跡碑'],
+['羅城門(羅生門)跡','史',34.9894,135.7444,'平安京の正門跡碑。朱雀大路の南端'],
+['新選組屯所跡(旧前川邸)','史',35.0031,135.7422,'壬生浪士隊の屯所。八木邸と並ぶ'],
+['池田屋事件跡','史',35.0086,135.7681,'1864年の池田屋騒動の舞台'],
+['近江屋跡','史',35.0078,135.7656,'坂本龍馬暗殺の地。寺町通沿い'],
+['蹴上インクライン','史',35.0072,135.7900,'琵琶湖疏水の明治の鉄道遺構'],
+['一乗寺下り松','史',35.0442,135.7878,'宮本武蔵と吉岡一門の決闘地'],
+['首塚大明神','史',35.0364,135.7439,'酒呑童子の首を埋めた伝説の塚'],
+['高瀬川一之船入','史',35.0089,135.7697,'角倉了以が開削した水運の起点'],
+['伏見城跡','史',34.9372,135.7789,'秀吉晩年の城。現在は運動公園'],
+['淀城跡公園','史',34.8956,135.7239,'徳川譜代の城。千姫も入城'],
+['天王山(山崎の合戦場)','史',34.9008,135.6789,'1582年、秀吉vs光秀の決戦地'],
+['勝竜寺城公園','史',34.9303,135.7039,'明智光秀の城。細川ガラシャの結婚地'],
+['桂離宮','史',35.0003,135.7097,'世界に名高い宮殿庭園(要予約)'],
+['修学院離宮','史',35.0525,135.8069,'後水尾上皇の離宮(要予約)'],
+['五条大橋','史',34.9961,135.7675,'義経と弁慶の出会い伝説の橋'],
+['六道珍皇寺・冥界通いの井戸','史',34.9967,135.7756,'小野篁が冥界へ通ったという井戸'],
+['三条大橋','道',35.0092,135.7717,'旧東海道の西の終点。十返舎一九ゆかり'],
+['旧東海道・山科宿','道',34.9922,135.8158,'東海道の宿場。山科駅周辺'],
+['逢坂山関跡','道',34.9783,135.8597,'古代の三関のひとつ。近江との境'],
+['旧東海道・淀宿','道',34.8953,135.7247,'東海道の宿場。水郷の町'],
+['旧東海道・伏見宿','道',34.9356,135.7603,'伏見の酒蔵と町並みが残る'],
+['西国街道・山崎宿','道',34.9008,135.6850,'石畳と町家が残る大山崎の宿場'],
+['鯖街道・出町(出町枡形)','道',35.0303,135.7731,'若狭への鯖街道の起点'],
+['鞍馬街道・鞍馬口','道',35.0353,135.7597,'鞍馬への参詣道の入り口'],
+['周山街道(京北方面)','道',35.1644,135.6311,'鯖街道の支線。杉の美林で知られる'],
+['老ノ坂峠(旧山陰道)','道',34.9575,135.6817,'丹波口の難所。酒呑童子伝説ゆかり'],
+['旧朱雀大路・千本通','道',35.0086,135.7422,'平安京の南北大通りの名残'],
+['旧五条大路・五条通','道',34.9967,135.7597,'平安京の東西大路'],
+['豊国廟(豊臣秀吉の墓)','墓',34.9892,135.7742,'阿弥陀ヶ峰の山裾。方広寺大仏のすぐ東'],
+['坂本龍馬の墓(霊山護国神社)','墓',34.9989,135.7808,'東山の中腹。維新志士が眠る'],
+['中岡慎太郎の墓','墓',34.9989,135.7811,'龍馬の隣に眠る'],
+['木戸孝允(桂小五郎)の墓','墓',34.9986,135.7806,'霊山墓地。幾松とともに'],
+['明智光秀の首塚(谷性寺)','墓',35.0417,135.6861,'山門の裏山に残る首塚'],
+['新選組隊士の墓(壬生塚)','墓',35.0036,135.7419,'壬生寺境内。近藤勇の遺髪塔も'],
+['斎藤道三の廟(大徳寺総見院)','墓',35.0444,135.7458,'信長が父道三のために建てた'],
+['平清盛塚','墓',34.9958,135.7761,'大和大路五条東の小さな塚'],
+['壬生寺','寺',35.0036,135.7422,'壬生狂言と新選組ゆかり'],
+['六波羅蜜寺','寺',34.9964,135.7739,'空也上人と十一面観音'],
+['豊国神社','社',34.9919,135.7728,'秀吉を祀る。大和大路'],
+['方広寺','寺',34.9917,135.7722,'「国家安康」の鐘と大仏殿跡'],
+['粟田神社','社',35.0194,135.7867,'粟田口の古社。夜泣き泉']
+];
+
+/* ---------- 全国版チェックポイント(47都道府県) ---------- */
+const ZENKOKU_CP = [
+/* 北海道・東北 */
+['五稜郭','城',41.7969,140.7570,'日本初の洋式城郭(函館)'],
+['北海道神宮','社',43.0614,141.3064,'開拓の総鎮守(札幌)'],
+['弘前城','城',40.6081,140.4642,'現存天守と桜(青森)'],
+['三内丸山遺跡','史',40.8106,140.6972,'縄文の大集落跡。世界遺産(青森)'],
+['中尊寺','寺',39.0006,141.0997,'金色堂。平泉の世界遺産(岩手)'],
+['盛岡城跡(岩手公園)','城',39.7000,141.1503,'南部氏の城。石垣が見事(岩手)'],
+['瑞巌寺','寺',38.3722,141.0589,'伊達家の菩提寺。松島(宮城)'],
+['仙台城跡(青葉城)','城',38.2547,140.8553,'伊達政宗の城。騎馬像(宮城)'],
+['大崎八幡宮','社',38.2725,140.8450,'国宝の社殿(仙台)'],
+['鶴ヶ城(会津若松城)','城',37.4878,139.9297,'白虎隊の名城(福島)'],
+['大内宿','史',37.3283,139.8631,'茅葺きの宿場町(福島)'],
+['偕楽園','史',36.3722,140.4522,'日本三名園。水戸の梅(茨城)'],
+['鹿島神宮','社',35.9694,140.6314,'東国三社の一つ(茨城)'],
+['牛久大仏','史',35.9828,140.2203,'高さ120mの大仏(茨城)'],
+/* 関東 */
+['日光東照宮','社',36.7581,139.5989,'徳川家康を祀る。世界遺産(栃木)'],
+['日光二荒山神社','社',36.7583,139.5969,'日光の総氏神(栃木)'],
+['水澤観世音','寺',36.3308,139.0039,'坂東三十三所(群馬)'],
+['川越 時の鐘','史',35.9239,139.4853,'蔵造りの町並みのシンボル(埼玉)'],
+['秩父神社','社',35.9978,139.0844,'秩父夜祭(埼玉)'],
+['浅草寺','寺',35.7147,139.7967,'雷門と仲見世(東京)'],
+['明治神宮','社',35.6764,139.6993,'都会の大社林(東京)'],
+['江戸城跡(皇居)','城',35.6852,135.7521,'徳川将軍家の居城(東京)'],
+['増上寺','寺',35.6574,139.7483,'徳川将軍家の菩提寺(東京)'],
+['高徳院(鎌倉大仏)','寺',35.3167,139.5358,'国宝の大仏(神奈川)'],
+['鶴岡八幡宮','社',35.3261,139.5564,'鎌倉幕府の守護神(神奈川)'],
+['小田原城','城',35.2508,139.1536,'北条氏の難攻不落の城(神奈川)'],
+['箱根神社','社',35.2042,139.0253,'芦ノ湖の水上鳥居(神奈川)'],
+/* 中部 */
+['弥彦神社','社',37.7028,138.8317,'越後一宮(新潟)'],
+['春日山城跡','城',37.1467,138.2086,'上杉謙信の居城(新潟)'],
+['瑞龍寺','寺',36.7358,137.0106,'国宝の禅寺。高岡(富山)'],
+['金沢城公園','城',36.5658,136.6597,'加賀百万石の城(石川)'],
+['兼六園','史',36.5622,136.6625,'日本三名園(石川)'],
+['永平寺','寺',36.0825,136.3553,'道元の禅の道場(福井)'],
+['一乗谷朝倉氏遺跡','史',36.0136,136.2956,'戦国の城下町跡(福井)'],
+['武田神社','社',35.6886,138.5719,'武田信玄を祀る(山梨)'],
+['身延山久遠寺','寺',35.3817,138.4239,'日蓮宗総本山(山梨)'],
+['善光寺','寺',36.6617,138.1878,'一生に一度は善光寺詣り(長野)'],
+['松本城','城',36.2386,137.9689,'現存五重天守の国宝(長野)'],
+['上田城跡','城',36.4028,138.2444,'真田の城(長野)'],
+['妻籠宿','道',35.5764,137.5678,'中山道の宿場町(長野)'],
+['馬籠宿','道',35.5269,137.4878,'中山道の宿場町(岐阜)'],
+['岐阜城(金華山)','城',35.4339,136.7822,'信長の天下布武の城(岐阜)'],
+['白川郷(荻町集落)','史',36.2578,136.9061,'合掌造り。世界遺産(岐阜)'],
+['久能山東照宮','社',34.9592,138.4667,'家康初の葬地(静岡)'],
+['三保の松原','史',34.9961,138.5222,'富士山と松原。世界遺産構成資産(静岡)'],
+['名古屋城','城',35.1856,136.8994,'金鯱の名城(愛知)'],
+['熱田神宮','社',35.1281,136.9072,'三種の神器・草薙剣(愛知)'],
+['犬山城','城',35.3883,136.9392,'現存天守の国宝(愛知)'],
+['岡崎城','城',34.9564,137.1589,'家康生誕の城(愛知)'],
+['伊勢神宮 内宮','社',34.4550,136.7258,'お伊勢さん。日本人の心のふるさと(三重)'],
+['二見浦(二見興玉神社)','社',34.5097,136.7883,'夫婦岩(三重)'],
+/* 近畿 */
+['彦根城','城',35.2764,136.2519,'現存天守の国宝(滋賀)'],
+['延暦寺','寺',35.0706,135.8414,'比叡山。世界遺産(滋賀)'],
+['大阪城','城',34.6872,135.5258,'秀吉の天下の城(大阪)'],
+['住吉大社','社',34.6128,135.4931,'全国住吉神社の総本社(大阪)'],
+['四天王寺','寺',34.6531,135.5164,'聖徳太子建立(大阪)'],
+['姫路城','城',34.8394,134.6939,'白鷺城。世界遺産(兵庫)'],
+['有馬温泉','史',34.7969,135.2478,'日本三古湯(兵庫)'],
+['東大寺','寺',34.6889,135.8397,'奈良の大仏。世界遺産(奈良)'],
+['春日大社','社',34.6814,135.8483,'藤原氏の氏神。世界遺産(奈良)'],
+['法隆寺','寺',34.6142,135.7342,'世界最古の木造建築。世界遺産(奈良)'],
+['金剛峯寺(高野山)','寺',34.2142,135.5844,'空海の聖地。世界遺産(和歌山)'],
+['和歌山城','城',34.2286,135.1714,'紀州徳川家の城(和歌山)'],
+['熊野那智大社','社',33.6697,135.8903,'那智の滝と熊野信仰(和歌山)'],
+/* 中国 */
+['鳥取砂丘','史',35.5400,134.2358,'日本最大級の砂丘(鳥取)'],
+['白兎神社','社',35.5167,134.2833,'因幡の白兎(鳥取)'],
+['出雲大社','社',35.4019,132.6856,'縁結びの大神(島根)'],
+['松江城','城',35.4750,133.0506,'現存天守の国宝(島根)'],
+['岡山城(烏城)','城',34.6653,133.9361,'黒漆の名城(岡山)'],
+['後楽園','史',34.6675,133.9364,'日本三名園(岡山)'],
+['倉敷美観地区','史',34.5967,133.7719,'白壁の町並み(岡山)'],
+['厳島神社','社',34.2958,132.3197,'海に浮かぶ大鳥居。世界遺産(広島)'],
+['原爆ドーム','史',34.3956,132.4536,'平和の祈り。世界遺産(広島)'],
+['錦帯橋','史',34.1678,132.1803,'五連の木造アーチ橋(山口)'],
+['瑠璃光寺五重塔','史',34.1908,131.4731,'日本三名塔(山口)'],
+['防府天満宮','社',34.0528,131.5750,'天神信仰の古社(山口)'],
+/* 四国 */
+['霊山寺','寺',34.1319,134.5308,'四国八十八箇所第1番札所(徳島)'],
+['鳴門の渦潮(大鳴門橋)','史',34.2383,134.6514,'世界最大級の渦潮(徳島)'],
+['金刀比羅宮','社',34.1839,133.8072,'こんぴらさん。785段の石段(香川)'],
+['栗林公園','史',34.3300,134.0444,'讃岐の大名庭園(香川)'],
+['高松城(玉藻公園)','城',34.3508,134.0522,'日本三大水城(香川)'],
+['松山城','城',33.8456,132.7656,'現存天守。難攻不落の平山城(愛媛)'],
+['道後温泉本館','史',33.8367,132.7617,'日本三古湯(愛媛)'],
+['高知城','城',33.5608,133.5314,'天守と本丸御殿が残る(高知)'],
+['桂浜','史',33.4969,133.5772,'龍馬像と太平洋(高知)'],
+/* 九州・沖縄 */
+['太宰府天満宮','社',33.5217,130.5350,'菅原道真を祀る総本宮(福岡)'],
+['福岡城跡(舞鶴公園)','城',33.5847,130.3797,'黒田家の城(福岡)'],
+['櫛田神社','社',33.5939,130.4106,'博多の総鎮守(福岡)'],
+['吉野ヶ里遺跡','史',33.3244,130.3847,'弥生時代の大集落(佐賀)'],
+['祐徳稲荷神社','社',33.0722,130.0264,'日本三大稲荷(佐賀)'],
+['平和公園','史',32.7731,129.8631,'平和祈念像(長崎)'],
+['出島','史',32.7439,129.8731,'江戸の鎖国の窓口(長崎)'],
+['大浦天主堂','寺',32.7342,129.8703,'世界遺産の教会(長崎)'],
+['熊本城','城',32.8061,130.7056,'加藤清正の名城(熊本)'],
+['阿蘇神社','社',32.9731,131.1178,'阿蘇の総鎮守(熊本)'],
+['宇佐神宮','社',33.5264,131.3747,'全国八幡宮の総本宮(大分)'],
+['高千穂神社','社',32.7056,131.3069,'天孫降臨の地(宮崎)'],
+['青島神社','社',31.8056,131.4750,'鬼の洗濯板の島(宮崎)'],
+['照国神社','社',31.5967,130.5550,'島津斉彬を祀る(鹿児島)'],
+['仙厳園','史',31.6181,130.5764,'島津家の別邸。世界遺産構成資産(鹿児島)'],
+['首里城','城',26.2172,127.7194,'琉球王国の王城。世界遺産(沖縄)'],
+['斎場御嶽','史',26.1697,127.8264,'琉球最高の聖地。世界遺産(沖縄)']
+];
+CHECKPOINTS.push.apply(CHECKPOINTS, ZENKOKU_CP);
+
+/* ---------- 全国名所 拡充パック(約160箇所) ---------- */
+const EXTRA_CP2 = [
+/* 北海道・東北 */
+['小樽運河','史',43.1972,141.0011,'明治〜大正の港湾遺産。石造倉庫群'],
+['札幌時計台','史',43.0625,141.3536,'旧札幌農学校演武場。1878年建築'],
+['函館 元町教会群','史',41.7628,140.7122,'函館正教会・カトリック元町教会など'],
+['松前城(福山城)','城',41.4292,140.1078,'日本最北の城。松前藩'],
+['五稜郭タワー前・奉行所','史',41.7972,140.7569,'箱館奉行所の復元建物'],
+['平内町 大森勝山遺跡','史',41.0619,140.6531,'縄文遺跡群。世界遺産構成'],
+['十和田湖 乙女の像','史',40.4294,140.8994,'高村光太郎作。湖畔の名所'],
+['弘前 最勝院五重塔','史',40.6011,140.4647,'東北最古の五重塔'],
+['角館 武家屋敷','史',39.5994,140.5586,'みちのくの小京都。桜の名所(秋田)'],
+['なまはげ館(男鹿)','史',39.9667,139.7333,'なまはげ文化の拠点'],
+['毛越寺','寺',38.9886,141.1081,'平泉の浄土庭園。世界遺産(岩手)'],
+['猊鼻渓','史',38.9836,141.2789,'舟下りの名勝(岩手)'],
+['山寺(立石寺)','寺',38.3158,140.4350,'松尾芭蕉「閑さや岩にしみ入蝉の声」(山形)'],
+['出羽三山神社','社',38.5306,139.9836,'羽黒山・月山・湯殿山の修験道(山形)'],
+['上杉神社','社',37.9139,140.1086,'上杉謙信を祀る。米沢城跡(山形)'],
+['松島 五大堂','寺',38.3711,141.0661,'伊達政宗の建立。松島のシンボル(宮城)'],
+['鹽竈神社','社',38.3181,141.0128,'奥州一宮。202段の石段(宮城)'],
+['白石城','城',38.0039,140.6181,'片倉小十郎の城(宮城)'],
+['飯盛山','寺',37.4931,139.9544,'白虎隊の墓。さざえ堂(福島)'],
+['霞ヶ城(二本松城)','城',37.5872,140.4328,'戊辰戦争の少年隊の城(福島)'],
+['五色沼','史',37.6528,140.0756,'磐梯山噴火でできた湖沼群(福島)'],
+/* 関東 */
+['常陸国出雲大社','社',36.3639,140.6125,'磯崎の大社。大しめ縄(茨城)'],
+['袋田の滝','史',36.7656,140.3903,'日本三名瀑(茨城)'],
+['足利学校','史',36.3408,139.4547,'日本最古の学校(栃木)'],
+['日光山輪王寺','寺',36.7572,139.6019,'日光の社寺。世界遺産(栃木)'],
+['華厳の滝','史',36.7778,139.5886,'中禅寺湖の名瀑(栃木)'],
+['富岡製糸場','史',36.2553,138.8878,'世界遺産の官営模範工場(群馬)'],
+['榛名神社','社',36.4633,138.8528,'奇岩に囲まれた古社(群馬)'],
+['少林山達磨寺','寺',36.3550,139.0111,'だるま発祥の寺(群馬)'],
+['川越 菓子屋横丁','史',35.9239,139.4856,'駄菓子の香る横丁(埼玉)'],
+['久伊豆神社','社',36.0058,139.7522,'岩槻の総鎮守(埼玉)'],
+['羊山公園 芝桜','史',35.9975,139.0972,'芝桜の名所(秩父)'],
+['成田山新勝寺','寺',35.7861,140.3186,'節分と初詣の大本山(千葉)'],
+['佐倉城址公園','城',35.7228,140.2164,'本佐倉城の大空堀(千葉)'],
+['国府台(里見公園)','史',35.7439,139.8964,'国府台合戦の古戦場(千葉)'],
+['上野 東照宮','社',35.7178,139.7728,'家康を祀る金色殿(東京)'],
+['東京大神宮','社',35.6997,139.7464,'東京のお伊勢さま(東京)'],
+['靖國神社','社',35.6942,139.7433,'近代の英霊を祀る(東京)'],
+['柴又帝釈天','寺',35.7583,139.8789,'寅さんの寺(東京)'],
+['深大寺','寺',35.6678,139.5519,'調布の古刹。だるま市(東京)'],
+['高尾山 薬王院','寺',35.6311,139.2428,'修験道の山(東京)'],
+['鎌倉 建長寺','寺',35.3314,139.5561,'鎌倉五山第一位(神奈川)'],
+['鎌倉 円覚寺','寺',35.3358,139.5478,'舎利殿の名刹(神奈川)'],
+['鎌倉 長谷寺','寺',35.3125,139.5350,'観音とあじさい(神奈川)'],
+['横浜 赤レンガ倉庫','史',35.4522,139.6425,'明治の保税倉庫(神奈川)'],
+['横浜中華街 関帝廟','史',35.4433,139.6456,'三国志の関羽を祀る(神奈川)'],
+['大山阿夫利神社','社',35.4406,139.2589,'大山詣りの聖地(神奈川)'],
+['鎌倉 銭洗弁天','社',35.3139,139.5336,'銭を洗うと増えるとされる(神奈川)'],
+/* 中部 */
+['高田城址公園','城',37.1083,138.2542,'日本三大夜桜(新潟)'],
+['北方文化博物館','史',37.8542,139.2272,'越後の大地主の邸宅(新潟)'],
+['白山神社','社',37.9122,139.0367,'新潟の総鎮守(新潟)'],
+['佐渡 金山跡','史',38.0381,138.2561,'世界遺産の金銀山(新潟)'],
+['五箇山 合掌造り','史',36.4261,136.9342,'菅沼・相倉集落。世界遺産(富山)'],
+['高岡大仏','寺',36.7408,137.0194,'日本三大仏の一つ(富山)'],
+['雨晴海岸','史',36.7956,137.0589,'立山連峰を望む名勝(富山)'],
+['気多大社','社',37.0753,136.8581,'能登一宮。縁結び(石川)'],
+['東尋坊','史',36.2378,136.1319,'越前の断崖絶壁(福井)'],
+['養浩館庭園','史',36.0672,136.2208,'福井城の大名庭園(福井)'],
+['諏訪大社 上社本宮','社',36.0464,138.1172,'全国諏訪神社の総本社(長野)'],
+['諏訪大社 下社秋宮','社',36.0719,138.0931,'御柱祭の社(長野)'],
+['高遠城址公園','城',35.8328,138.0631,'天下第一の桜(長野)'],
+['臥竜公園','史',36.3264,138.4178,'須坂の桜と動物園(長野)'],
+['別所温泉 安楽寺','寺',36.3517,138.1836,'国宝の八角三重塔(長野)'],
+['恵林寺','寺',35.7236,138.7083,'武田信玄の菩提寺(山梨)'],
+['富士山本宮浅間大社','社',35.2264,138.6100,'全国浅間神社の総本宮(静岡)'],
+['伊豆山神社','社',35.0944,139.0306,'源頼朝と政子の縁結び(静岡)'],
+['修善寺','寺',34.9717,138.9331,'伊豆最古の温泉寺(静岡)'],
+['城ヶ崎海岸','史',34.8703,139.1283,'門脇吊橋の景勝(静岡)'],
+['沼津御用邸','史',35.0194,138.9444,'明治以降の皇室の別邸(静岡)'],
+['三嶋大社','社',35.1231,138.9183,'伊豆一宮(静岡)'],
+['浜松城','城',34.7114,137.7247,'家康の出世城(静岡)'],
+['豊川稲荷','寺',34.8386,137.3933,'日本三大稲荷の妙厳寺(愛知)'],
+['伊賀上野城','城',34.7703,136.1269,'高さ30mの高石垣(三重)'],
+['熊野速玉大社','社',33.7303,135.9839,'熊野三山の一つ(三重)'],
+['伊賀流忍者博物館','史',34.7700,136.1278,'忍術屋敷と実演(三重)'],
+['鳥羽城跡','城',34.4806,136.8450,'九鬼水軍の城(三重)'],
+/* 近畿 */
+['多賀大社','社',35.2211,136.2861,'延命長寿の神(滋賀)'],
+['日吉大社','社',35.0711,135.8636,'全国日吉・山王の総本宮(滋賀)'],
+['近江八幡 八幡堀','史',35.1294,136.0989,'豊臣秀次の城下町(滋賀)'],
+['長浜城(豊公園)','城',35.3792,136.2644,'秀吉初の城持ちの地(滋賀)'],
+['安土城跡','城',35.1564,136.1394,'信長の天下布武の城(滋賀)'],
+['百済寺','寺',35.0719,136.3206,'湖東三山の紅葉(滋賀)'],
+['今井町(重要伝建群)','史',34.5600,135.7861,'戦国の環濠集落(奈良)'],
+['吉野山 金峯山寺','寺',34.3689,135.8581,'蔵王堂と桜。世界遺産(奈良)'],
+['橿原神宮','社',34.4922,135.7858,'神武天皇を祀る(奈良)'],
+['大神神社','社',34.5353,135.8528,'日本最古の神社の一つ。三輪(奈良)'],
+['興福寺','寺',34.6831,135.8311,'五重塔と阿修羅像(奈良)'],
+['唐招提寺','寺',34.6756,135.7847,'鑑真の寺。世界遺産(奈良)'],
+['薬師寺','寺',34.6683,135.7844,'東塔と玄奘三蔵院(奈良)'],
+['白浜温泉 円月島','史',33.6783,135.3350,'夕陽の名所(和歌山)'],
+['那智の滝','史',33.6747,135.8925,'日本一の落差の名瀑(和歌山)'],
+['湯浅町 伝建地区','史',33.5781,135.1789,'醤油発祥の町並み(和歌山)'],
+['粉河寺','寺',34.2589,135.3542,'西国三十三所第3番(和歌山)'],
+['大阪 四天王寺 五重塔','寺',34.6536,135.5167,'聖徳太子の伽藍(大阪)'],
+['住吉大社 反橋','社',34.6133,135.4928,'太鼓橋の名所(大阪)'],
+['大坂城 豊国神社','社',34.6872,135.5264,'秀吉を祀る。城内(大阪)'],
+['道明寺天満宮','社',34.6069,135.6139,'菅原家ゆかり(大阪)'],
+['高槻城跡','城',34.8511,135.6172,'キリシタン大名高山右近の城(大阪)'],
+['大坂夏の陣 三光神社','史',34.6753,135.5308,'真田幸村の抜け穴伝説(大阪)'],
+['神戸 北野異人館','史',34.7022,135.1900,'明治の外国人居留地(兵庫)'],
+['生田神社','社',34.6947,135.1922,'神戸の総鎮守(兵庫)'],
+['明石城','城',34.6528,135.0072,'巽櫓・坤櫓が残る(兵庫)'],
+['赤穂城跡','城',34.7486,134.3892,'大石内蔵助と忠臣蔵(兵庫)'],
+['竹田城跡','城',35.3003,134.8289,'天空の城。雲海(兵庫)'],
+['城崎温泉','史',35.6269,134.8114,'外湯巡りの温泉街(兵庫)'],
+['出石城跡','城',35.4603,134.8708,'但馬の小京都(兵庫)'],
+/* 中国・四国 */
+['鳥取城跡(久松公園)','城',35.5072,134.2394,'石垣の名城。桜の名所(鳥取)'],
+['三徳山三佛寺 投入堂','寺',35.3978,133.9558,'断崖の国宝。日本一危険な国宝(鳥取)'],
+['皆生温泉','史',35.5356,133.3269,'山陰の温泉地(鳥取)'],
+['八重垣神社','社',35.4375,132.9711,'素盞嗚尊と稲田姫。縁結び(島根)'],
+['石見銀山 龍源寺間歩','史',35.0917,132.4356,'世界遺産の銀鉱山(島根)'],
+['津和野 太皷谷稲成神社','社',34.4686,131.7711,'城下町と稲荷の朱(島根)'],
+['萩 城下町','史',34.4153,131.3836,'維新胎動の町。世界遺産(山口)'],
+['松下村塾','史',34.4275,131.4181,'吉田松陰の私塾。世界遺産(山口)'],
+['岩国 吉香公園','史',34.1661,132.1850,'錦帯橋のほとり(山口)'],
+['秋吉台','史',34.2194,131.2961,'カルスト台地と秋芳洞(山口)'],
+['宮島 弥山','史',34.2794,132.3136,'厳島の霊山(広島)'],
+['鞆の浦','史',34.3819,133.3806,'崖の上のポニョの港町(広島)'],
+['尾道 千光寺','寺',34.4064,133.1978,'瀬戸内を望む寺(広島)'],
+['福山城','城',34.4886,133.3622,'伏見櫓が残る(広島)'],
+['呉 大和ミュージアム','史',34.2414,132.5558,'戦艦大和の資料館(広島)'],
+['大竹 亀居城跡','城',34.2286,132.2167,'瀬戸内の水城(広島)'],
+['金比羅宮 奥社','社',34.1839,133.8078,'1368段の先の厳魂神社(香川)'],
+['丸亀城','城',34.2858,133.8003,'日本一の高石垣(香川)'],
+['善通寺','寺',34.2294,133.7869,'空海誕生の地(香川)'],
+['屋島','史',34.3522,134.1033,'源平合戦の古戦場(香川)'],
+['讃岐国分寺','寺',34.3028,133.9572,'四国八十八箇所第80番(香川)'],
+['阿波舞踊会館','史',34.0678,134.5542,'阿波おどりの拠点(徳島)'],
+['眉山','史',34.0703,134.5139,'徳島のシンボルの山(徳島)'],
+['大歩危・小歩危','史',33.8986,133.7850,'吉野川の渓谷美(徳島)'],
+['祖谷のかずら橋','史',33.8747,133.8358,'平家の落人伝説(徳島)'],
+['剣山','史',33.8536,134.0944,'西日本第二の高峰(徳島)'],
+['石鎚神社','社',33.8486,133.3103,'西日本最高峰の霊山(愛媛)'],
+['今治城','城',34.0600,132.9894,'日本三大水城(愛媛)'],
+['大洲城','城',33.5072,132.5436,'臥龍の城(愛媛)'],
+['宇和島城','城',33.2222,132.5628,'現存十二天守の一つ(愛媛)'],
+['内子座','史',33.5494,132.6589,'大正の芝居小屋(愛媛)'],
+['四国八十八箇所 大窪寺','寺',34.1181,134.1686,'結願の寺(香川)'],
+['高知 ひろめ市場','史',33.5583,133.5350,'カツオのたたきの台所(高知)'],
+['五台山 竹林寺','寺',33.5486,133.5772,'四国八十八箇所第31番(高知)'],
+['四万十川 沈下橋','史',33.0039,132.8728,'日本最後の清流(高知)'],
+['室戸岬','史',33.2419,134.1794,'台風銀座の景勝(高知)'],
+/* 九州・沖縄 */
+['小倉城','城',33.8847,130.8753,'細川忠興の城(福岡)'],
+['光明禅寺','寺',33.5217,130.5342,'枯山水の庭(福岡)'],
+['宗像大社 辺津宮','社',33.8350,130.5228,'世界遺産の古代祭祀(福岡)'],
+['宮地嶽神社','社',33.7794,130.4861,'光の道(福岡)'],
+['香春岳','史',33.7278,130.8858,'古くからの鉱山の山(福岡)'],
+['柳川 川下り','史',33.1619,130.4081,'水郷の堀巡り(福岡)'],
+['大宰府政庁跡','史',33.5122,130.5172,'古代の西都(福岡)'],
+['唐津城','城',33.4536,129.9783,'虹の松原に臨む(佐賀)'],
+['有田 陶磁器の里','史',33.1792,129.8628,'伊万里焼の産地(佐賀)'],
+['名護屋城跡','城',33.5300,129.8706,'秀吉の朝鮮出兵の本拠(佐賀)'],
+['嬉野温泉','史',33.0981,129.9881,'日本三大美肌の湯(佐賀)'],
+['原城跡','史',32.6286,130.2531,'島原の乱の舞台。世界遺産(長崎)'],
+['雲仙温泉','史',32.7331,130.2608,'地獄めぐり(長崎)'],
+['平戸城','城',33.3681,129.5556,'松浦氏の城(長崎)'],
+['軍艦島(端島)','史',32.6272,129.7386,'世界遺産の海底炭鉱島(長崎)'],
+['ハウステンボス','史',33.0903,129.7886,'オランダの街並み(長崎)'],
+['島原城','城',32.7897,130.3703,'天草四郎ゆかり(長崎)'],
+['水前寺成趣園','史',32.7906,130.7350,'桃山式回遊庭園(熊本)'],
+['青井阿蘇神社','社',32.2117,130.8097,'国宝の楼門(熊本)'],
+['通潤橋','史',32.6550,130.9808,'石造アーチの水路橋(熊本)'],
+['杖立温泉','史',33.0581,131.2067,'こいのぼりの温泉地(熊本)'],
+['黒川温泉','史',33.0856,131.1064,'入湯手形の温泉郷(熊本)'],
+['別府地獄めぐり','史',33.3167,131.4722,'海地獄・血の池地獄(大分)'],
+['湯布院 金鱗湖','史',33.2639,131.3586,'湯けむりの名所(大分)'],
+['岡城跡','城',32.9811,131.4153,'荒城の月の城(大分)'],
+['臼杵 石仏','史',33.1231,131.8069,'国宝の磨崖仏(大分)'],
+['国東半島 両子寺','寺',33.6903,131.5831,'六郷満山の古刹(大分)'],
+['飫肥城下町','史',31.6289,131.3519,'小京都の町並み(宮崎)'],
+['鵜戸神宮','社',31.6533,131.4689,'洞窟の中の社殿(宮崎)'],
+['西都原古墳群','史',32.1050,131.4017,'300基超の古墳(宮崎)'],
+['天岩戸神社','社',32.7197,131.3000,'天照大神の岩戸隠れ(宮崎)'],
+['霧島神宮','社',31.8581,130.8725,'坂本龍馬も訪れた(鹿児島)'],
+['知覧 武家屋敷','史',31.3783,130.4419,'薩摩の小京都(鹿児島)'],
+['知覧特攻平和会館','史',31.3800,130.4447,'特攻隊の記録(鹿児島)'],
+['開聞岳','史',31.1800,130.5283,'薩摩富士(鹿児島)'],
+['城山','史',31.5986,130.5506,'西南戦争最後の地(鹿児島)'],
+['桜島 赤水展望広場','史',31.6117,130.6058,'活火山の絶景(鹿児島)'],
+['中城城跡','城',26.2836,127.8006,'琉球のグスク。世界遺産(沖縄)'],
+['勝連城跡','城',26.3272,127.8786,'阿麻和利の城(沖縄)'],
+['今帰仁城跡','城',26.6908,127.9289,'北山王の城(沖縄)'],
+['座喜味城跡','城',26.4083,127.7439,'読谷のグスク(沖縄)'],
+['美ら海水族館','史',26.6944,127.8778,'ジンベエザメの大水槽(沖縄)'],
+['万座毛','史',26.5039,127.8514,'象の鼻の奇岩(沖縄)'],
+['波上宮','社',26.2192,127.6708,'沖縄総鎮守(沖縄)'],
+['ひめゆりの塔','史',26.0956,127.6900,'沖縄戦の慰霊碑(沖縄)']
+];
+CHECKPOINTS.push.apply(CHECKPOINTS, EXTRA_CP2);
+
+/* ---------- ニッチ名所パック: 旧街道・墓・秘境スポット(約140箇所) ---------- */
+const EXTRA_CP3 = [
+/* ===== 旧街道: 東海道 ===== */
+['日本橋 道路元標','道',35.6841,139.7744,'五街道の起点。東京'],
+['品川宿 本陣跡','道',35.6136,139.7408,'東海道最初の宿場。東京'],
+['鈴ヶ森刑場跡','道',35.5958,139.7492,'江戸の処刑場跡。八百屋お七の碑。東京'],
+['川崎宿 本陣跡','道',35.5319,139.7028,'川崎大師の門前宿。神奈川'],
+['神奈川宿 本陣跡','道',35.4683,139.6358,'「神奈川」の歌川広重の宿。横浜'],
+['保土ヶ谷宿 本陣跡','道',35.4611,139.5967,'霞ヶ橋のほとり。横浜'],
+['戸塚宿 本陣跡','道',35.3967,139.5344,'東海道最大級の宿場。横浜'],
+['藤沢宿 遊行寺','道',35.3392,139.4883,'時宗総本山の門前宿。神奈川'],
+['平塚宿 見付跡','道',35.3289,139.3506,'中原街道との分岐。神奈川'],
+['大磯宿 鴫立庵','道',35.3078,139.3117,'西行ゆかりの歌枕。神奈川'],
+['小田原宿 一里塚','道',35.2564,139.1500,'小田原提灯の宿。神奈川'],
+['箱根関所','道',35.1931,139.0236,'復元された関所。入り鉄砲に出女。神奈川'],
+['旧東海道 箱根杉並木','道',35.2064,139.0139,'420本の杉の並木道。神奈川'],
+['箱根 甘酒茶屋','道',35.2089,139.0031,'江戸時代から続く茶屋。神奈川'],
+['三島宿 楽寿園','道',35.1225,138.9161,'小浜池のほとりの宿場。静岡'],
+['沼津宿 高尾山古墳','道',35.0956,138.8667,'富士山が望める宿場。静岡'],
+['興津宿 清見寺','道',35.0228,138.5122,'信長・家康も泊まった寺。静岡'],
+['丸子宿 丁子屋','道',35.1036,138.4383,'とろろ汁の老舗。静岡'],
+['宇津ノ谷峠 明治のトンネル','道',34.9931,138.3061,'明治の煉瓦トンネル。静岡'],
+['島田宿 大井川川越し場','道',34.8500,138.1178,'川越し人足の人力渡河。静岡'],
+['掛川宿 掛川城','道',34.7758,138.0167,'日本初の本格木造復元天守。静岡'],
+['袋井宿 法多山','道',34.7236,137.9228,'だるまの寺。静岡'],
+['磐田宿 見付天神','道',34.7167,137.8506,'裸祭りの社。静岡'],
+['新居宿 新居関所','道',34.6958,137.5597,'現存する唯一の関所建物。静岡'],
+['吉田宿 豊橋公園','道',34.7700,137.3919,'吉田城跡の宿場。愛知'],
+['藤川宿 上街道との分岐','道',34.9033,137.2444,'「とうかいどう」の碑。愛知'],
+['岡崎宿 二十七曲り','道',34.9500,137.1617,'27の直角カーブの旧道。愛知'],
+['池鯉鮒宿(知立) 本陣跡','道',35.0006,137.0500,'知立神社の門前宿。愛知'],
+['熱田宿 七里の渡し跡','道',35.1178,136.8925,'東海道唯一の海路。愛知'],
+['桑名宿 七里の渡し跡','道',35.0636,136.6936,'渡船場跡の碑。三重'],
+['四日市宿 諏訪神社','道',34.9667,136.6239,'日永の追分の宿。三重'],
+['亀山宿 亀山城','道',34.8556,136.4506,'多気の門前宿。三重'],
+['関宿 町並み','道',34.8564,136.3900,'重伝建の宿場町。三重'],
+['坂下宿 追分','道',34.9336,136.3300,'鈴鹿峠の麓の宿。三重'],
+['土山宿 鈴鹿関跡','道',34.8797,136.2819,'古代三関のひとつ。滋賀'],
+['水口宿 本陣跡','道',34.9667,136.1667,'水口岡山城の城下宿。滋賀'],
+['石部宿 本陣跡','道',34.9333,136.0667,'伊賀越えの宿。滋賀'],
+['草津宿 本陣','道',35.0167,135.9594,'中山道との追分。本陣が現存。滋賀'],
+['大津宿 逢坂山','道',35.0044,135.8833,'近江八景の宿。滋賀'],
+['三条大橋 東海道終点碑','道',35.0094,135.7714,'「東海道終点」の碑。京都'],
+/* ===== 旧街道: 中山道・甲州街道・その他 ===== */
+['板橋宿 縁切榎','道',35.7517,139.7075,'中山道最初の宿。東京'],
+['蕨宿 わらび機市','道',35.8250,139.6803,'日本一面積の小さい市の宿場。埼玉'],
+['浦和宿 調神社','道',35.8592,139.6494,'つきのみや。埼玉'],
+['大宮宿 氷川神社','道',35.9172,139.6300,'氷川神社の総本社門前。埼玉'],
+['上尾宿 平方のクス','道',35.9792,139.5928,'中山道の宿。埼玉'],
+['鴻巣宿 本陣跡','道',36.0608,139.5225,'こうのす花火の宿。埼玉'],
+['熊谷宿 妻沼聖天山','道',36.1444,139.3853,'国宝の彫刻寺院。埼玉'],
+['深谷宿 本陣跡','道',36.1964,139.2819,'渋沢栄一のふるさと。埼玉'],
+['本庄宿 本陣跡','道',36.2447,139.1903,'埼玉最後の宿。埼玉'],
+['新町宿 楽山園','道',36.2761,139.1067,'大名庭園の宿。群馬'],
+['倉賀野宿 高崎城','道',36.3125,138.9967,'倉賀野城の城下宿。群馬'],
+['高崎宿 白衣観音','道',36.3236,138.9897,'高崎白衣大観音。群馬'],
+['板鼻宿 碓氷峠の麓','道',36.3606,138.7236,'上州の宿場。群馬'],
+['松井田宿 松井田城','道',36.3217,138.8019,'西国街道との追分。群馬'],
+['安中宿 碓氷峠鉄道遺構','道',36.3403,138.9172,'アプト式の廃線跡。群馬'],
+['碓氷峠 熊野神社','道',36.3433,138.6594,'長野・群馬の県境の社。群馬'],
+['軽井沢宿 旧軽銀座','道',36.3517,138.5964,'避暑地の宿場。長野'],
+['沓掛宿 追分','道',36.3628,138.5817,'北國街道との分岐。長野'],
+['小田井宿 藪原','道',35.9861,137.7850,'木曽路の入口。長野'],
+['藪原宿 おんころばし','道',35.9608,137.7456,'木曽の桟(かけはし)伝説。長野'],
+['宮ノ越宿 木曽福島','道',35.8433,137.6908,'木曽代官の関所。長野'],
+['上松宿 寝覚の床','道',35.7833,137.6928,'木曽八景の奇勝。長野'],
+['須原宿 野尻宿','道',35.7328,137.6208,'木曽の宿場。長野'],
+['三留野宿 木曽路','道',35.6731,137.5897,'中山道の宿。長野'],
+['馬籠宿 枡形','道',35.5292,137.4894,'坂道の石畳の宿場。岐阜'],
+['落合宿 中津川','道',35.5167,137.4819,'恵那山の麓の宿。岐阜'],
+['中津川宿 栗きんとん','道',35.4947,137.5000,'中山道の宿。岐阜'],
+['大井宿 恵那峡','道',35.4456,137.4153,'中山道の宿。岐阜'],
+['恵那宿 大湫宿','道',35.4264,137.5019,'中山道の宿場。岐阜'],
+['御嶽宿 細久手','道',35.3739,137.3719,'中山道の宿。岐阜'],
+['伏見宿(岐阜) 御立峠','道',35.3392,137.3000,'中山道の宿。岐阜'],
+['中津川市 苗木城跡','道',35.5058,137.4858,'岩山の上の天空の城。岐阜'],
+['岩村城跡','道',35.3583,137.4494,'日本三大山城・女城主の城。岐阜'],
+['美濃太田宿 中山道','道',35.4269,137.0200,'美濃路との追分。岐阜'],
+['加納宿 岐阜城下','道',35.4094,136.7606,'中山道の宿。岐阜'],
+['河渡宿 垂井','道',35.3697,136.5289,'中山道の宿。岐阜'],
+['垂井宿 南宮大社','道',35.3556,136.5764,'美濃国一宮の門前宿。岐阜'],
+['関ヶ原 決戦場','道',35.3647,136.4672,'天下分け目の古戦場。岐阜'],
+['今須宿 柏原','道',35.3425,136.3956,'中山道の宿。滋賀'],
+['醒井宿 居醒の清水','道',35.3272,136.3469,'名水百選の宿。滋賀'],
+['柏原宿 木之本','道',35.4044,136.2564,'北国街道との分岐。滋賀'],
+['木之本宿 北国街道','道',35.5011,136.2167,'北近江の宿場。滋賀'],
+['高月宿 賤ヶ岳','道',35.5039,136.1894,'賤ヶ岳の戦いの古戦場。滋賀'],
+['甲州街道 小仏峠','道',35.6269,139.1969,'甲州道中の難所。東京'],
+['甲州街道 上野原宿','道',35.6300,139.1089,'甲州街道の宿。山梨'],
+['甲州街道 鶴川宿','道',35.6167,138.5500,'甲斐の宿場。山梨'],
+['甲府宿 甲府城','道',35.6650,138.5683,'武田氏の城下町。山梨'],
+['日光街道 杉並木','道',36.7042,139.7250,'世界最長の並木道。栃木'],
+['日光街道 幸手宿','道',36.0781,139.7250,'権現堂堤の桜。埼玉'],
+['奥州街道 白河宿','道',37.1264,140.2108,'白河の関跡。福島'],
+['奥州街道 白河小峰城','道',37.1333,140.2139,'戊辰戦争の城。福島'],
+['水戸街道 旧取手宿','道',35.8950,140.0503,'水戸街道の宿。茨城'],
+['北国街道 善光寺宿','道',36.6611,138.1928,'善光寺の門前町。長野'],
+['北国街道 海野宿','道',36.3361,138.2622,'重伝建の宿場町。長野'],
+['北陸道 木之本宿','道',35.5000,136.2158,'北国街道の要衝。滋賀'],
+/* ===== 墓(武将・志士・文人・歌人) ===== */
+['織田信長の廟(大徳寺総見院)','墓',35.0450,135.7447,'信長の墓所。京都'],
+['豊臣秀吉 豊国廟の大碑','墓',34.9897,135.7747,'阿弥陀ヶ峰の山頂に大碑。京都'],
+['石田三成の墓(大徳寺三玄院)','墓',35.0439,135.7450,'佐和山城主の墓。京都'],
+['真田幸村の墓(九度山 善名称院)','墓',34.3119,135.5592,'真田庵の墓。和歌山'],
+['直江兼続の墓(林泉寺)','墓',37.1486,138.1986,'米沢・上杉家廟所。山形'],
+['上杉謙信の墓(上杉家廟所)','墓',37.9122,140.1089,'米沢城跡の御廟。山形'],
+['伊達政宗の墓(瑞巌寺 瑞鳳殿)','墓',38.2542,140.8586,'仙台の霊屋。宮城'],
+['武田信玄の墓(武田神社)','墓',35.6889,138.5725,'信玄公の墓。山梨'],
+['山本勘助の墓(来迎寺)','墓',35.6900,138.5650,'川中島の軍師。山梨'],
+['徳川家康の墓(久能山)','墓',34.9594,138.4669,'久能山東照宮の奥院。静岡'],
+['徳川家康 日光廟','墓',36.7589,139.6000,'東照宮奥社の宝塔。栃木'],
+['家康遺言の杉(久能山)','墓',34.9589,138.4661,'「どうする家康」の神木。静岡'],
+['本多忠勝の墓(妙慶寺)','墓',35.4469,138.3614,'鹿角兜の名将。山梨'],
+['黒田官兵衛の墓(崇福寺)','墓',33.5956,130.4081,'如水の墓。福岡'],
+['加藤清正の墓(本妙寺)','墓',32.8031,130.7197,'熊本の清正公。熊本'],
+['立花道雪の墓(梅岳寺)','墓',33.5300,130.5200,'雷切の名将。福岡'],
+['細川ガラシャの墓(崇禅寺)','墓',34.7400,135.5089,'玉子の辞世。大阪'],
+['千利休の墓(大徳寺聚光院)','墓',35.0447,135.7444,'茶聖の墓。京都'],
+['小早川秀秋の墓(霊山寺)','墓',34.7000,134.0000,'関ヶ原の寝返り武将。岡山'],
+['直江景明の墓','墓',37.9100,140.1100,'米沢藩士の墓。山形'],
+['大石内蔵助の墓(泉岳寺)','墓',35.6378,139.7372,'四十七士の墓。東京'],
+['吉良上野介の墓(本所松坂町)','墓',35.6900,139.8050,'討ち入りの相手。東京'],
+['宮本武蔵の墓(武蔵塚)','墓',32.8247,130.7669,'熊本の武蔵塚。熊本'],
+['佐々木小次郎の碑(巌流島)','墓',33.9617,130.9367,'巌流島の決闘碑。山口'],
+['武蔵の碑(一乗寺下り松)','墓',35.0444,135.7881,'決闘の松の跡。京都'],
+['近藤勇の墓(板橋 近藤勇墓所)','墓',35.7531,139.7053,'新選組局長。東京'],
+['土方歳三の墓(石田寺)','墓',35.6900,139.6800,'函館戦争の鬼の副長。東京'],
+['沖田総司の墓(専称寺)','墓',35.7100,139.7900,'新選組一番隊組長。東京'],
+['山南敬助の墓(光縁寺)','墓',35.0039,135.7436,'切腹した総長。京都'],
+['伊東甲子太郎の墓(戒光寺)','墓',34.9786,135.7778,'油小路の変の剣客。京都'],
+['西郷隆盛の墓(南洲墓地)','墓',31.6167,130.5419,'南洲神社の麓。鹿児島'],
+['大久保利通の墓(青山霊園)','墓',35.6689,139.7222,'維新の三傑。東京'],
+['勝海舟の墓(洗足池公園)','墓',35.6058,139.6900,'咸臨丸の艦長。東京'],
+['榎本武揚の墓(覚王山日泰寺)','墓',35.1700,136.9500,'五稜郭の総裁。愛知'],
+['高杉晋作の墓(奇兵隊本部跡)','墓',34.0208,131.0189,'下関の功山寺。山口'],
+['久坂玄瑞の墓(奇兵隊墓地)','墓',34.0219,131.0183,'松下村塾の高弟。山口'],
+['吉田松陰の墓(松陰神社)','墓',35.6500,139.6567,'世田谷の松陰神社。東京'],
+['横井小楠の墓(南川墓地)','墓',32.8000,130.7100,'熊本の先覚者。熊本'],
+['橋本左内の墓(青山霊園)','墓',35.6697,139.7219,'安政の大獄の志士。東京'],
+['頼山陽の墓(大雲院)','墓',35.0069,135.7733,'『日本外史』の著者。京都'],
+['滝沢馬琴の墓(深光寺)','墓',35.7300,139.7900,'『南総里見八犬伝』。東京'],
+['十返舎一九の墓(長圓寺)','墓',35.7000,139.7500,'『東海道中膝栗毛』。東京'],
+['式亭三馬の墓(慈眼寺)','墓',35.7300,139.8100,'『浮世風呂』の作者。東京'],
+['曲亭馬琴の別墓','墓',35.7400,139.7600,'江戸の文豪。東京'],
+['井原西鶴の墓(誓願寺)','墓',35.0050,135.7669,'『好色一代男』。京都'],
+['近松門左衛門の墓(廣徳寺)','墓',34.6650,135.5133,'人形浄瑠璃の作者。大阪'],
+['松尾芭蕉の墓(義仲寺)','墓',35.0069,135.8717,'大津の芭蕉翁。滋賀'],
+['与謝蕪村の墓(金福寺)','墓',35.0467,135.7950,'俳人・画家。京都'],
+['小林一茶の墓(信濃 柏原)','墓',36.8600,138.2000,'「やせ蛙」の俳人。長野'],
+['正岡子規の墓(正宗寺)','墓',35.7100,139.7200,'俳句革新の歌人。東京'],
+['夏目漱石の墓(雑司ヶ谷霊園)','墓',35.7200,139.7150,'『吾輩は猫である』。東京'],
+['森鴎外の墓(三縁山広度院)','墓',35.7350,139.7250,'『舞姫』の文豪。東京'],
+['芥川龍之介の墓(染井霊園)','墓',35.7350,139.7450,'『羅生門』の作家。東京'],
+['太宰治の墓(禅林寺)','墓',35.6700,139.5900,'『人間失格』の作家。東京'],
+['宮沢賢治の墓(身延山久遠寺 花巻分院)','墓',39.3900,141.1100,'『銀河鉄道の夜』。岩手'],
+['樋口一葉の墓(築地本願寺 和田堀廟所)','墓',35.6800,139.6800,'『たけくらべ』。東京'],
+['石川啄木の墓(函館 立待岬)','墓',41.7500,140.7000,'函館の歌人の墓。北海道'],
+['種田山頭火の墓(報恩寺)','墓',34.1000,131.4000,'自由律俳句の放浪俳人。山口'],
+/* ===== ニッチ史跡・遺構・秘境 ===== */
+['横須賀 走水神社','史',35.2600,139.7300,'日本武尊と弟橘媛。神奈川'],
+['観音崎 日本最初の洋式灯台','史',35.2561,139.7403,'1869年点灯。神奈川'],
+['浦賀 ペリー上陸記念碑','史',35.2350,139.7150,'黒船来航の地。神奈川'],
+['三浦 油壺','史',35.1600,139.6100,'城ヶ島の景勝。神奈川'],
+['江ノ島 岩屋','史',35.2989,139.4803,'弁財天の洞窟。神奈川'],
+['富士五湖 鳴沢氷穴','史',35.4750,138.7000,'富士山麓の溶岩洞。山梨'],
+['富岳風穴','史',35.4789,138.6586,'青木ヶ原の溶岩洞窟。山梨'],
+['青木ヶ原樹海 遊歩道','史',35.4700,138.6800,'溶岩の上の原生林。山梨'],
+['韮崎 白山平の穴観音','史',35.7100,138.4500,'奇岩の霊場。山梨'],
+['長野 姨捨の棚田','史',36.4900,138.0900,'日本三大車窓の棚田。長野'],
+['戸隠神社 奥社','社',36.7650,138.0789,'天岩戸伝説の杉並木。長野'],
+['戸隠 忍者からくり屋敷','史',36.7700,138.0700,'戸隠流忍法の里。長野'],
+['地獄谷野猿公苑','史',36.7300,138.4600,'温泉に入る猿。長野'],
+['白骨温泉','史',36.2000,137.7500,'「3日入れば3年風邪をひかぬ」。長野'],
+['上高地 河童橋','史',36.2489,137.6378,'穂高連峰の絶景。長野'],
+['乗鞍 畳平','史',36.1100,137.5600,'標高2700mのバスターミナル。長野'],
+['立山黒部 室堂平','史',36.5800,137.6000,'雪の大谷と雷鳥。富山'],
+['黒部ダム','史',36.5667,137.6611,'日本最大のダム。富山'],
+['宇奈月温泉 黒部峡谷','史',36.8700,137.5800,'トロッコ電車の峡谷。富山'],
+['魚津 埋没林博物館','史',36.8200,137.4200,'2000年前の杉の根。富山'],
+['五箇山 村上家','史',36.4200,136.9300,'国重文の合掌造り。富山'],
+['輪島 千枚田','史',37.4200,137.0000,'日本の棚田百選。石川'],
+['珠洲 見附島','史',37.4900,137.2400,'能登のシンボル。石川'],
+['金沢 忍者寺(妙立寺)','寺',36.5550,136.6489,'からくり屋敷の寺。石川'],
+['山中温泉 こおろぎ橋','史',36.2500,136.3700,'鶴仙渓の橋。石川'],
+['加賀 山代温泉','史',36.2900,136.3700,'古総湯の温泉街。石川'],
+['福井 東尋坊 雄島','史',36.2350,136.1283,'自殺の名所の島。福井'],
+['永平寺 傘松閣','寺',36.0833,136.3567,'230枚の天井絵。福井'],
+['敦賀 氣比神宮','社',35.6550,136.0739,'大鳥居の越前一宮。福井'],
+['若狭 三方五湖','史',35.5800,135.8900,'五つの湖のレインボーライン。福井'],
+['小浜 蘇洞門','史',35.4900,135.7300,'海食洞窟群。福井'],
+['熊野古道 中辺路 滝尻王子','道',33.7500,135.5500,'熊野参詣道の出発点。和歌山'],
+['熊野古道 大門坂','道',33.6700,135.8850,'石畳と杉並木の参道。和歌山'],
+['熊野古道 発心門王子','道',33.7900,135.8000,'熊野本宮への門。和歌山'],
+['湯の峰温泉 つぼ湯','史',33.8600,135.7700,'世界遺産の温泉。和歌山'],
+['白浜 三段壁','史',33.6750,135.3300,'断崖の海食洞。和歌山'],
+['白浜 千畳敷','史',33.6800,135.3300,'広大な岩盤の景勝。和歌山'],
+['橋杭岩','史',33.5300,135.9000,'約40の岩が並ぶ奇景。和歌山'],
+['那智勝浦 マグロの町','史',33.6250,135.9400,'生マグロ水揚げ日本一。和歌山'],
+['伊勢神宮 外宮','社',34.4889,136.7078,'豊受大神を祀る。三重'],
+['おかげ横丁','史',34.4600,136.7250,'伊勢の門前町。三重'],
+['鳥羽 ミキモト真珠島','史',34.4800,136.8450,'真珠養殖発祥の地。三重'],
+['熊野市 鬼ヶ城','史',33.9200,136.1300,'世界遺産の海食崖。三重'],
+['熊野市 獅子巖','史',33.9000,136.1000,'高さ25mの獅子の岩。三重'],
+['松阪 御城番屋敷','史',34.5789,136.5278,'武士の長屋が残る。三重'],
+['伊勢志摩 英虞湾','史',34.3100,136.8500,'リアス海岸の絶景。三重'],
+['鳥羽城跡 潮見公園','史',34.4800,136.8433,'城跡の展望公園。三重'],
+['四日市 四日市コンビナート夜景','史',34.9300,136.6100,'工場夜景の聖地。三重'],
+['鈴鹿 椿大神社','社',34.9700,136.4500,'椿岸神社の総本宮。三重'],
+['伊賀 上野公園','史',34.7700,136.1283,'俳聖殿と忍者の町。三重'],
+['名張 赤目四十八滝','史',34.5900,136.0800,'忍者修行の渓谷。三重'],
+['大津 石山寺','寺',34.9600,135.9069,'紫式部が源氏物語を構想。滋賀'],
+['近江八幡 ラ コリーナ','史',35.1300,136.0900,'たねやの茅葺き屋根。滋賀'],
+['彦根 玄宮園','史',35.2778,136.2533,'大名庭園と天守の眺め。滋賀'],
+['長浜 黒壁スクエア','史',35.3800,136.2667,'ガラスの街並み。滋賀'],
+['大津 日吉大社 西本宮','社',35.0722,135.8650,'山王信仰の総本宮。滋賀'],
+['米原 中山道 醒井','史',35.3267,136.3481,'梅花藻の清流。滋賀'],
+['高島 白髭神社','社',35.3000,136.0400,'琵琶湖に浮かぶ鳥居。滋賀'],
+['近江八幡 ヴォーリズ記念館','史',35.1289,136.0950,'建築家の足跡。滋賀'],
+['豊岡 出石皿そば','史',35.4600,134.8739,'皿そばと辰鼓楼。兵庫'],
+['竹田 立雲峡','史',35.3056,134.8300,'竹田城の眺望地。兵庫'],
+['姫路 好古園','史',34.8383,134.6889,'城に隣接する日本庭園。兵庫'],
+['明石 魚の棚商店街','史',34.6489,134.9939,'明石焼きの商店街。兵庫'],
+['西宮 西宮神社','社',34.7378,135.3386,'えべっさんの総本社。兵庫'],
+['宝塚 清荒神清澄寺','寺',34.8400,135.3500,'かまどの神。兵庫'],
+['有馬温泉 太閤の湯','史',34.7989,135.2500,'秀吉ゆかりの湯。兵庫'],
+['丹波篠山 武家屋敷','史',35.0739,135.2178,'城下町の町並み。兵庫'],
+['洲本温泉','史',34.3400,134.9000,'淡路島の温泉。兵庫'],
+['沼島 おのころ島神社','史',34.1700,134.8200,'国生み神話の島。兵庫'],
+['奈良 ならまち 元興寺','寺',34.6778,135.8306,'世界遺産の町家の寺。奈良'],
+['明日香 石舞台古墳','史',34.4678,135.8264,'蘇我馬子の墓とされる。奈良'],
+['明日香 亀石','史',34.4700,135.8100,'飛鳥の謎の石造物。奈良'],
+['明日香 高松塚古墳','史',34.4689,135.7917,'極彩色の壁画古墳。奈良'],
+['橿原 今井町','史',34.5600,135.7867,'重伝建の環濠集落。奈良'],
+['宇陀 松山城','城',34.4900,135.9550,'日本三大山城。奈良'],
+['吉野 金峯山寺 蔵王堂','寺',34.3689,135.8581,'吉野山のシンボル。奈良'],
+['吉野 南朝妙法殿','史',34.3800,135.8600,'南朝の歴史。奈良'],
+['十津川温泉','史',33.9900,135.7900,'源泉かけ流しの湯。奈良'],
+['洞川温泉','史',34.2400,135.8900,'大峯山の温泉街。奈良'],
+['岡山 津山城跡','城',35.0600,134.0000,'鶴山公園の桜。岡山'],
+['備中松山城','城',34.8100,133.6239,'現存天守の天空の山城。岡山'],
+['高梁 吹屋ふるさと村','史',34.8600,133.4500,'ベンガラの赤い町並み。岡山'],
+['倉敷 大原美術館','史',34.5972,133.7733,'日本初の西洋美術館。岡山'],
+['総社 吉備路 備中国分寺','史',34.6750,133.7800,'五重塔と田園風景。岡山'],
+['吉備津神社','社',34.6700,133.8500,'鳴釜神事の社。岡山'],
+['吉備津彦神社','社',34.6650,133.8689,'桃太郎伝説の社。岡山'],
+['広島 呉 入船山記念館','史',34.2350,132.5600,'旧呉鎮守府司令長官官舎。広島'],
+['尾道 猫の細道','史',34.4089,133.2000,'福石猫の路地。広島'],
+['竹原 町並み保存地区','史',34.3400,132.9100,'安芸の小京都。広島'],
+['福山 鞆の浦 対潮楼','史',34.3833,133.3833,'坂本龍馬のいろは丸事件。広島'],
+['三次 備後護国神社','史',34.8000,132.8500,'川の霧の町。広島'],
+['廿日市 宮島 大聖院','寺',34.2900,132.3189,'弥山の古刹。広島'],
+['岩国 岩国城','城',34.1722,132.1789,'錦帯橋を望む城。山口'],
+['萩 松陰神社','社',34.4272,131.4172,'松下村塾の境内。山口'],
+['長門 元乃隅神社','社',34.4200,131.0600,'123基の赤い鳥居。山口'],
+['角島大橋','史',34.3567,130.8700,'エメラルドの海の橋。山口'],
+['下関 赤間神宮','社',33.9572,130.9489,'壇ノ浦の平家ゆかり。山口'],
+['下関 唐戸市場','史',33.9600,130.9400,'ふぐの市場。山口'],
+['秋芳洞','史',34.2250,131.3039,'日本最大級の鍾乳洞。山口'],
+['津和野 殿町通り','史',34.4650,131.7689,'山陰の小京都。島根'],
+['出雲 稲佐の浜','史',35.3800,132.6700,'国譲り神話の浜。島根'],
+['松江 小泉八雲旧居','史',35.4739,133.0533,'ラフカディオ・ハーンの家。島根'],
+['松江 塩見縄手','史',35.4722,133.0478,'堀川の白壁の町並み。島根'],
+['温泉津 温泉津温泉','史',35.0989,132.3956,'石見銀山の温泉街。島根'],
+['鳥取 三朝温泉','史',35.4089,133.8619,'三朝小唄の温泉。鳥取'],
+['倉吉 白壁土蔵群','史',35.4300,133.8250,'赤瓦の町並み。鳥取'],
+['境港 水木しげるロード','史',35.5400,133.2300,'ゲゲゲの鬼太郎の商店街。鳥取'],
+['大山 大山寺','寺',35.3900,133.5300,'大山開山の古刹。鳥取'],
+['香川 小豆島 エンジェルロード','史',34.4789,134.1900,'潮が引くと現れる砂の道。香川'],
+['小豆島 二十四の瞳映画村','史',34.4900,134.3056,'映画のロケ地。香川'],
+['小豆島 寒霞渓','史',34.5200,134.2800,'日本三大渓谷美。香川'],
+['直島 地中美術館','史',34.4500,133.9950,'アートの島。香川'],
+['豊島 豊島美術館','史',34.4900,134.0900,'水滴のアート。香川'],
+['徳島 鳴門公園','史',34.2400,134.6500,'渦の道の展望台。徳島'],
+['阿南 日和佐 大浜海岸','史',33.9300,134.6500,'ウミガメの産卵地。徳島'],
+['美馬 脇町 うだつの町並み','史',34.0700,134.1600,'うだつが上がる商家。徳島'],
+['三好 奥祖谷二重かずら橋','史',33.8400,133.7800,'秘境のかずら橋。徳島'],
+['剣山 見ノ越','史',33.8500,134.0900,'剣山登山口。徳島'],
+['愛媛 今治 来島海峡大橋','史',34.1200,132.9989,'しまなみ海道の橋。愛媛'],
+['今治 大山祇神社','社',34.2400,132.9900,'日本総鎮守。大三島。愛媛'],
+['大三島 瀬戸田 耕三寺','史',34.2900,133.0900,'西の日光。広島県側。愛媛'],
+['松山 道後 坊っちゃん列車','史',33.8350,132.7628,'夏目漱石ゆかりの列車。愛媛'],
+['大洲 おおず赤煉瓦館','史',33.5050,132.5400,'明治の銀行建築。愛媛'],
+['内子 八日市護国','史',33.5500,132.6550,'うだつの町並み。愛媛'],
+['宇和島 闘牛','史',33.2200,132.5600,'牛同士の闘い。愛媛'],
+['高知 室戸 中岡慎太郎像','史',33.2400,134.1800,'室戸岬の志士像。高知'],
+['高知 龍河洞','史',33.6000,133.7500,'日本三大鍾乳洞。高知'],
+['高知 四万十川 三里沈下橋','史',33.0000,132.8700,'四万十川の上流の橋。高知'],
+['高知 足摺岬','史',32.7200,133.0100,'土佐の最南端の岬。高知'],
+['高知 土佐清水 竜串','史',32.7900,132.8700,'奇岩の海岸。高知'],
+['福岡 博多 櫛田神社 山笠','社',33.5936,130.4108,'博多祇園山笠の社。福岡'],
+['福岡 志賀島 金印の浜','史',33.6700,130.3000,'金印発見の地。福岡'],
+['宗像 沖ノ島','史',34.2400,130.1000,'世界遺産の神宿る島。福岡'],
+['久留米 水天宮','社',33.3200,130.5100,'水の神の総本宮。福岡'],
+['太宰府 光明禅寺','寺',33.5217,130.5350,'石庭の名所。福岡'],
+['朝倉 秋月城跡','城',33.4600,130.6900,'筑前の小京都。福岡'],
+['飯塚 嘉穂劇場','史',33.6400,130.6900,'芝居小屋の建築。福岡'],
+['佐賀 嬉野 肥前夢街道','史',33.1000,129.9900,'江戸の街並み。佐賀'],
+['佐賀 伊万里 大川内山','史',33.2300,129.8800,'秘窯の里。佐賀'],
+['佐賀 有田 陶山神社','社',33.1800,129.8600,'磁器の鳥居。佐賀'],
+['唐津 虹の松原','史',33.4400,129.9800,'日本三大松原。佐賀'],
+['長崎 グラバー園','史',32.7350,129.8689,'坂本龍馬も訪れた洋館。長崎'],
+['長崎 眼鏡橋','史',32.7450,129.8733,'日本三名橋の石橋。長崎'],
+['長崎 崇福寺','寺',32.7433,129.8778,'赤い唐門の寺。長崎'],
+['雲仙 雲仙地獄','史',32.7350,130.2617,'キリシタン殉教の地。長崎'],
+['島原 武家屋敷','史',32.7900,130.3700,'島原城下の武家町。長崎'],
+['平戸 ザビエル記念教会','史',33.3700,129.5500,'南蛮文化の港。長崎'],
+['五島 堂崎天主堂','史',32.6900,128.8400,'潜伏キリシタンの教会。長崎'],
+['壱岐 原の辻遺跡','史',33.7500,129.6900,'一支国の王都。長崎'],
+['対馬 和多都美神社','社',34.2000,129.2200,'海に沈む鳥居。長崎'],
+['熊本 天草 大江天主堂','史',32.3000,130.0000,'潜伏キリシタンの教会。熊本'],
+['天草 崎津教会','史',32.3100,130.0300,'世界遺産の漁村の教会。熊本'],
+['人吉 球磨川下り','史',32.2100,130.7600,'日本三急流。熊本'],
+['人吉 青井阿蘇神社','社',32.2100,130.8100,'国宝の社殿。熊本'],
+['小国 わいた温泉郷','史',33.1200,131.0600,'山あいの秘湯。熊本'],
+['阿蘇 草千里ヶ浜','史',32.8850,131.0533,'噴煙を望む草原。熊本'],
+['高森 上色見熊野座神社','社',32.8900,131.1600,'苔むす石段の神秘の社。熊本'],
+['大分 湯平温泉','史',33.1900,131.3550,'石畳の温泉街。大分'],
+['由布院 湯の坪街道','史',33.2650,131.3600,'由布岳を望む通り。大分'],
+['九重 夢大吊橋','史',33.1700,131.1700,'日本一の歩道吊橋。大分'],
+['耶馬溪 青の洞門','史',33.4300,131.1500,'禅海の掘った隧道。大分'],
+['中津 福澤諭吉旧居','史',33.6000,131.1900,'『学問のすすめ』の家。大分'],
+['日田 豆田町','史',33.3200,130.9400,'江戸の町並み。大分'],
+['宇佐 宇佐八幡宮 上宮','社',33.5264,131.3750,'八幡神の本殿。大分'],
+['宮崎 高千穂峡','史',32.7100,131.3000,'真名井の滝の峡谷。宮崎'],
+['高千穂 天安河原','史',32.7189,131.2989,'八百万の神が集まった洞窟。宮崎'],
+['宮崎 青島 鬼の洗濯板','史',31.8050,131.4736,'波食棚の奇景。宮崎'],
+['日南 サンメッセ日南','史',31.5900,131.3800,'モアイ像の丘。宮崎'],
+['日南 飫肥 豫章館','史',31.6289,131.3500,'泰平踊りの庭園。宮崎'],
+['延岡 今山八幡宮','社',32.5800,131.6600,'延岡城下の社。宮崎'],
+['鹿児島 指宿 砂むし温泉','史',31.2300,130.6300,'砂の中に入る温泉。鹿児島'],
+['鹿児島 開聞岳 唐船峡','史',31.1700,130.5400,'そうめん流しの名所。鹿児島'],
+['鹿児島 知覧 武家屋敷通り','史',31.3783,130.4428,'石垣と生垣の武家町。鹿児島'],
+['鹿児島 出水 ツルの渡来地','史',32.0900,130.3500,'1万羽のツル。鹿児島'],
+['鹿児島 薩摩川内 市比野温泉','史',31.8100,130.2900,'歴史ある温泉。鹿児島'],
+['鹿児島 屋久島 縄文杉','史',30.3500,130.5300,'樹齢数千年の杉。鹿児島'],
+['鹿児島 屋久島 白谷雲水峡','史',30.3800,130.5700,'もののけ姫の森。鹿児島'],
+['沖縄 那覇 国際通り','史',26.2150,127.6850,'沖縄のメインストリート。沖縄'],
+['沖縄 首里 金城町石畳','史',26.2200,127.7200,'琉球の石畳道。沖縄'],
+['沖縄 識名園','史',26.2000,127.7300,'琉球王室の別邸。世界遺産。沖縄'],
+['沖縄 糸満 平和祈念公園','史',26.0950,127.6900,'沖縄戦の祈りの地。沖縄'],
+['沖縄 南城 斎場御嶽','史',26.1689,127.8264,'琉球の聖地。世界遺産。沖縄'],
+['沖縄 今帰仁 今帰仁グスク','史',26.6908,127.9300,'桜の名所の城跡。沖縄'],
+['沖縄 本部 備瀬のフクギ並木','史',26.6900,127.8800,'防風林の緑の道。沖縄'],
+['沖縄 古宇利島 古宇利大橋','史',26.6800,128.0100,'エメラルドの海の橋。沖縄'],
+['沖縄 石垣島 川平湾','史',24.4500,124.1500,'グラスボートの絶景。沖縄'],
+['沖縄 竹富島 集落','史',24.3300,124.0800,'赤瓦と白砂の道。沖縄']
+];
+CHECKPOINTS.push.apply(CHECKPOINTS, EXTRA_CP3);
+
+/* ---------- 旧街道ライン(主要街道の経路) ---------- */
+const KAIDO_LINES = [
+{name:'旧東海道', color:'#8d5a2b', segs:[[[35.34611,139.48641],[35.34624,139.48663]],[[35.01564,137.03696],[35.01593,137.03688]],[[35.00356,137.05433],[35.00193,137.06194],[35.00237,137.06637],[35.00208,137.06825]],[[34.99516,137.08076],[34.99228,137.08501],[34.99114,137.08859],[34.98977,137.09506],[34.98587,137.10508]],[[34.99100,135.83642],[34.99120,135.83128]],[[35.49587,139.67411],[35.49684,139.67457]],[[35.49347,139.66961],[35.49171,139.66393]],[[35.11100,138.57303],[35.10947,138.57060]],[[35.00925,137.04040],[35.00814,137.04214]],[[35.57763,139.73621],[35.57950,139.73674]],[[35.43646,139.56666],[35.43633,139.56670]],[[35.32624,139.33240],[35.32704,139.33613]],[[35.57950,139.73674],[35.58138,139.73681]],[[35.19356,139.02707],[35.19373,139.02677]],[[35.30737,139.31342],[35.30722,139.31400],[35.30762,139.31431]],[[34.83269,138.18291],[34.83437,138.18825],[34.83506,138.19265]],[[35.26044,139.17833],[35.26067,139.17814]],[[34.92523,137.20092],[34.92547,137.20004],[34.92661,137.19877]],[[35.30448,139.27767],[35.30473,139.28259],[35.30571,139.28711],[35.30522,139.28837]],[[35.11760,136.91328],[35.11763,136.91322]],[[35.12014,136.91002],[35.11961,136.91113],[35.11763,136.91322]],[[35.24696,139.14036],[35.24759,139.14202],[35.24685,139.14615],[35.24646,139.14744],[35.24614,139.14765]],[[35.11429,136.92827],[35.11406,136.92686]],[[34.93350,137.19546],[34.93147,137.19586]],[[35.44565,139.57814],[35.44496,139.57643]],[[35.11857,136.90599],[35.11876,136.90499]],[[34.99128,135.83015],[34.99128,135.83024]],[[35.44664,139.57885],[35.44638,139.57865]],[[35.44496,139.57643],[35.44450,139.57605]],[[35.34740,139.46681],[35.34778,139.46713]],[[34.98713,135.89746],[34.98756,135.89630],[34.98732,135.89421],[34.99122,135.89388],[34.99129,135.89197]],[[35.00421,135.87579],[35.00404,135.87710]],[[35.25196,139.16592],[35.24943,139.16264],[35.24838,139.15974]],[[34.85511,136.45400],[34.85413,136.45298],[34.85403,136.45231],[34.85447,136.45133],[34.85396,136.45049]],[[34.86827,136.49184],[34.86851,136.49192]],[[34.86600,136.48913],[34.86604,136.48995],[34.86680,136.49102],[34.86827,136.49184]],[[35.18812,139.02133],[35.18799,139.02088]],[[35.17282,139.00748],[35.17248,139.00687],[35.17203,139.00703],[35.17144,139.00607],[35.16883,139.00353],[35.16784,139.00305],[35.16638,139.00310],[35.16619,139.00255],[35.16472,139.00203],[35.16394,139.00217],[35.16315,139.00130],[35.16281,139.00171]],[[35.15382,138.99429],[35.15158,138.99141]],[[35.14687,138.97850],[35.14613,138.97631],[35.14618,138.97515],[35.14447,138.97265]],[[35.12408,138.93485],[35.12383,138.93378],[35.12400,138.93301],[35.12301,138.93016]],[[35.13763,138.95951],[35.13760,138.96020]],[[35.13816,138.96299],[35.13725,138.96119]],[[34.86023,136.48394],[34.86328,136.48567]],[[34.85550,136.44523],[34.85663,136.44175],[34.85711,136.43731]],[[34.85718,136.43609],[34.85831,136.43216],[34.85830,136.43104],[34.85791,136.43032]],[[34.85552,136.44653],[34.85551,136.44602]],[[34.85551,136.44602],[34.85550,136.44523]],[[34.85525,136.44704],[34.85552,136.44653]],[[34.87594,136.51192],[34.87736,136.51514],[34.87703,136.51858],[34.87804,136.51991]],[[34.87077,136.49645],[34.87110,136.49733],[34.87021,136.50016],[34.87125,136.50305]],[[34.88654,136.52882],[34.88659,136.52872]],[[35.45519,139.60398],[35.45470,139.60369]],[[34.99355,135.80580],[34.99352,135.80437]],[[35.45707,139.60506],[35.45519,139.60398]],[[35.53460,139.70618],[35.53470,139.70634]],[[35.53193,139.70186],[35.53460,139.70618]],[[35.51404,139.68080],[35.51498,139.68148]],[[35.51718,139.68374],[35.51940,139.68627]],[[35.50006,139.67573],[35.50232,139.67628]],[[35.52350,139.69175],[35.52320,139.69131]],[[35.45966,139.60663],[35.45707,139.60506]],[[35.46488,139.61085],[35.46285,139.60867]],[[35.46905,139.61566],[35.46882,139.61564]],[[35.47063,139.62603],[35.46980,139.61899]],[[35.46947,139.61724],[35.46921,139.61609]],[[35.46976,139.61863],[35.46947,139.61724]],[[35.60302,139.74224],[35.59852,139.74046],[35.59731,139.73967]],[[34.99267,138.42398],[34.99270,138.42431]],[[34.99270,138.42431],[34.99272,138.42522]],[[35.62375,139.73906],[35.62247,139.73974]],[[35.15642,138.65564],[35.15594,138.65485],[35.15579,138.65259],[35.15610,138.65142]],[[35.15672,138.67508],[35.16051,138.67796]],[[34.83964,137.32244],[34.84062,137.32144]],[[35.02885,138.48769],[35.02588,138.48623],[35.02363,138.48585]],[[35.12291,138.92994],[35.12301,138.93016]],[[35.12408,138.93485],[35.12388,138.93506]],[[35.15382,138.99429],[35.15494,138.99484]],[[35.00814,137.04214],[35.00725,137.04329]],[[35.02998,137.01773],[35.02867,137.01919],[35.02728,137.02145],[35.02533,137.02336],[35.02468,137.02600]],[[35.03974,137.01079],[35.03980,137.01120],[35.03829,137.01307]],[[35.00518,137.05022],[35.00391,137.05362]],[[35.02459,136.01298],[35.02415,136.01606]],[[35.02553,136.03106],[35.02451,136.03401]],[[35.02595,136.00831],[35.02560,136.00568],[35.02591,136.00459]],[[35.02594,136.01962],[35.02486,136.01886],[35.02467,136.01805]],[[35.02451,136.03401],[35.02393,136.03676]],[[35.02393,136.03676],[35.02395,136.03699]],[[35.02553,136.03106],[35.02556,136.02948],[35.02598,136.02822],[35.02589,136.02477]],[[35.02589,136.02477],[35.02608,136.02291]],[[35.02617,136.02143],[35.02614,136.02091]],[[35.02597,135.99925],[35.02593,135.99736]],[[35.02604,136.02009],[35.02594,136.01962]],[[35.02563,135.99418],[35.02592,135.99462]],[[35.02592,135.99462],[35.02601,135.99587]],[[35.02601,135.99587],[35.02593,135.99736]],[[35.02597,135.99925],[35.02591,136.00459]],[[35.02608,136.02291],[35.02617,136.02143]],[[35.02467,136.01805],[35.02415,136.01606]],[[35.02459,136.01298],[35.02589,136.01075]],[[35.02589,136.01075],[35.02595,136.00831]],[[35.01774,135.96152],[35.01705,135.96362]],[[34.99325,135.94417],[34.99344,135.94420]],[[34.99754,135.94799],[34.99634,135.94712],[34.99584,135.94601]],[[34.99101,135.94206],[34.99097,135.94202]],[[34.99500,135.94468],[34.99471,135.94460]],[[35.01097,135.95607],[35.01102,135.95610]],[[35.01171,135.95649],[35.01174,135.95651]],[[35.00839,135.95436],[35.00762,135.95391]],[[35.00979,135.95529],[35.00905,135.95481]],[[35.00283,135.95196],[35.00298,135.95194]],[[35.00411,135.95212],[35.00404,135.95222]],[[35.00178,135.95216],[35.00277,135.95197]],[[35.00905,135.95481],[35.00839,135.95436]],[[35.00979,135.95529],[35.01097,135.95607]],[[34.99809,135.94834],[34.99808,135.94833]],[[34.99344,135.94420],[34.99370,135.94440]],[[34.98940,135.94056],[34.98863,135.93963]],[[34.99325,135.94417],[34.99310,135.94405]],[[35.01174,135.95651],[35.01338,135.95712]],[[34.99788,135.94816],[34.99759,135.94801]],[[35.00588,135.95285],[35.00411,135.95212]],[[35.00146,135.95212],[35.00078,135.95190]],[[34.99370,135.94440],[34.99471,135.94460]],[[34.99565,135.94488],[34.99500,135.94468]],[[34.99296,135.94396],[34.99101,135.94206]],[[34.99097,135.94202],[34.99060,135.94161]],[[35.00014,135.95078],[34.99942,135.94941],[34.99809,135.94834]],[[35.01697,135.96812],[35.01645,135.96985]],[[35.00588,135.95285],[35.00762,135.95391]],[[35.01689,135.96525],[35.01725,135.96658]],[[35.00421,135.87579],[35.00412,135.87363],[35.00475,135.87180]],[[35.00243,135.88312],[35.00304,135.88085]],[[35.00331,135.87978],[35.00304,135.88085]],[[35.00387,135.87764],[35.00331,135.87978]],[[35.00243,135.88312],[35.00197,135.88464]],[[35.00077,135.88933],[35.00046,135.89030],[34.99964,135.89002],[34.99851,135.89195]],[[35.00197,135.88464],[35.00167,135.88480],[35.00089,135.88703]],[[35.01937,136.04935],[35.01842,136.05055]],[[35.02136,136.04661],[35.02035,136.04746]],[[35.00302,136.07101],[35.00400,136.06879]],[[34.98459,136.11369],[34.98495,136.11310],[34.98449,136.11105]],[[34.98374,136.11661],[34.98385,136.11490],[34.98419,136.11427]],[[34.99401,136.08732],[34.99262,136.09048]],[[34.98628,136.10821],[34.98547,136.10994],[34.98453,136.11077]],[[34.99471,136.08520],[34.99526,136.08387],[34.99644,136.08272]],[[34.99228,136.09120],[34.99262,136.09048]],[[35.00787,136.05893],[35.00739,136.05985]],[[35.00425,136.06629],[35.00428,136.06617]],[[34.99403,136.08727],[34.99417,136.08701]],[[34.98824,136.10191],[34.98830,136.10174]],[[34.98951,136.09571],[34.98948,136.09685]],[[34.98453,136.11077],[34.98453,136.11080]],[[34.99403,136.08727],[34.99401,136.08732]],[[34.98824,136.10191],[34.98813,136.10215]],[[35.02395,136.03699],[35.02397,136.03743]],[[35.01270,136.05408],[35.01301,136.05371]],[[35.02136,136.04661],[35.02308,136.04337],[35.02372,136.04074],[35.02397,136.03743]],[[34.98813,136.10215],[34.98753,136.10330]],[[35.00140,136.07412],[35.00121,136.07453]],[[35.01122,136.05287],[35.01270,136.05408]],[[34.98369,136.11746],[34.98374,136.11661]],[[35.00246,136.07205],[35.00195,136.07305]],[[34.98835,136.10110],[34.98830,136.10174]],[[34.99844,136.08022],[34.99836,136.08043]],[[35.01301,136.05371],[35.01349,136.05310]],[[35.00035,136.07602],[34.99976,136.07701]],[[34.98972,136.09502],[34.98951,136.09571]],[[34.98453,136.11080],[34.98449,136.11105]],[[34.99426,136.08675],[34.99471,136.08520]],[[35.01122,136.05287],[35.01052,136.05382]],[[34.98419,136.11427],[34.98459,136.11369]],[[35.00982,136.05503],[35.00889,136.05691]],[[34.99644,136.08272],[34.99699,136.08197]],[[35.00542,136.06422],[35.00491,136.06514]],[[34.98639,136.10704],[34.98628,136.10821]],[[34.98854,136.09996],[34.98897,136.09880]],[[34.98946,136.09780],[34.98948,136.09685]],[[35.00787,136.05893],[35.00889,136.05691]],[[35.00690,136.06133],[35.00664,136.06224]],[[35.00400,136.06879],[35.00398,136.06739]],[[35.00195,136.07305],[35.00140,136.07412]],[[35.00121,136.07453],[35.00035,136.07602]],[[35.00491,136.06514],[35.00428,136.06617]],[[35.00302,136.07101],[35.00246,136.07205]],[[35.01052,136.05382],[35.00982,136.05503]],[[34.99976,136.07701],[34.99919,136.07812]],[[34.99170,136.09218],[34.99228,136.09120]],[[34.99844,136.08022],[34.99863,136.07911]],[[35.01679,136.05121],[35.01419,136.05233]],[[35.00664,136.06224],[35.00542,136.06422]],[[35.01419,136.05233],[35.01349,136.05310]],[[34.98650,136.10537],[34.98619,136.10695]],[[35.00690,136.06133],[35.00739,136.05985]],[[35.00425,136.06629],[35.00398,136.06739]],[[34.99863,136.07911],[34.99919,136.07812]],[[34.98897,136.09880],[34.98946,136.09780]],[[34.98753,136.10330],[34.98650,136.10537]],[[34.99170,136.09218],[34.98972,136.09502]],[[34.99836,136.08043],[34.99699,136.08197]],[[34.98835,136.10110],[34.98854,136.09996]],[[34.98369,136.11746],[34.98340,136.11965]],[[35.00089,135.88703],[35.00072,135.88766]],[[35.00072,135.88766],[35.00037,135.88886],[35.00074,135.88925]],[[34.97633,135.91388],[34.97614,135.91458],[34.97684,135.91617],[34.97674,135.91820]],[[34.97684,135.91991],[34.97674,135.91820]],[[34.97982,135.92001],[34.98074,135.92012]],[[34.98348,135.92814],[34.98292,135.92617],[34.98201,135.92530]],[[34.97976,135.92001],[34.97873,135.92001]],[[34.97873,135.92001],[34.97684,135.91991]],[[34.98201,135.92530],[34.98111,135.92485],[34.98079,135.92433],[34.98074,135.92012]],[[34.98739,135.93798],[34.98774,135.93841]],[[34.98810,135.93887],[34.98863,135.93963]],[[34.98679,135.93638],[34.98697,135.93714]],[[34.98697,135.93714],[34.98739,135.93798]],[[34.98672,135.93467],[34.98679,135.93638]],[[34.98520,135.93030],[34.98514,135.93011]],[[34.98555,135.93162],[34.98685,135.93304],[34.98672,135.93467]],[[34.98520,135.93030],[34.98555,135.93162]],[[34.98348,135.92814],[34.98483,135.92940]],[[35.51963,139.68654],[35.52146,139.68867]],[[34.97762,138.40018],[34.97759,138.40083]],[[34.89744,136.33570],[34.89740,136.33544]],[[34.91215,136.32224],[34.91360,136.32163],[34.91475,136.32054]],[[34.91613,136.31827],[34.91475,136.32054]],[[34.91609,136.31710],[34.91631,136.31738],[34.91613,136.31827]],[[34.92015,136.31306],[34.92076,136.31000]],[[34.92925,136.29775],[34.92818,136.29661]],[[34.92925,136.29775],[34.92921,136.29782]],[[34.92654,136.30199],[34.92647,136.30212]],[[34.92703,136.30159],[34.92654,136.30199]],[[34.92826,136.29352],[34.92784,136.29483]],[[34.92784,136.29483],[34.92747,136.29567]],[[34.92936,136.29247],[34.92846,136.29310]],[[34.92868,136.29860],[34.92921,136.29782]],[[34.92747,136.29567],[34.92818,136.29661]],[[34.92703,136.30159],[34.92806,136.29954]],[[34.92846,136.29310],[34.92826,136.29352]],[[34.93291,136.28764],[34.93363,136.28658]],[[34.92936,136.29247],[34.93091,136.29057]],[[34.93091,136.29057],[34.93204,136.28892]],[[34.93291,136.28764],[34.93204,136.28892]],[[34.93466,136.28407],[34.93481,136.28248]],[[34.92289,136.30627],[34.92485,136.30354]],[[34.92485,136.30354],[34.92569,136.30335],[34.92647,136.30212]],[[34.93481,136.28248],[34.93470,136.28040]],[[34.93404,136.28610],[34.93466,136.28407]],[[34.97832,136.14673],[34.97846,136.14625]],[[34.98233,136.13025],[34.98243,136.13046]],[[34.98131,136.13740],[34.98217,136.13396],[34.98248,136.13051]],[[34.97846,136.14625],[34.97904,136.14441]],[[34.98243,136.13046],[34.98248,136.13051]],[[34.97754,136.14906],[34.97832,136.14673]],[[34.97904,136.14441],[34.97944,136.14323]],[[34.98233,136.13025],[34.98222,136.12958]],[[34.97677,136.15140],[34.97754,136.14906]],[[34.98222,136.12958],[34.98233,136.12852]],[[34.94068,136.26822],[34.93867,136.26657],[34.93809,136.26545]],[[34.93912,136.27583],[34.93851,136.27625]],[[34.94127,136.27338],[34.94074,136.27443]],[[34.94074,136.27443],[34.93912,136.27583]],[[34.93521,136.27985],[34.93824,136.27738]],[[34.95569,136.21535],[34.95579,136.21495]],[[34.95230,136.22707],[34.95243,136.22669]],[[34.95125,136.22905],[34.95208,136.22766]],[[34.95125,136.22905],[34.95059,136.23011]],[[34.95216,136.22747],[34.95230,136.22707]],[[34.95537,136.21759],[34.95569,136.21535]],[[34.95059,136.23011],[34.94944,136.23083]],[[34.95489,136.22160],[34.95510,136.21983]],[[34.95455,136.22304],[34.95489,136.22160]],[[34.95510,136.21983],[34.95537,136.21759]],[[34.95243,136.22669],[34.95335,136.22509]],[[34.95335,136.22509],[34.95455,136.22304]],[[34.96834,136.17645],[34.96896,136.17539]],[[34.97295,136.16567],[34.97376,136.16599],[34.97264,136.16986],[34.97150,136.16940]],[[34.97150,136.16940],[34.97140,136.16988]],[[34.96632,136.18167],[34.96623,136.18207]],[[34.97102,136.17088],[34.97099,136.17094]],[[34.97082,136.17141],[34.97061,136.17183]],[[34.97560,136.15499],[34.97677,136.15140]],[[34.96964,136.17377],[34.97050,136.17202]],[[34.97356,136.16131],[34.97425,136.15910]],[[34.96722,136.18452],[34.96726,136.18594]],[[34.97402,136.16165],[34.97295,136.16567]],[[34.96726,136.18594],[34.96726,136.18617]],[[34.96628,136.18078],[34.96632,136.18167]],[[34.96765,136.17765],[34.96834,136.17645]],[[34.96896,136.17539],[34.96964,136.17377]],[[34.96628,136.18078],[34.96708,136.17883]],[[34.97402,136.16165],[34.97356,136.16131]],[[34.97500,136.15673],[34.97560,136.15499]],[[34.97425,136.15910],[34.97500,136.15673]],[[34.96708,136.17883],[34.96765,136.17765]],[[34.97102,136.17088],[34.97140,136.16988]],[[34.96659,136.18365],[34.96611,136.18286],[34.96623,136.18207]],[[34.96460,136.19122],[34.96508,136.19107]],[[34.95608,136.21333],[34.95807,136.20904]],[[34.95800,136.19871],[34.95980,136.19680]],[[34.96256,136.19324],[34.96262,136.19318]],[[34.95807,136.20904],[34.95749,136.20871]],[[34.96091,136.19513],[34.96097,136.19504]],[[34.96377,136.19147],[34.96460,136.19122]],[[34.96097,136.19504],[34.96256,136.19324]],[[34.95980,136.19680],[34.96091,136.19513]],[[34.95806,136.20521],[34.95855,136.20415]],[[34.95840,136.20170],[34.95772,136.20011]],[[34.96508,136.19107],[34.96550,136.19062]],[[34.96262,136.19318],[34.96377,136.19147]],[[34.96550,136.19062],[34.96677,136.18867]],[[34.95855,136.20415],[34.95840,136.20170]],[[34.93763,136.25571],[34.93797,136.25489],[34.93885,136.25404]],[[34.93772,136.26304],[34.93776,136.26232]],[[34.93776,136.26232],[34.93782,136.26205]],[[34.93781,136.25956],[34.93765,136.25901]],[[34.93728,136.25803],[34.93734,136.25724]],[[34.93793,136.26065],[34.93781,136.25956]],[[34.93765,136.25901],[34.93728,136.25803]],[[34.93782,136.26205],[34.93793,136.26065]],[[34.93734,136.25724],[34.93763,136.25571]],[[34.93927,136.25175],[34.93885,136.25404]],[[34.94044,136.24857],[34.93927,136.25175]],[[34.94390,136.23776],[34.94350,136.23853]],[[34.94642,136.23239],[34.94602,136.23248]],[[34.94189,136.24474],[34.94190,136.24470]],[[34.94189,136.24474],[34.94185,136.24491]],[[34.94886,136.23070],[34.94944,136.23083]],[[34.94074,136.24743],[34.94044,136.24857]],[[34.94463,136.23595],[34.94390,136.23776]],[[34.94190,136.24470],[34.94239,136.24192]],[[34.94788,136.23133],[34.94886,136.23070]],[[34.94788,136.23133],[34.94642,136.23239]],[[34.94239,136.24192],[34.94350,136.23853]],[[34.94074,136.24743],[34.94185,136.24491]],[[34.94602,136.23248],[34.94490,136.23371],[34.94463,136.23595]],[[35.47066,139.62711],[35.47076,139.63068]],[[34.97770,138.39956],[34.97762,138.40018]],[[34.98002,138.40765],[34.97798,138.40464],[34.97748,138.40283]],[[34.98861,138.41258],[34.98791,138.41138],[34.98566,138.40904]],[[34.98861,138.41258],[34.99044,138.41604],[34.99091,138.41789]],[[34.99315,138.42989],[34.99282,138.42733]],[[35.10069,138.84489],[35.10060,138.84507]],[[35.10056,138.84515],[35.09822,138.84957],[35.09660,138.85185]],[[35.02670,136.65496],[35.02892,136.65705],[35.03204,136.65845],[35.03254,136.65824],[35.03473,136.66119],[35.03507,136.66394],[35.03588,136.66574],[35.04034,136.67035],[35.04124,136.67177],[35.04336,136.67367],[35.04451,136.67531]],[[34.89117,138.28053],[34.89010,138.28026],[34.88794,138.28104],[34.88633,138.28053]],[[34.91088,138.28069],[34.91083,138.28069]],[[34.92958,138.30370],[34.93015,138.30444],[34.93041,138.30357],[34.93101,138.30308]],[[34.93101,138.30308],[34.93257,138.30297]],[[34.89299,138.28212],[34.89287,138.28210]],[[34.88166,138.27387],[34.88085,138.27320]],[[34.86538,138.25046],[34.86545,138.25048]],[[34.92066,138.28248],[34.92051,138.28245]],[[34.84903,138.24153],[34.84887,138.24137]],[[34.88594,138.28062],[34.88602,138.28061]],[[34.89372,138.28220],[34.89299,138.28212]],[[34.88166,138.27387],[34.88119,138.27557],[34.88329,138.27689],[34.88594,138.28062]],[[34.85214,138.24418],[34.84986,138.24266],[34.84903,138.24153]],[[34.92078,138.28350],[34.92066,138.28248]],[[34.88162,138.27372],[34.88046,138.27253]],[[34.92464,138.30026],[34.92484,138.29994]],[[34.92927,138.30295],[34.92958,138.30370]],[[34.89117,138.28053],[34.89284,138.28209]],[[34.92893,138.30279],[34.92834,138.30244]],[[34.94653,138.33094],[34.94599,138.33047]],[[34.94514,138.32978],[34.94488,138.33024]],[[34.93257,138.30297],[34.93324,138.30281],[34.93386,138.30358],[34.93442,138.30305],[34.93548,138.30302]],[[34.93548,138.30302],[34.93545,138.30315]],[[34.93664,138.30546],[34.93648,138.30492]],[[35.02885,138.48769],[35.03155,138.48928]],[[34.99261,138.43039],[34.99315,138.42989]],[[34.91800,137.20920],[34.91560,137.21229]],[[34.89837,137.24579],[34.89878,137.24363],[34.89961,137.24190]],[[34.92486,137.20178],[34.92523,137.20092]],[[34.95588,137.17595],[34.95519,137.17562]],[[34.92470,137.20204],[34.92430,137.20282]],[[34.92486,137.20178],[34.92470,137.20204]],[[34.89142,137.26051],[34.89134,137.26062]],[[34.89481,137.25362],[34.89469,137.25392]],[[34.93147,137.19586],[34.93121,137.19593]],[[34.90231,137.23688],[34.90216,137.23703]],[[34.94140,137.19378],[34.94217,137.19276]],[[34.89238,137.25919],[34.89176,137.25994]],[[34.94909,137.18350],[34.94993,137.18315],[34.95168,137.18138]],[[34.89998,137.24100],[34.89961,137.24190]],[[34.90321,137.23567],[34.90292,137.23608]],[[34.90339,137.23518],[34.90321,137.23567]],[[34.89134,137.26062],[34.89086,137.26130]],[[34.91560,137.21229],[34.91540,137.21244]],[[34.89142,137.26051],[34.89176,137.25994]],[[34.90292,137.23608],[34.90231,137.23688]],[[34.89238,137.25919],[34.89300,137.25842]],[[34.93532,137.19495],[34.93639,137.19534]],[[34.93532,137.19495],[34.93508,137.19498]],[[34.93714,137.19565],[34.93639,137.19534]],[[34.90148,137.23807],[34.90074,137.23950]],[[34.94217,137.19276],[34.94256,137.19221]],[[34.93996,137.19495],[34.93794,137.19578]],[[34.89086,137.26130],[34.88920,137.26299]],[[34.91837,137.20906],[34.91800,137.20920]],[[34.91540,137.21244],[34.91482,137.21304]],[[34.89300,137.25842],[34.89362,137.25745],[34.89394,137.25621]],[[34.90148,137.23807],[34.90216,137.23703]],[[34.95256,137.18186],[34.95317,137.18023]],[[34.94259,137.19155],[34.94256,137.19221]],[[34.93996,137.19495],[34.94140,137.19378]],[[34.93794,137.19578],[34.93714,137.19565]],[[34.93121,137.19593],[34.92958,137.19634],[34.92661,137.19877]],[[34.90074,137.23950],[34.89998,137.24100]],[[34.88920,137.26299],[34.88910,137.26308]],[[34.94809,137.18613],[34.94863,137.18439]],[[34.96463,137.13947],[34.96507,137.13776],[34.96495,137.13675]],[[34.96028,137.16213],[34.96093,137.16214]],[[34.96342,137.14150],[34.96318,137.14187]],[[34.96109,137.14595],[34.96066,137.14686]],[[34.95753,137.17054],[34.95647,137.17401]],[[34.96149,137.14507],[34.96189,137.14423]],[[34.95957,137.16390],[34.95956,137.16309]],[[34.96019,137.15791],[34.96018,137.15798]],[[34.96093,137.16214],[34.96164,137.16216]],[[34.95849,137.15131],[34.95871,137.15142]],[[34.96066,137.14686],[34.96016,137.14795]],[[34.96149,137.14507],[34.96109,137.14595]],[[34.95849,137.15131],[34.95731,137.15075]],[[34.95705,137.15611],[34.95847,137.15604]],[[34.96264,137.14299],[34.96318,137.14187]],[[34.95623,137.15614],[34.95640,137.15501]],[[34.96463,137.13947],[34.96342,137.14150]],[[34.96189,137.14423],[34.96264,137.14299]],[[34.93563,138.30403],[34.93578,138.30324],[34.93541,138.30374]],[[34.93648,138.30492],[34.93644,138.30485]],[[35.21141,139.06237],[35.21077,139.06190]],[[35.21068,139.06175],[35.21077,139.06190]],[[35.20343,139.04420],[35.20280,139.04573],[35.20231,139.04853],[35.20250,139.05089]],[[35.20614,139.05648],[35.20510,139.05516]],[[35.24615,139.12765],[35.24516,139.12678],[35.24294,139.12257],[35.24235,139.12198]],[[35.20375,139.03488],[35.20404,139.03577]],[[35.21068,139.06175],[35.20988,139.06142],[35.20987,139.06102]],[[34.96059,136.61379],[34.95875,136.61008]],[[34.82745,138.14184],[34.82690,138.14040]],[[34.94488,138.33024],[34.94335,138.32903],[34.94124,138.32451],[34.94120,138.32306],[34.94176,138.32298],[34.94195,138.32216],[34.94143,138.32067],[34.94092,138.32024]],[[35.05527,136.69015],[35.05684,136.68634],[35.05761,136.68189]],[[35.06316,136.69554],[35.06825,136.69651]],[[35.34680,139.48731],[35.34652,139.48797]],[[35.01506,138.47367],[35.01339,138.46897]],[[35.03756,137.01392],[35.03577,137.01503]],[[35.03756,137.01392],[35.03829,137.01307]],[[35.06222,136.97703],[35.06115,136.97873],[35.06102,136.98039]],[[34.99942,137.07543],[34.99916,137.07564]],[[35.11744,136.91356],[35.11631,136.91860]],[[35.12113,136.90783],[35.12018,136.90992]],[[35.11869,136.90605],[35.12005,136.90718]],[[35.53074,139.70116],[35.53193,139.70186]],[[35.15461,138.62084],[35.15473,138.62020]],[[35.14064,138.61289],[35.14070,138.61308]],[[35.15738,138.63590],[35.15765,138.63476],[35.15701,138.63306],[35.15660,138.63241],[35.15589,138.63218]],[[35.15686,138.67170],[35.15669,138.67126]],[[35.13392,138.61191],[35.13449,138.61224],[35.13556,138.61204]],[[35.15686,138.67170],[35.15645,138.67221]],[[35.15634,138.67077],[35.15667,138.67122]],[[35.12856,138.61245],[35.13038,138.61344]],[[35.15634,138.67077],[35.15653,138.66960]],[[35.13678,138.73807],[35.13798,138.72994],[35.13884,138.72679]],[[35.45442,139.60353],[35.45390,139.60322]],[[35.44664,139.57885],[35.44603,139.58147],[35.44548,139.58679]],[[35.06375,136.69340],[35.06316,136.69554]],[[35.03409,137.01584],[35.03185,137.01628],[35.03083,137.01705]],[[35.02403,137.02864],[35.02441,137.02651]],[[35.44632,139.57860],[35.44565,139.57814]],[[35.44450,139.57605],[35.44356,139.57565],[35.44164,139.57314],[35.44072,139.57259]],[[35.43483,139.56570],[35.43432,139.56527]],[[35.43646,139.56666],[35.43681,139.56726]],[[35.42657,139.56041],[35.42622,139.56021]],[[35.42438,139.55922],[35.42186,139.55759]],[[35.42767,139.56229],[35.42764,139.56211]],[[35.43432,139.56527],[35.43429,139.56524]],[[35.43429,139.56524],[35.43260,139.56439]],[[35.43260,139.56439],[35.43117,139.56332],[35.42881,139.56299]],[[34.83768,138.20458],[34.83738,138.20112],[34.83630,138.19894]],[[35.42775,139.56260],[35.42767,139.56229]],[[35.06095,136.69077],[35.06058,136.69162]],[[35.57504,139.73511],[35.57369,139.73409]],[[35.57514,139.73516],[35.57504,139.73511]],[[34.84062,137.32144],[34.84212,137.31936]],[[35.59722,139.73961],[35.59656,139.73942]],[[34.82690,138.14040],[34.82686,138.14020]],[[34.81672,138.12485],[34.81670,138.12526],[34.81708,138.12564]],[[34.81963,138.12649],[34.81981,138.12624]],[[35.42103,139.55382],[35.42085,139.55605]],[[35.42085,139.55605],[35.42084,139.55626]],[[35.42084,139.55626],[35.42085,139.55648]],[[35.42072,139.55314],[35.42089,139.55317]],[[35.41992,139.55031],[35.42019,139.55235]],[[34.99404,136.64350],[34.99416,136.64355]],[[34.97326,136.62647],[34.97259,136.62625]],[[34.98045,136.62912],[34.98143,136.62946]],[[34.95736,136.60823],[34.95722,136.60802]],[[34.96778,136.62414],[34.96794,136.62356]],[[34.91464,136.56089],[34.91458,136.56068]],[[35.01248,136.64926],[35.01384,136.64806]],[[34.95214,136.60378],[34.95193,136.60369]],[[34.91903,136.58007],[34.91907,136.58141],[34.91995,136.58168]],[[34.91995,136.58168],[34.92175,136.58206]],[[34.93427,136.59576],[34.93174,136.59342],[34.93050,136.59146],[34.92870,136.59071],[34.92888,136.58954],[34.92713,136.58817],[34.92615,136.58664]],[[34.96778,136.62414],[34.97259,136.62625]],[[35.01112,136.65021],[35.01040,136.65077]],[[34.91790,136.58028],[34.91603,136.57769],[34.91506,136.57450],[34.91508,136.57381]],[[35.01384,136.64806],[35.01683,136.65003]],[[34.99416,136.64355],[34.99718,136.64492],[34.99901,136.64691]],[[35.01155,136.64983],[35.01248,136.64926]],[[34.98592,136.63437],[34.98697,136.63408],[34.98797,136.63518],[34.99182,136.64092],[34.99402,136.64350]],[[34.92615,136.58664],[34.92360,136.58322]],[[34.95467,136.60536],[34.95214,136.60378]],[[34.95193,136.60369],[34.94873,136.60220],[34.94603,136.60200],[34.94089,136.60058],[34.93826,136.59883],[34.93694,136.59838]],[[34.91848,136.57999],[34.91790,136.58028]],[[35.00549,136.65139],[35.00490,136.65066],[35.00352,136.64988]],[[35.01112,136.65021],[35.01155,136.64983]],[[34.96785,136.62336],[34.96767,136.62293]],[[34.97326,136.62647],[34.97705,136.62816],[34.97930,136.62871]],[[34.95722,136.60802],[34.95703,136.60733],[34.95467,136.60536]],[[34.82686,138.14020],[34.82669,138.13843],[34.82690,138.13596]],[[35.41124,139.54186],[35.41142,139.54196]],[[35.07142,138.54137],[35.07012,138.54124],[35.06855,138.53987]],[[35.06855,138.53987],[35.06678,138.53901],[35.06538,138.53921],[35.06464,138.53837]],[[35.12856,138.61245],[35.12854,138.61250]],[[34.99631,138.43892],[34.99777,138.44118],[35.00006,138.44296]],[[35.01741,138.48045],[35.01605,138.47640]],[[34.99421,138.43569],[34.99383,138.43443]],[[34.99470,138.43678],[34.99450,138.43642]],[[34.99222,138.43072],[34.99264,138.43180]],[[34.99341,138.43340],[34.99383,138.43443]],[[34.99631,138.43892],[34.99470,138.43678]],[[34.99264,138.43180],[34.99341,138.43340]],[[34.99443,138.43630],[34.99421,138.43569]],[[34.99450,138.43642],[34.99443,138.43630]],[[35.01339,138.46897],[35.01332,138.46879]],[[35.01051,138.45974],[35.01110,138.45850],[35.01104,138.45763],[35.00987,138.45636],[35.00607,138.45339]],[[35.01605,138.47640],[35.01506,138.47367]],[[35.06375,136.69340],[35.06173,136.69162]],[[35.17936,139.01365],[35.17805,139.01217],[35.17735,139.01081]],[[34.89785,136.54890],[34.89595,136.54887],[34.89517,136.54843]],[[34.87363,136.50351],[34.87471,136.50458]],[[34.89906,136.54817],[34.89927,136.54805]],[[34.89906,136.54817],[34.89893,136.54849]],[[34.89306,136.54320],[34.89292,136.54428]],[[34.89496,136.54808],[34.89501,136.54816]],[[34.89501,136.54816],[34.89517,136.54843]],[[34.87499,136.50511],[34.87471,136.50458]],[[34.90892,136.55007],[34.90562,136.54853]],[[34.88493,136.52570],[34.88575,136.52621]],[[34.90287,136.54762],[34.90167,136.54755]],[[34.88331,136.52469],[34.88493,136.52570]],[[34.91129,136.55168],[34.91136,136.55235]],[[34.87532,136.50574],[34.87499,136.50511]],[[34.89927,136.54805],[34.90167,136.54755]],[[34.88216,136.52402],[34.88331,136.52469]],[[34.87924,136.52134],[34.87906,136.52101]],[[34.90287,136.54762],[34.90562,136.54853]],[[34.87599,136.50828],[34.87570,136.51107],[34.87594,136.51192]],[[34.88044,136.52234],[34.87924,136.52134]],[[34.89203,136.54197],[34.89069,136.54101]],[[34.88575,136.52621],[34.88735,136.52732]],[[34.89496,136.54808],[34.89474,136.54756]],[[34.89785,136.54890],[34.89893,136.54849]],[[34.89306,136.54320],[34.89303,136.54318]],[[34.87599,136.50828],[34.87532,136.50574]],[[34.88216,136.52402],[34.88044,136.52234]],[[34.85057,136.40507],[34.85163,136.40110],[34.85248,136.39204],[34.85299,136.38970]],[[35.17735,139.01081],[35.17527,139.00893],[35.17406,139.00895],[35.17296,139.00826]],[[35.01494,137.03760],[35.01418,137.03784]],[[35.01418,137.03784],[35.01414,137.03785]],[[35.01076,137.03982],[35.00995,137.04077]],[[35.31662,139.32101],[35.31633,139.32081]],[[34.81792,138.11064],[34.81794,138.11080]],[[34.81790,138.11045],[34.81792,138.11064]],[[34.81794,138.11080],[34.81824,138.11208]],[[34.81931,138.10762],[34.81921,138.10754]],[[34.81878,138.10909],[34.81790,138.11045]],[[34.81926,138.10769],[34.81878,138.10909]],[[35.30512,139.28854],[35.30466,139.28934]],[[35.30522,139.28837],[35.30512,139.28854]],[[35.29387,139.24602],[35.29482,139.24708],[35.29548,139.24867]],[[35.12291,138.92994],[35.12261,138.92922]],[[34.85336,136.41110],[34.85502,136.41313],[34.85543,136.41406]],[[34.85802,136.42648],[34.85848,136.42932]],[[34.89110,136.33723],[34.89009,136.34010]],[[34.85733,136.42219],[34.85747,136.42275]],[[34.88748,136.35595],[34.88890,136.35332]],[[34.88890,136.35332],[34.88916,136.35040]],[[34.86177,136.37409],[34.86050,136.37419],[34.86031,136.37460]],[[34.86403,136.37431],[34.86317,136.37382],[34.86207,136.37394]],[[34.89333,136.33723],[34.89248,136.33766],[34.89253,136.33715],[34.89191,136.33730]],[[34.85202,136.40770],[34.85222,136.40892],[34.85336,136.41110]],[[34.86022,136.37480],[34.85886,136.37446]],[[34.85568,136.41521],[34.85543,136.41406]],[[34.89401,136.33680],[34.89333,136.33723]],[[34.85223,136.40702],[34.85207,136.40742]],[[34.85607,136.41737],[34.85633,136.41863]],[[34.85207,136.40742],[34.85202,136.40770]],[[34.86031,136.37460],[34.86022,136.37480]],[[34.88921,136.35011],[34.88916,136.35040]],[[34.85327,136.38920],[34.85573,136.38318],[34.85607,136.38108]],[[34.88332,136.35952],[34.88236,136.36003],[34.88172,136.35999],[34.88030,136.36114],[34.87872,136.36157]],[[34.87567,136.36255],[34.87297,136.36336],[34.87265,136.36400],[34.87167,136.36466]],[[34.88748,136.35595],[34.88688,136.35668],[34.88484,136.35742],[34.88412,136.35906],[34.88332,136.35952]],[[34.87614,136.36250],[34.87567,136.36255]],[[34.85785,136.42496],[34.85798,136.42546]],[[34.85568,136.41521],[34.85572,136.41545]],[[34.85785,136.42496],[34.85776,136.42378]],[[34.85798,136.42546],[34.85802,136.42648]],[[34.85848,136.42932],[34.85791,136.43032]],[[34.85776,136.42378],[34.85760,136.42309]],[[34.85870,136.48347],[34.85818,136.48263]],[[34.85633,136.41863],[34.85733,136.42219]],[[34.87872,136.36157],[34.87800,136.36230],[34.87614,136.36250]],[[34.87167,136.36466],[34.86943,136.36484]],[[35.49347,139.66961],[35.49413,139.67115]],[[35.21369,139.06487],[35.21379,139.06597],[35.21444,139.06634]],[[34.84212,137.31936],[34.84229,137.31889]],[[34.84229,137.31889],[34.84297,137.31743],[34.84357,137.31702]],[[35.34634,139.48683],[35.34680,139.48731]],[[34.98566,138.40904],[34.98507,138.40882]],[[35.59426,139.73823],[35.59131,139.73641]],[[35.57763,139.73621],[35.57754,139.73616]],[[35.58138,139.73681],[35.58208,139.73645]],[[34.93907,138.31724],[34.94029,138.31868],[34.94035,138.31925],[34.94010,138.31946]],[[35.29206,139.24163],[35.29124,139.24025],[35.29051,139.23801]],[[35.25923,139.17699],[35.25974,139.17839]],[[35.26031,139.17817],[35.25974,139.17839]],[[35.24714,139.13246],[35.24734,139.13192],[35.24680,139.13047],[35.24662,139.12893]],[[35.24714,139.13246],[35.24692,139.13270]],[[35.26240,139.17929],[35.26140,139.17822],[35.26067,139.17814]],[[34.95863,137.15693],[34.96015,137.15734]],[[35.23498,139.11386],[35.23488,139.11393]],[[35.02363,138.48585],[35.01859,138.48559]],[[34.96722,136.18452],[34.96659,136.18365]],[[34.96677,136.18867],[34.96725,136.18635]],[[35.33168,139.36082],[35.33175,139.36095]],[[34.86603,136.48900],[34.86600,136.48913]],[[34.90945,136.55052],[34.90892,136.55007]],[[34.81981,138.12624],[34.81989,138.12613]],[[34.96726,136.18617],[34.96725,136.18635]],[[34.81842,138.12582],[34.81733,138.12582],[34.81729,138.12537]],[[34.81960,138.12652],[34.81850,138.12580]],[[35.52341,139.69224],[35.52345,139.69191]],[[34.98233,136.12838],[34.98207,136.12800]],[[34.98233,136.12852],[34.98233,136.12838]],[[35.02998,137.01773],[35.03066,137.01718]],[[35.02169,137.03052],[35.02247,137.03021]],[[35.02389,137.02877],[35.02247,137.03021]],[[35.33162,139.36264],[35.33177,139.36374]],[[35.01364,137.03910],[35.01085,137.03979]],[[35.12197,138.61075],[35.12388,138.61320]],[[35.11770,138.60156],[35.11915,138.60155],[35.11981,138.60363],[35.12016,138.60601]],[[35.12179,138.61051],[35.12197,138.61075]],[[35.12402,138.61353],[35.12801,138.61321]],[[35.33001,139.35021],[35.32911,139.34532]],[[35.41142,139.54196],[35.41252,139.54182]],[[35.41252,139.54182],[35.41402,139.54226]],[[35.14183,138.61408],[35.14211,138.61473],[35.14277,138.61502],[35.14381,138.61631],[35.14383,138.61721]],[[35.14180,138.61377],[35.14183,138.61408]],[[35.43633,139.56670],[35.43483,139.56570]],[[35.42881,139.56299],[35.42813,139.56320],[35.42775,139.56260]],[[35.42669,139.56050],[35.42657,139.56041]],[[35.42622,139.56021],[35.42481,139.55975],[35.42438,139.55922]],[[35.42085,139.55648],[35.42122,139.55719]],[[35.41494,139.54302],[35.41402,139.54226]],[[35.43681,139.56726],[35.43703,139.56889]],[[35.43703,139.56889],[35.43708,139.56925]],[[35.45393,139.60315],[35.45331,139.60295]],[[35.33225,139.37166],[35.33231,139.37233]],[[35.42019,139.55235],[35.42072,139.55314]],[[35.00083,138.44395],[35.00006,138.44296]],[[35.13143,138.94383],[35.13190,138.94399],[35.13251,138.94496]],[[35.33168,139.36082],[35.33143,139.36006]],[[35.33001,139.35021],[35.33003,139.35034]],[[34.92076,136.31000],[34.92026,136.30944]],[[35.18379,139.01568],[35.18272,139.01480]],[[35.20292,139.03317],[35.20338,139.03350]],[[35.20352,139.03386],[35.20377,139.03412],[35.20375,139.03488]],[[35.16182,139.00007],[35.16072,138.99861],[35.15932,138.99753],[35.15785,138.99691]],[[35.20342,139.03360],[35.20338,139.03370]],[[35.20404,139.03577],[35.20427,139.03766],[35.20390,139.03836],[35.20406,139.03920],[35.20378,139.04072],[35.20386,139.04189],[35.20412,139.04205],[35.20366,139.04279],[35.20376,139.04380],[35.20343,139.04420]],[[35.19204,139.02662],[35.19151,139.02742]],[[34.98483,135.92940],[34.98514,135.93011]],[[34.95555,136.21511],[34.95560,136.21502]],[[34.83236,138.15727],[34.83291,138.15866],[34.83345,138.16151]],[[34.83144,138.15590],[34.83236,138.15727]],[[34.95208,136.22766],[34.95216,136.22747]],[[34.93766,136.26417],[34.93809,136.26545]],[[34.94079,136.26851],[34.94096,136.26926]],[[34.93766,136.26417],[34.93772,136.26304]],[[34.94147,136.27150],[34.94150,136.27079]],[[34.94147,136.27150],[34.94127,136.27338]],[[34.92868,136.29860],[34.92829,136.29893]],[[34.92829,136.29893],[34.92806,136.29954]],[[34.86197,136.37399],[34.86177,136.37409]],[[34.86207,136.37394],[34.86197,136.37399]],[[35.00014,135.95078],[35.00078,135.95190]],[[35.09979,138.86683],[35.09922,138.86914],[35.09929,138.87076],[35.09967,138.87264],[35.10060,138.87428]],[[35.15653,138.66960],[35.15692,138.66831],[35.15744,138.66239]],[[35.15685,138.65608],[35.15687,138.65635]],[[35.57628,139.73570],[35.57514,139.73516]],[[35.01842,136.05055],[35.01679,136.05121]],[[35.02035,136.04746],[35.01996,136.04789]],[[35.00364,135.95200],[35.00404,135.95222]],[[35.00364,135.95200],[35.00330,135.95204]],[[34.99296,135.94396],[34.99310,135.94405]],[[34.97589,135.91344],[34.97338,135.91093]],[[34.97338,135.91093],[34.97291,135.91089]],[[35.15473,138.62020],[35.15234,138.61865]],[[35.13641,138.61147],[35.13566,138.61159]],[[35.14180,138.61377],[35.14180,138.61361]],[[35.14180,138.61361],[35.14092,138.61372],[35.14070,138.61308]],[[34.92051,138.28245],[34.91979,138.28254]],[[35.43936,139.57131],[35.43796,139.56956]],[[35.46515,139.61134],[35.46488,139.61085]],[[35.09358,138.55023],[35.09125,138.54852]],[[35.08159,138.54662],[35.07785,138.54542],[35.07669,138.54408],[35.07612,138.54399],[35.07369,138.54211],[35.07230,138.54157]],[[35.06344,138.53701],[35.06464,138.53837]],[[35.06549,138.53248],[35.06528,138.53371],[35.06490,138.53422]],[[35.06279,138.53118],[35.06464,138.53154],[35.06549,138.53248]],[[35.05890,138.53260],[35.05838,138.53147],[35.05675,138.53023],[35.05553,138.53044]],[[34.98507,138.40882],[34.98478,138.40885]],[[34.97897,137.11438],[34.97620,137.11727],[34.97542,137.11796],[34.97520,137.11783]],[[34.98444,137.10731],[34.98282,137.10956]],[[34.98282,137.10956],[34.98019,137.11303]],[[34.98583,137.10515],[34.98444,137.10731]],[[34.99449,135.79962],[34.99501,135.79845],[34.99728,135.79649],[34.99925,135.79354]],[[34.82953,137.33557],[34.82948,137.33567]],[[35.44548,139.58679],[35.44540,139.58679]],[[34.83625,138.19867],[34.83597,138.19735]],[[34.83049,138.15405],[34.83144,138.15590]],[[34.80387,138.08009],[34.80409,138.08125],[34.80707,138.08773],[34.80858,138.08837],[34.81153,138.09152],[34.81313,138.09221],[34.81612,138.09729],[34.81761,138.09787],[34.81796,138.09834],[34.81861,138.10016],[34.81899,138.10269],[34.81888,138.10479],[34.81830,138.10704],[34.81887,138.10733]],[[35.32911,139.34532],[35.32818,139.34090]],[[34.80477,138.07679],[34.80455,138.07559],[34.80399,138.07501],[34.80208,138.07621]],[[34.80477,138.07679],[34.80432,138.07668],[34.80328,138.07732],[34.80359,138.07816],[34.80345,138.07925],[34.80387,138.08009]],[[34.81599,138.11742],[34.81572,138.11982],[34.81477,138.12165]],[[35.00208,137.06825],[35.00100,137.07273],[34.99993,137.07496]],[[35.15010,138.98703],[35.15027,138.98836],[35.15086,138.98923],[35.15099,138.99027]],[[35.15720,138.65928],[35.15701,138.65836]],[[35.15743,138.66126],[35.15739,138.66051]],[[34.99916,137.07564],[34.99663,137.07830]],[[34.99657,137.07840],[34.99516,137.08076]],[[35.11106,138.57311],[35.11100,138.57303]],[[35.11165,138.57396],[35.11106,138.57311]],[[35.05622,136.99148],[35.05817,136.98918],[35.06110,136.98348]],[[35.05614,136.99159],[35.05622,136.99148]],[[35.46921,139.61609],[35.46905,139.61566]],[[34.86357,136.48577],[34.86638,136.48812]],[[34.86328,136.48567],[34.86357,136.48577]],[[34.95629,137.17463],[34.95647,137.17401]],[[34.85870,136.48347],[34.86023,136.48394]],[[34.86638,136.48812],[34.86603,136.48900]],[[34.88659,136.52872],[34.88735,136.52732]],[[34.89303,136.54318],[34.89289,136.54309]],[[34.89289,136.54309],[34.89203,136.54197]],[[34.89292,136.54428],[34.89290,136.54474]],[[34.89394,136.54648],[34.89372,136.54545],[34.89290,136.54474]],[[34.89474,136.54756],[34.89431,136.54681]],[[34.91458,136.56068],[34.91456,136.56012]],[[34.91456,136.56012],[34.91420,136.55764],[34.91190,136.55377],[34.91136,136.55235]],[[34.95869,136.60998],[34.95736,136.60823]],[[34.95875,136.61008],[34.95869,136.60998]],[[34.96451,136.62122],[34.96445,136.62119]],[[34.96222,136.61972],[34.96117,136.61864],[34.96038,136.61630],[34.96059,136.61379]],[[34.96767,136.62293],[34.96651,136.62213]],[[34.96555,136.62163],[34.96451,136.62122]],[[34.99901,136.64691],[34.99905,136.64696]],[[35.00343,136.64985],[35.00182,136.64896],[35.00054,136.64746],[35.00000,136.64798],[34.99905,136.64696]],[[35.00349,136.64988],[35.00343,136.64985]],[[35.00673,136.65174],[35.00754,136.65092],[35.01040,136.65077]],[[35.04613,136.67696],[35.04681,136.67758],[35.05761,136.68189]],[[35.06044,136.69193],[35.05683,136.69022],[35.05558,136.69024]],[[35.06124,136.69132],[35.06173,136.69162]],[[35.12113,136.90783],[35.12077,136.90748]],[[35.11411,136.92851],[35.11427,136.92829]],[[35.10087,136.93311],[35.10530,136.93303],[35.10729,136.93387],[35.10902,136.93259],[35.11205,136.93132],[35.11411,136.92851]],[[35.05354,136.99509],[35.05410,136.99389],[35.05614,136.99159]],[[35.02403,137.02864],[35.02389,137.02877]],[[35.01531,137.03745],[35.01564,137.03696]],[[35.01531,137.03745],[35.01494,137.03760]],[[35.01593,137.03688],[35.01531,137.03745]],[[35.00995,137.04077],[35.00925,137.04040]],[[35.00391,137.05362],[35.00356,137.05433]],[[34.96018,137.15798],[34.96018,137.15836]],[[34.96025,137.15737],[34.96019,137.15791]],[[34.96028,137.16213],[34.96030,137.16318]],[[34.95956,137.16309],[34.96030,137.16318]],[[34.95965,137.16720],[34.95862,137.16719]],[[34.95588,137.17595],[34.95629,137.17463]],[[34.95168,137.18138],[34.95256,137.18186]],[[34.94809,137.18613],[34.94733,137.18688]],[[34.93508,137.19498],[34.93451,137.19529]],[[34.95965,137.16720],[34.95957,137.16390]],[[34.96193,137.15843],[34.96018,137.15840]],[[34.89837,137.24579],[34.89827,137.24607]],[[34.84357,137.31702],[34.84414,137.31802]],[[34.99440,135.85276],[34.99450,135.85389],[34.99411,135.85546]],[[35.55576,139.72034],[35.55706,139.72124]],[[35.55803,139.72236],[35.55571,139.72047]],[[35.20975,139.06044],[35.20960,139.06078]],[[34.95519,137.17562],[34.95317,137.18023]],[[34.88910,137.26308],[34.88814,137.26431]],[[34.95682,137.15317],[34.95687,137.15293]],[[34.89469,137.25392],[34.89394,137.25621]],[[35.32818,139.34090],[35.32727,139.33723]],[[35.01807,135.96083],[35.01774,135.96152]],[[35.19368,139.02673],[35.19256,139.02635]],[[35.12391,138.61326],[35.12402,138.61353]],[[35.12388,138.61320],[35.12391,138.61326]],[[35.05354,136.99509],[35.05045,137.00005],[35.04625,137.00491]],[[34.99352,135.80437],[34.99355,135.80437]],[[34.81908,138.10749],[34.81898,138.10749]],[[34.81914,138.10753],[34.81908,138.10749]],[[34.81921,138.10754],[34.81917,138.10750]],[[34.81917,138.10750],[34.81914,138.10753]],[[34.89287,138.28210],[34.89284,138.28209]],[[34.90201,138.28455],[34.90217,138.28457]],[[34.90217,138.28457],[34.90250,138.28440]],[[34.91083,138.28069],[34.91082,138.28039]],[[34.92481,138.30062],[34.92464,138.30026]],[[34.92481,138.30062],[34.92643,138.30200]],[[34.92834,138.30244],[34.92794,138.30238]],[[34.97246,138.37766],[34.97185,138.37728]],[[34.97164,138.37969],[34.97246,138.37766]],[[34.97759,138.40083],[34.97757,138.40142]],[[34.99182,138.41976],[34.99180,138.42107],[34.99267,138.42398]],[[34.99222,138.43072],[34.99261,138.43039]],[[35.00083,138.44395],[35.00102,138.44381]],[[35.07230,138.54157],[35.07203,138.54091]],[[35.13392,138.61191],[35.13266,138.61294],[35.13164,138.61285],[35.13038,138.61344]],[[35.15721,138.65933],[35.15720,138.65928]],[[35.13669,138.73861],[35.13678,138.73807]],[[35.13424,138.74988],[35.13605,138.74173]],[[35.13659,138.95329],[35.13610,138.95504],[35.13769,138.95798],[35.13763,138.95951]],[[35.13725,138.96119],[35.13760,138.96020]],[[35.13816,138.96299],[35.13948,138.96625],[35.14016,138.96696],[35.14117,138.96901],[35.14447,138.97265]],[[35.14960,138.98356],[35.15027,138.98458],[35.15028,138.98580],[35.15054,138.98601],[35.15013,138.98647],[35.15010,138.98703]],[[35.16182,139.00007],[35.16206,139.00093]],[[35.18205,139.01401],[35.18276,139.01445],[35.18272,139.01480]],[[35.19373,139.02677],[35.19368,139.02673]],[[35.20292,139.03317],[35.20115,139.03154],[35.20095,139.03088]],[[35.21782,139.06969],[35.21709,139.06766]],[[35.23498,139.11386],[35.23697,139.11543],[35.23820,139.11756]],[[35.25264,139.16507],[35.25196,139.16592]],[[35.30466,139.28934],[35.30383,139.29084]],[[35.31586,139.32049],[35.31281,139.31847]],[[35.31921,139.32346],[35.31704,139.32133]],[[35.32704,139.33613],[35.32731,139.33708]],[[35.33143,139.36006],[35.33135,139.35927]],[[35.33204,139.36943],[35.33225,139.37166]],[[35.52387,139.69240],[35.52341,139.69224]],[[35.62247,139.73974],[35.61814,139.74395]],[[35.03577,137.01503],[35.03560,137.01511]],[[35.03560,137.01511],[35.03409,137.01584]],[[35.18712,139.01922],[35.18708,139.01919]],[[35.18708,139.01919],[35.18615,139.01850],[35.18611,139.01764],[35.18565,139.01732],[35.18562,139.01647]],[[34.99129,135.89197],[34.99851,135.89195]],[[34.84028,138.21329],[34.84119,138.21569]],[[35.20987,139.06102],[35.20987,139.06087]],[[35.21194,139.06257],[35.21141,139.06237]],[[34.85572,136.41545],[34.85607,136.41737]],[[35.49171,139.66393],[35.49176,139.66388]],[[34.85283,138.24464],[34.85274,138.24458]],[[34.85274,138.24458],[34.85214,138.24418]],[[34.91741,138.28203],[34.91670,138.28240],[34.91566,138.28158],[34.91374,138.28160],[34.91088,138.28069]],[[34.92927,138.30295],[34.92893,138.30279]],[[34.92484,138.29994],[34.92507,138.29973]],[[34.93541,138.30374],[34.93545,138.30315]],[[34.93644,138.30485],[34.93563,138.30403]],[[35.13647,138.95232],[35.13659,138.95329]],[[35.13251,138.94496],[35.13412,138.94903],[35.13647,138.95232]],[[35.10060,138.84507],[35.10056,138.84515]],[[35.01332,138.46879],[35.01207,138.46486],[35.01091,138.46262],[35.01051,138.45974]],[[34.98007,135.90201],[34.98052,135.90196]],[[34.97971,135.90204],[34.98007,135.90201]],[[34.97944,135.90207],[34.97971,135.90204]],[[34.97925,135.90208],[34.97944,135.90207]],[[35.00075,135.88928],[35.00077,135.88933]],[[35.00074,135.88925],[35.00075,135.88928]],[[35.01998,136.04810],[35.01937,136.04935]],[[35.01996,136.04789],[35.01998,136.04810]],[[35.59656,139.73942],[35.59552,139.73903]],[[34.80208,138.07621],[34.80201,138.07620]],[[34.80201,138.07620],[34.80043,138.07554],[34.79942,138.07461],[34.79882,138.07479]],[[34.98550,135.89803],[34.98713,135.89746]],[[34.98052,135.90196],[34.98410,135.90079],[34.98550,135.89803]],[[34.97597,135.91352],[34.97589,135.91344]],[[34.97633,135.91388],[34.97597,135.91352]],[[35.33134,139.35918],[35.33003,139.35034]],[[35.33135,139.35927],[35.33134,139.35918]],[[35.52570,139.69574],[35.52567,139.69568]],[[34.97979,135.92001],[34.97976,135.92001]],[[34.97982,135.92001],[34.97979,135.92001]],[[35.21444,139.06634],[35.21473,139.06569],[35.21543,139.06591]],[[35.21709,139.06766],[35.21706,139.06724],[35.21667,139.06698]],[[35.01355,135.95713],[35.01807,135.96083]],[[35.49413,139.67115],[35.49446,139.67182]],[[35.49684,139.67457],[35.50006,139.67573]],[[35.49477,139.67237],[35.49513,139.67307]],[[35.49513,139.67307],[35.49587,139.67411]],[[35.49446,139.67182],[35.49477,139.67237]],[[34.95571,136.21494],[34.95579,136.21495]],[[34.95579,136.21495],[34.95574,136.21488]],[[34.95560,136.21502],[34.95571,136.21494]],[[35.00277,135.95197],[35.00283,135.95196]],[[35.15696,138.64591],[35.15683,138.64346],[35.15766,138.64042]],[[35.15695,138.64599],[35.15696,138.64591]],[[34.99931,135.79360],[34.99936,135.79368]],[[35.00404,135.87710],[35.00387,135.87764]],[[34.99120,135.83128],[34.99127,135.83090]],[[34.99438,135.85265],[34.99440,135.85276]],[[34.99925,135.79354],[34.99931,135.79360]],[[34.99447,135.79975],[34.99449,135.79962]],[[34.99431,135.80060],[34.99447,135.79975]],[[34.99399,135.80229],[34.99430,135.80065]],[[34.99379,135.80325],[34.99399,135.80229]],[[34.99355,135.80437],[34.99379,135.80325]],[[35.00330,135.95204],[35.00316,135.95244]],[[34.99808,135.94833],[34.99794,135.94822]],[[34.99794,135.94822],[34.99788,135.94816]],[[34.99584,135.94601],[34.99565,135.94488]],[[34.99060,135.94161],[34.99015,135.94129]],[[34.99015,135.94129],[34.98940,135.94056]],[[34.98774,135.93841],[34.98810,135.93887]],[[35.01348,135.95712],[35.01355,135.95713]],[[35.13567,138.61199],[35.13699,138.61133],[35.14064,138.61289]],[[35.15713,138.64824],[35.15695,138.64599]],[[35.15713,138.64834],[35.15713,138.64824]],[[35.15785,138.99691],[35.15750,138.99598],[35.15690,138.99591]],[[34.85711,136.43731],[34.85718,136.43609]],[[35.43796,139.56956],[35.43773,139.56949]],[[35.43773,139.56949],[35.43727,139.56931]],[[35.44072,139.57259],[35.43981,139.57235],[35.43936,139.57131]],[[35.29551,139.24874],[35.29533,139.25024]],[[35.29548,139.24867],[35.29551,139.24874]],[[35.12015,138.60608],[35.12071,138.60916],[35.12179,138.61051]],[[35.12016,138.60601],[35.12015,138.60608]],[[35.34778,139.46713],[35.34748,139.46846]],[[35.18799,139.02088],[35.18774,139.01975],[35.18712,139.01922]],[[35.46285,139.60867],[35.46140,139.60786]],[[35.46140,139.60786],[35.45966,139.60663]],[[34.95567,136.21481],[34.95560,136.21469]],[[34.95574,136.21488],[34.95567,136.21481]],[[35.01645,135.96985],[35.01649,135.96990]],[[35.01732,135.96667],[35.01708,135.96774]],[[35.01708,135.96774],[35.01697,135.96812]],[[35.01705,135.96362],[35.01689,135.96525]],[[35.43727,139.56931],[35.43708,139.56925]],[[34.87322,136.50342],[34.87357,136.50348]],[[34.87357,136.50348],[34.87363,136.50351]],[[34.93694,136.59838],[34.93677,136.59842]],[[35.01733,135.96664],[35.01795,135.96681]],[[35.01725,135.96658],[35.01733,135.96664]],[[34.91903,136.58007],[34.91848,136.58000]],[[35.52320,139.69131],[35.52310,139.69115]],[[35.52310,139.69115],[35.52305,139.69107]],[[35.52345,139.69191],[35.52350,139.69175]],[[35.51498,139.68148],[35.51564,139.68205]],[[35.14892,138.98252],[35.14711,138.97904]],[[35.14711,138.97904],[35.14687,138.97850]],[[35.24024,139.12010],[35.23906,139.11869]],[[35.24692,139.14023],[35.24696,139.14036]],[[35.24683,139.14012],[35.24692,139.14023]],[[34.89740,136.33544],[34.89580,136.33567],[34.89491,136.33622]],[[34.91185,136.32230],[34.91205,136.32227]],[[34.91205,136.32227],[34.91215,136.32224]],[[34.93382,136.28636],[34.93404,136.28610]],[[34.93363,136.28658],[34.93382,136.28636]],[[34.93470,136.28040],[34.93513,136.27988]],[[34.93513,136.27988],[34.93521,136.27985]],[[34.88946,136.34692],[34.88961,136.34794],[34.88921,136.35011]],[[34.97099,136.17094],[34.97082,136.17141]],[[34.97061,136.17183],[34.97055,136.17194]],[[34.97944,136.14323],[34.98101,136.13835]],[[34.98101,136.13835],[34.98131,136.13740]],[[34.86970,136.36967],[34.86969,136.37014],[34.86939,136.37018]],[[35.55801,139.72193],[35.55948,139.72304]],[[35.55891,139.72301],[35.55803,139.72236]],[[35.55948,139.72304],[35.56005,139.72369]],[[35.56022,139.72395],[35.55979,139.72368]],[[34.98585,137.10512],[34.98583,137.10515]],[[34.98587,137.10508],[34.98585,137.10512]],[[35.59552,139.73903],[35.59426,139.73823]],[[35.57369,139.73409],[35.57356,139.73391]],[[34.99993,137.07496],[34.99942,137.07543]],[[35.61676,139.74450],[35.61467,139.74410]],[[35.61679,139.74451],[35.61676,139.74450]],[[35.61814,139.74395],[35.61806,139.74400]],[[35.61806,139.74400],[35.61706,139.74453]],[[35.61467,139.74410],[35.61065,139.74415]],[[35.60748,139.74411],[35.60682,139.74403]],[[35.61065,139.74415],[35.60748,139.74411]],[[35.10126,138.84369],[35.10069,138.84489]],[[34.96445,136.62119],[34.96222,136.61972]],[[35.52567,139.69568],[35.52387,139.69240]],[[35.00352,136.64988],[35.00349,136.64988]],[[34.99402,136.64350],[34.99404,136.64350]],[[35.55706,139.72124],[35.55801,139.72193]],[[35.55962,139.72351],[35.55891,139.72301]],[[34.85112,136.40598],[34.85057,136.40507]],[[35.53470,139.70634],[35.53546,139.70786]],[[34.94068,136.26822],[34.94079,136.26851]],[[35.24232,139.12196],[35.24024,139.12010]],[[35.24235,139.12198],[35.24232,139.12196]],[[35.24662,139.12893],[35.24618,139.12771]],[[35.24618,139.12771],[35.24615,139.12765]],[[34.89006,136.34023],[34.88987,136.34074]],[[34.89009,136.34010],[34.89006,136.34023]],[[34.89180,136.33747],[34.89205,136.33749],[34.89191,136.33730]],[[34.89180,136.33747],[34.89140,136.33762],[34.89110,136.33723]],[[34.89491,136.33622],[34.89401,136.33680]],[[34.88987,136.34074],[34.88982,136.34076]],[[34.87804,136.51991],[34.87852,136.52020]],[[35.06095,136.69077],[35.06124,136.69132]],[[35.06058,136.69162],[35.06044,136.69193]],[[35.04580,137.00544],[35.04625,137.00491]],[[35.01368,137.03906],[35.01364,137.03910]],[[35.01414,137.03785],[35.01418,137.03832],[35.01368,137.03906]],[[34.99663,137.07830],[34.99657,137.07840]],[[35.31281,139.31847],[35.31273,139.31850]],[[35.52146,139.68867],[35.52305,139.69107]],[[35.51564,139.68205],[35.51634,139.68286]],[[35.51940,139.68627],[35.51958,139.68647]],[[35.51958,139.68647],[35.51963,139.68654]],[[35.19253,139.02635],[35.19223,139.02639]],[[35.19256,139.02635],[35.19253,139.02635]],[[34.97053,136.17196],[34.97050,136.17202]],[[34.97055,136.17194],[34.97053,136.17196]],[[35.20338,139.03350],[35.20342,139.03360]],[[35.15627,138.67473],[35.15672,138.67508]],[[34.99417,136.08701],[34.99421,136.08688]],[[34.99421,136.08688],[34.99426,136.08675]],[[34.99430,135.80065],[34.99431,135.80060]],[[34.81960,138.12652],[34.81963,138.12649]],[[34.81603,138.11723],[34.81606,138.11733]],[[34.81930,138.10763],[34.81926,138.10769]],[[34.81931,138.10762],[34.81930,138.10763]],[[34.92643,138.30200],[34.92794,138.30238]],[[35.09660,138.85185],[35.09465,138.85503]],[[34.81850,138.12580],[34.81842,138.12582]],[[35.09402,138.55043],[35.09361,138.55024]],[[35.09581,138.55133],[35.09447,138.55060]],[[35.09121,138.54849],[35.08719,138.54809],[35.08470,138.54696]],[[35.09125,138.54852],[35.09121,138.54849]],[[35.08466,138.54696],[35.08288,138.54676]],[[35.08208,138.54663],[35.08159,138.54662]],[[35.08209,138.54663],[35.08208,138.54663]],[[35.08286,138.54676],[35.08209,138.54663]],[[35.08288,138.54676],[35.08286,138.54676]],[[35.10947,138.57060],[35.10713,138.56670]],[[35.13556,138.61204],[35.13567,138.61199]],[[35.13566,138.61159],[35.13556,138.61158]],[[35.13536,138.61162],[35.13529,138.61163]],[[35.13536,138.61162],[35.13539,138.61161]],[[35.13554,138.61159],[35.13539,138.61161]],[[35.13556,138.61158],[35.13554,138.61159]],[[35.12832,138.61293],[35.12801,138.61321]],[[35.13529,138.61163],[35.13392,138.61191]],[[34.99755,135.94800],[34.99754,135.94799]],[[34.99759,135.94801],[34.99755,135.94800]],[[35.15517,138.62126],[35.15461,138.62084]],[[35.15671,138.65603],[35.15642,138.65564]],[[35.15685,138.65608],[35.15671,138.65603]],[[35.20388,139.05371],[35.20384,139.05363]],[[35.20465,139.05468],[35.20463,139.05466]],[[35.20498,139.05498],[35.20465,139.05468]],[[35.20499,139.05500],[35.20498,139.05498]],[[35.20502,139.05504],[35.20499,139.05500]],[[35.20504,139.05506],[35.20502,139.05504]],[[35.20506,139.05510],[35.20504,139.05506]],[[35.20463,139.05466],[35.20388,139.05371]],[[35.20510,139.05516],[35.20506,139.05510]],[[35.20616,139.05650],[35.20614,139.05648]],[[35.20617,139.05650],[35.20616,139.05650]],[[35.20633,139.05668],[35.20617,139.05650]],[[35.20820,139.05725],[35.20751,139.05757],[35.20633,139.05668]],[[35.20823,139.05727],[35.20820,139.05725]],[[35.20879,139.05860],[35.20851,139.05787],[35.20870,139.05740],[35.20823,139.05727]],[[35.15645,138.67221],[35.15622,138.67247]],[[35.15766,138.64042],[35.15777,138.64024]],[[35.15687,138.65635],[35.15686,138.65680]],[[35.15686,138.65680],[35.15699,138.65827]],[[35.31704,139.32133],[35.31662,139.32101]],[[34.81887,138.10733],[34.81891,138.10743]],[[34.81891,138.10743],[34.81898,138.10749]],[[35.20338,139.03370],[35.20352,139.03386]],[[35.15610,138.65142],[35.15713,138.64834]],[[35.15669,138.67126],[35.15667,138.67122]],[[35.15744,138.66239],[35.15743,138.66126]],[[35.15739,138.66051],[35.15721,138.65933]],[[35.19221,139.02642],[35.19204,139.02662]],[[35.19223,139.02639],[35.19221,139.02642]],[[35.15099,138.99027],[35.15102,138.99035]],[[34.94863,137.18439],[34.94909,137.18350]],[[34.96651,136.62213],[34.96555,136.62163]],[[35.13605,138.74173],[35.13669,138.73861]],[[34.95799,137.16718],[34.95849,137.16718]],[[35.09444,138.55059],[35.09402,138.55043]],[[35.51634,139.68286],[35.51718,139.68374]],[[35.42186,139.55759],[35.42122,139.55719]],[[34.85673,138.24873],[34.85454,138.24799],[34.85366,138.24666],[34.85356,138.24530],[34.85283,138.24464]],[[35.60682,139.74403],[35.60302,139.74224]]]},
+{name:'中山道', color:'#6b4226', segs:[[[36.03054,139.53651],[36.02342,139.54242],[36.01572,139.54956]],[[35.91315,139.62516],[35.90974,139.62604]],[[36.24327,139.17624],[36.24081,139.18311],[36.24022,139.19340],[36.23931,139.19633],[36.23719,139.19972],[36.23655,139.20721]],[[36.25552,139.15435],[36.25483,139.15544],[36.25409,139.16117],[36.25325,139.16249],[36.25111,139.16846],[36.24970,139.17067],[36.24653,139.17435]],[[36.27149,138.42465],[36.27134,138.42311]],[[36.27149,138.42465],[36.27136,138.42632],[36.26976,138.42928],[36.26957,138.43072],[36.26913,138.43136]],[[36.30794,139.02321],[36.30697,139.02536]],[[36.32037,139.00780],[36.32221,139.00751]],[[36.31855,138.50968],[36.32129,138.51254],[36.32320,138.51404],[36.32302,138.51551],[36.32363,138.51734]],[[36.29697,138.49329],[36.29897,138.49427],[36.30468,138.49508],[36.30685,138.49812],[36.30831,138.49867]],[[36.32679,138.75756],[36.32753,138.75563],[36.32877,138.75392],[36.32941,138.75360]],[[36.33751,138.92380],[36.33694,138.92636],[36.33722,138.93096]],[[35.85417,139.65493],[35.85072,139.65533],[35.84923,139.65689],[35.84805,139.65751]],[[35.84441,139.65892],[35.84339,139.65878]],[[35.83892,139.66006],[35.83851,139.66095],[35.83691,139.66211]],[[35.85747,139.65411],[35.86120,139.65300]],[[35.84805,139.65751],[35.84540,139.65875]],[[35.23740,136.25801],[35.23905,136.25924]],[[36.29320,139.07567],[36.29322,139.07388]],[[36.29411,139.05757],[36.29401,139.06355]],[[36.28905,139.08214],[36.28848,139.08227]],[[36.28414,139.09775],[36.27987,139.10174],[36.27884,139.10410]],[[36.19864,139.25958],[36.19797,139.26131],[36.19642,139.26321]],[[36.07598,139.48495],[36.07646,139.48361],[36.08057,139.47761]],[[36.26651,139.12342],[36.26593,139.12626],[36.26651,139.12965],[36.26557,139.13487],[36.26349,139.14082],[36.26118,139.14551]],[[35.82824,139.67531],[35.82944,139.66981],[35.83114,139.66865]],[[35.74229,139.72634],[35.74624,139.72131]],[[35.01864,135.96125],[35.01928,135.96178]],[[35.43696,137.01060],[35.43711,137.01111],[35.43829,137.01104]],[[36.19347,139.23798],[36.19432,139.23734],[36.20203,139.23920],[36.21186,139.24482]],[[36.19439,139.29468],[36.19423,139.29615]],[[36.19642,139.26321],[36.19545,139.26450],[36.19509,139.26673]],[[35.19214,136.22275],[35.18875,136.22005]],[[35.19756,136.22718],[35.19294,136.22335]],[[35.17620,136.21030],[35.17302,136.20874]],[[35.17620,136.21030],[35.17818,136.21095],[35.17910,136.21251]],[[35.17302,136.20874],[35.17001,136.20680],[35.16918,136.20577]],[[35.18875,136.22005],[35.18814,136.21960]],[[35.18814,136.21960],[35.17977,136.21299]],[[35.14044,136.17424],[35.13856,136.17074]],[[35.09942,136.10111],[35.10282,136.10694],[35.10335,136.10902],[35.10329,136.10992]],[[35.11321,136.12464],[35.11304,136.12496]],[[35.11955,136.13942],[35.11786,136.13618]],[[35.11514,136.13022],[35.11494,136.13090],[35.11641,136.13408]],[[35.13784,136.17050],[35.13856,136.17074]],[[35.11786,136.13618],[35.11641,136.13408]],[[35.09942,136.10111],[35.09727,136.09601]],[[35.10858,136.11910],[35.10687,136.11610]],[[35.13784,136.17050],[35.13630,136.16929]],[[35.11514,136.13022],[35.11304,136.12496]],[[35.09541,136.09389],[35.09615,136.09622]],[[35.09147,136.09083],[35.09307,136.09248]],[[35.08831,136.08503],[35.08894,136.08653],[35.08984,136.08736]],[[35.09541,136.09389],[35.09413,136.09287],[35.09344,136.09277]],[[35.05752,135.99975],[35.05841,136.00253],[35.05917,136.00378]],[[35.02759,135.96885],[35.02907,135.97018]],[[35.02753,135.96861],[35.02759,135.96885]],[[35.02196,135.96402],[35.02103,135.96323]],[[35.02753,135.96861],[35.02583,135.96701]],[[35.02510,135.96632],[35.02196,135.96402]],[[35.25786,136.27457],[35.25768,136.27441]],[[35.26856,136.27958],[35.26794,136.27963]],[[35.23228,136.25389],[35.23220,136.25381]],[[35.23220,136.25381],[35.23137,136.25299]],[[35.23545,136.25651],[35.23542,136.25649]],[[35.22940,136.25127],[35.22958,136.25140]],[[35.23537,136.25644],[35.23273,136.25434]],[[35.22958,136.25140],[35.23133,136.25295]],[[35.23542,136.25649],[35.23537,136.25644]],[[35.22825,136.24996],[35.22940,136.25127]],[[35.14028,136.17445],[35.14044,136.17424]],[[35.15420,136.19296],[35.15419,136.19312]],[[35.15395,136.19274],[35.15420,136.19292]],[[35.15582,136.19569],[35.15787,136.19731],[35.16129,136.19922]],[[35.14719,136.18628],[35.14826,136.18815],[35.15395,136.19274]],[[35.14096,136.17535],[35.14515,136.18272]],[[36.15980,139.36431],[36.16271,139.36000]],[[36.06768,139.50260],[36.06650,139.50576]],[[36.10560,139.45092],[36.10528,139.44962]],[[36.31043,139.01866],[36.31313,139.01485]],[[36.30697,139.02536],[36.30632,139.02645],[36.30320,139.02951],[36.30021,139.03406]],[[36.29581,139.05190],[36.29526,139.05438]],[[36.29399,139.06805],[36.29399,139.06959]],[[36.27095,138.30767],[36.27248,138.30976],[36.27269,138.31095]],[[36.07740,138.03775],[36.07811,138.03547],[36.07694,138.03342],[36.07584,138.03290],[36.07511,138.03346],[36.07463,138.03337]],[[36.08620,138.03986],[36.08555,138.03996],[36.08521,138.04079],[36.08543,138.04132]],[[36.08709,138.03612],[36.08651,138.03971]],[[36.08741,138.03511],[36.08709,138.03612]],[[36.08543,138.04132],[36.08545,138.04295],[36.08317,138.05208]],[[36.08303,138.05288],[36.08166,138.05629],[36.07978,138.05935]],[[36.09980,137.98457],[36.10054,137.98219]],[[36.34063,138.55005],[36.34070,138.54777],[36.33999,138.54662],[36.33958,138.54478]],[[36.33800,138.54070],[36.33900,138.54255],[36.33958,138.54478]],[[36.33800,138.54070],[36.33709,138.53969]],[[36.26952,138.45676],[36.26969,138.45726]],[[36.26934,138.45634],[36.26952,138.45676]],[[36.27476,138.39705],[36.27345,138.39465]],[[36.27481,138.40482],[36.27544,138.40003]],[[36.27286,138.41143],[36.27434,138.40725],[36.27481,138.40482]],[[36.27144,138.41644],[36.27188,138.41418]],[[36.27345,138.39465],[36.27149,138.39107]],[[36.27543,138.39950],[36.27532,138.39826],[36.27476,138.39705]],[[36.33488,138.98244],[36.33477,138.98090],[36.33417,138.97878],[36.33385,138.97254],[36.33266,138.96616]],[[36.33215,138.99368],[36.33007,138.99650],[36.32918,138.99723]],[[36.33709,138.93430],[36.33722,138.93096]],[[36.29401,139.06507],[36.29401,139.06644]],[[35.75739,139.70888],[35.75896,139.70782]],[[35.75557,139.70901],[35.75722,139.70889]],[[35.74951,139.71429],[35.75212,139.71072]],[[35.75212,139.71072],[35.75331,139.70970],[35.75557,139.70901]],[[35.74849,139.71657],[35.74913,139.71534]],[[36.32060,138.77267],[36.32055,138.77269]],[[36.37174,138.66204],[36.37158,138.66292],[36.37219,138.66294],[36.37172,138.66604],[36.37044,138.66734],[36.36910,138.66978],[36.36935,138.67096],[36.36906,138.67294],[36.36974,138.67398],[36.37003,138.67536],[36.37066,138.67651],[36.36992,138.67754],[36.36879,138.68065],[36.36900,138.68308],[36.36816,138.68456],[36.36799,138.68571],[36.36679,138.68736],[36.36719,138.68785],[36.36702,138.68895],[36.36680,138.68924],[36.36569,138.68927],[36.36367,138.69147],[36.36362,138.69310],[36.36426,138.69341],[36.36430,138.69387],[36.36302,138.69528],[36.36266,138.69646],[36.36280,138.69724],[36.36112,138.70023],[36.36033,138.70102],[36.36042,138.70228],[36.35787,138.70660],[36.35811,138.70758],[36.35871,138.70833],[36.35862,138.70908],[36.35977,138.70819],[36.35938,138.70961],[36.35962,138.70981],[36.35817,138.71178],[36.35765,138.71143],[36.35757,138.71252],[36.35780,138.71270],[36.35736,138.71350],[36.35565,138.71386]],[[36.32741,138.76240],[36.32707,138.76351],[36.32588,138.76461],[36.32480,138.76675]],[[36.31953,138.77447],[36.32055,138.77269]],[[36.31928,138.78626],[36.31884,138.78485],[36.31886,138.78276]],[[36.32111,138.77146],[36.32203,138.76993],[36.32391,138.76799]],[[36.32111,138.77146],[36.32069,138.77233]],[[36.29399,139.07055],[36.29399,139.06959]],[[36.29322,139.07388],[36.29396,139.07092]],[[36.06768,139.50260],[36.06879,139.49872],[36.07458,139.48851],[36.07598,139.48495]],[[36.30990,139.01958],[36.30853,139.02199]],[[36.31043,139.01866],[36.30990,139.01958]],[[35.83283,139.66774],[35.83448,139.66506]],[[36.26759,138.45276],[36.26779,138.45313]],[[36.26669,138.45017],[36.26739,138.45217]],[[35.86847,139.65025],[35.86811,139.65022]],[[35.86811,139.65022],[35.86380,139.65211]],[[35.90061,139.62911],[35.89735,139.63166]],[[35.90974,139.62604],[35.90810,139.62645]],[[36.30831,138.49867],[36.31031,138.50050],[36.31118,138.50319],[36.31237,138.50352],[36.31821,138.50923]],[[36.32991,138.75295],[36.33032,138.75207],[36.33080,138.75179]],[[36.29311,139.07713],[36.29261,139.07885],[36.29265,139.07967]],[[36.32582,138.52110],[36.33017,138.52556],[36.33120,138.52860],[36.33324,138.53134],[36.33347,138.53252],[36.33562,138.53635]],[[35.74688,139.71995],[35.74849,139.71657]],[[36.33266,138.96616],[36.33254,138.96617]],[[35.82546,139.67842],[35.82171,139.68133],[35.82054,139.68122]],[[35.86891,139.64990],[35.87152,139.64784]],[[36.33582,138.53658],[36.33647,138.53772]],[[35.89344,139.63474],[35.88892,139.63762]],[[35.88232,139.64191],[35.87967,139.64362],[35.87524,139.64580]],[[36.08354,139.47505],[36.08783,139.47092],[36.09117,139.46654],[36.09459,139.46334]],[[36.18004,139.33231],[36.18530,139.32518],[36.19125,139.31581],[36.19159,139.31503],[36.19166,139.31370]],[[36.26011,139.14691],[36.25889,139.14713],[36.25733,139.15110]],[[36.25726,139.15125],[36.25622,139.15394],[36.25559,139.15432]],[[36.25733,139.15110],[36.25726,139.15125]],[[35.84339,139.65878],[35.84263,139.65924]],[[35.86380,139.65211],[35.86120,139.65300]],[[35.01807,135.96083],[35.01817,135.96089]],[[36.26884,138.45521],[36.26934,138.45634]],[[36.26779,138.45313],[36.26884,138.45521]],[[36.26750,138.45249],[36.26759,138.45276]],[[36.26739,138.45217],[36.26750,138.45249]],[[36.26969,138.45726],[36.26979,138.45829]],[[36.27107,138.42046],[36.27046,138.41958],[36.27067,138.41871]],[[36.08074,139.47734],[36.08131,139.47653],[36.08354,139.47505]],[[36.08061,139.47756],[36.08072,139.47737]],[[36.01363,139.55186],[36.01353,139.55198]],[[35.23133,136.25295],[35.23137,136.25299]],[[36.21238,139.24443],[36.21418,139.24266],[36.21591,139.24026],[36.21844,139.23780],[36.21939,139.23598]],[[36.10626,139.45132],[36.10560,139.45092]],[[35.96308,139.59861],[35.96015,139.59991]],[[35.94069,139.61143],[35.93839,139.61289],[35.93534,139.61555],[35.93311,139.61679],[35.92838,139.62078],[35.92082,139.62293]],[[36.32418,138.51800],[36.32582,138.52110]],[[36.30021,139.03406],[36.29782,139.04131]],[[36.29782,139.04131],[36.29625,139.04941]],[[36.29401,139.06355],[36.29401,139.06490]],[[36.29401,139.06662],[36.29399,139.06805]],[[36.27029,138.46594],[36.27008,138.46722],[36.27062,138.46743],[36.27121,138.46867],[36.27110,138.47062],[36.27155,138.47334],[36.27106,138.47538]],[[36.27017,138.46122],[36.27029,138.46594]],[[36.26566,138.44050],[36.26520,138.44163],[36.26528,138.44515],[36.26669,138.45017]],[[35.02011,135.96247],[35.02103,135.96323]],[[36.29625,139.04941],[36.29581,139.05190]],[[36.33870,138.72872],[36.33903,138.72777],[36.34000,138.72758],[36.34017,138.72702]],[[35.91635,139.62422],[35.91537,139.62452]],[[35.09319,136.09258],[35.09344,136.09277]],[[35.09307,136.09248],[35.09319,136.09258]],[[35.11956,136.13949],[35.12648,136.15907]],[[35.11955,136.13942],[35.11956,136.13949]],[[35.02907,135.97018],[35.02972,135.97101]],[[35.02972,135.97101],[35.02975,135.97096]],[[35.16913,136.20567],[35.16892,136.20529]],[[35.16918,136.20577],[35.16913,136.20567]],[[36.27014,138.45940],[36.27038,138.46003],[36.27017,138.46122]],[[35.53042,137.57371],[35.53064,137.57289]],[[35.12648,136.15907],[35.12652,136.15916]],[[35.12652,136.15916],[35.12710,136.16136]],[[35.12717,136.16143],[35.13010,136.16295],[35.13234,136.16298]],[[35.12710,136.16136],[35.12717,136.16143]],[[36.27032,138.38822],[36.27023,138.38818]],[[36.27543,138.39993],[36.27543,138.39950]],[[36.27544,138.40003],[36.27543,138.39993]],[[36.27055,138.38875],[36.27053,138.38863]],[[36.27053,138.38863],[36.27032,138.38822]],[[36.27193,138.41295],[36.27286,138.41143]],[[36.27118,138.41728],[36.27144,138.41644]],[[36.26986,138.45865],[36.27014,138.45940]],[[36.26982,138.45847],[36.26986,138.45865]],[[36.26650,138.43840],[36.26653,138.43944],[36.26566,138.44050]],[[36.26715,138.43448],[36.26650,138.43840]],[[36.26913,138.43136],[36.26884,138.43251],[36.26715,138.43448]],[[36.27134,138.42311],[36.27107,138.42046]],[[36.31821,138.50923],[36.31826,138.50927]],[[36.37083,138.65844],[36.37056,138.65906],[36.37079,138.66021],[36.37008,138.66188],[36.37131,138.66172],[36.37174,138.66204]],[[36.35384,138.71397],[36.35472,138.71408],[36.35528,138.71349],[36.35560,138.71389]],[[36.30941,138.81458],[36.30835,138.81661],[36.30818,138.81861]],[[36.29489,139.05539],[36.29411,139.05757]],[[36.29526,139.05438],[36.29489,139.05539]],[[36.17725,139.33611],[36.17765,139.33504],[36.17901,139.33371]],[[36.21238,139.24443],[36.21186,139.24482]],[[36.22079,139.23496],[36.22107,139.23493]],[[36.22107,139.23493],[36.22388,139.23447]],[[36.24341,139.17595],[36.24335,139.17605]],[[36.24653,139.17435],[36.24462,139.17481],[36.24373,139.17547]],[[36.28848,139.08227],[36.28770,139.08267]],[[35.01928,135.96178],[35.02011,135.96247]],[[36.17163,139.34771],[36.17004,139.34977],[36.16855,139.35106]],[[36.17178,139.34757],[36.17286,139.34609],[36.17489,139.34421],[36.17594,139.34233]],[[36.10513,139.44822],[36.10528,139.44962]],[[36.06650,139.50576],[36.06274,139.50991]],[[36.04092,139.52856],[36.04052,139.52892]],[[36.04811,139.52172],[36.04092,139.52856]],[[36.04052,139.52892],[36.03664,139.53250],[36.03235,139.53513]],[[35.97391,139.58960],[35.97076,139.59375],[35.96823,139.59638]],[[36.03138,139.53586],[36.03054,139.53651]],[[35.06120,136.01146],[35.06115,136.01196]],[[35.06107,136.01043],[35.06119,136.01118]],[[35.05917,136.00378],[35.05973,136.00481]],[[35.14515,136.18272],[35.14719,136.18628]],[[35.91537,139.62452],[35.91315,139.62516]],[[35.88385,139.64078],[35.88232,139.64191]],[[35.84540,139.65875],[35.84441,139.65892]],[[35.85654,139.65437],[35.85417,139.65493]],[[35.83448,139.66506],[35.83461,139.66457]],[[35.83461,139.66457],[35.83482,139.66390]],[[35.83691,139.66211],[35.83529,139.66312],[35.83482,139.66390]],[[35.83952,139.66019],[35.83892,139.66006]],[[35.84101,139.66035],[35.83952,139.66019]],[[35.84114,139.66037],[35.84101,139.66035]],[[35.84263,139.65924],[35.84114,139.66037]],[[35.82824,139.67531],[35.82782,139.67647],[35.82546,139.67842]],[[35.83280,139.66778],[35.83283,139.66774]],[[35.83130,139.66849],[35.83280,139.66778]],[[35.80268,139.68566],[35.80161,139.68572]],[[35.74913,139.71534],[35.74921,139.71534]],[[36.03235,139.53513],[36.03138,139.53586]],[[35.23273,136.25434],[35.23228,136.25389]],[[36.01572,139.54956],[36.01363,139.55186]],[[36.01181,139.55391],[36.00534,139.56101]],[[36.00020,139.56633],[35.99727,139.56887],[35.99392,139.57334],[35.98959,139.57592],[35.98829,139.57738],[35.98029,139.58356],[35.97928,139.58492],[35.97525,139.58834]],[[36.17706,139.33699],[36.17724,139.33618]],[[36.17594,139.34233],[36.17652,139.34047],[36.17706,139.33699]],[[36.17901,139.33371],[36.18004,139.33231]],[[36.24335,139.17605],[36.24327,139.17624]],[[36.24373,139.17547],[36.24341,139.17595]],[[35.74624,139.72131],[35.74688,139.71995]],[[36.29396,139.07092],[36.29398,139.07080]],[[35.90672,139.62676],[35.90326,139.62773],[35.90061,139.62911]],[[35.96823,139.59638],[35.96308,139.59861]],[[35.95187,139.60342],[35.94942,139.60506],[35.94668,139.60814],[35.94069,139.61143]],[[35.96015,139.59991],[35.95801,139.60068]],[[35.88547,139.63978],[35.88385,139.64078]],[[35.87267,139.64713],[35.87152,139.64784]],[[35.92082,139.62293],[35.91809,139.62371]],[[35.95196,139.60336],[35.95187,139.60342]],[[35.95801,139.60068],[35.95439,139.60187],[35.95196,139.60336]],[[36.00300,139.56351],[36.00020,139.56633]],[[36.00526,139.56109],[36.00300,139.56351]],[[36.30845,139.02215],[36.30794,139.02321]],[[36.30853,139.02199],[36.30845,139.02215]],[[36.00534,139.56101],[36.00526,139.56109]],[[36.16685,139.35368],[36.16794,139.35240]],[[36.16682,139.35371],[36.16685,139.35368]],[[36.16537,139.35565],[36.16682,139.35371]],[[36.16532,139.35570],[36.16537,139.35565]],[[36.16319,139.35941],[36.16440,139.35782],[36.16532,139.35570]],[[36.16313,139.35948],[36.16319,139.35941]],[[36.16277,139.35993],[36.16313,139.35948]],[[36.16271,139.36000],[36.16277,139.35993]],[[35.02583,135.96701],[35.02517,135.96640]],[[35.02517,135.96640],[35.02510,135.96632]],[[36.17170,139.34765],[36.17163,139.34771]],[[36.17170,139.34765],[36.17178,139.34757]],[[36.10457,137.97255],[36.10543,137.97218]],[[36.10543,137.97218],[36.10595,137.97185],[36.10768,137.96789],[36.10793,137.96594]],[[36.21228,139.24434],[36.21238,139.24443]],[[36.21238,139.24443],[36.21220,139.24443]],[[35.86891,139.64990],[35.86847,139.65025]],[[35.85747,139.65411],[35.85654,139.65437]],[[36.32412,138.51791],[36.32418,138.51800]],[[36.32363,138.51734],[36.32412,138.51791]],[[36.33562,138.53635],[36.33582,138.53658]],[[36.08072,139.47737],[36.08074,139.47734]],[[36.08996,138.03191],[36.08999,138.03187]],[[36.08994,138.03192],[36.08996,138.03191]],[[36.01353,139.55198],[36.01341,139.55211]],[[36.01341,139.55211],[36.01181,139.55391]],[[35.15419,136.19312],[35.15436,136.19450],[35.15541,136.19530]],[[35.06120,136.01124],[35.06120,136.01146]],[[35.06119,136.01118],[35.06120,136.01124]],[[35.15420,136.19292],[35.15420,136.19296]],[[35.89459,139.63388],[35.89344,139.63474]],[[35.88768,139.63840],[35.88604,139.63942]],[[35.88604,139.63942],[35.88547,139.63978]],[[35.88892,139.63762],[35.88768,139.63840]],[[35.97525,139.58834],[35.97391,139.58960]],[[36.26115,139.14556],[36.26011,139.14691]],[[36.26118,139.14551],[36.26115,139.14556]],[[36.25559,139.15432],[36.25552,139.15435]],[[36.08059,139.47758],[36.08061,139.47756]],[[36.08057,139.47761],[36.08059,139.47758]],[[36.32069,138.77233],[36.32067,138.77236]],[[35.91809,139.62371],[35.91716,139.62398]],[[35.90810,139.62645],[35.90718,139.62666]],[[35.90718,139.62666],[35.90672,139.62676]],[[35.89735,139.63166],[35.89459,139.63388]],[[35.87524,139.64580],[35.87267,139.64713]],[[35.83114,139.66865],[35.83126,139.66852]],[[35.83126,139.66852],[35.83130,139.66849]]]},
+{name:'甲州街道', color:'#a0522d', segs:[[[35.65766,139.53258],[35.65823,139.53118]],[[35.66471,139.58827],[35.66429,139.58699]],[[35.68873,139.41307],[35.68849,139.41197],[35.68769,139.41090]],[[35.64700,139.29111],[35.64686,139.28742],[35.64533,139.28501]],[[35.64517,139.28480],[35.64477,139.28467]],[[35.63407,139.06183],[35.63449,139.06246],[35.63439,139.06569]],[[35.63088,139.08391],[35.63069,139.08344],[35.63108,139.08289],[35.63101,139.08214]],[[35.63330,139.05919],[35.63397,139.06044],[35.63373,139.06099]],[[35.62904,139.10502],[35.62860,139.10602]],[[35.63183,139.09035],[35.63089,139.08950],[35.63085,139.08683]],[[35.63290,139.09278],[35.63285,139.09275]],[[35.63342,139.09290],[35.63290,139.09278]],[[35.63342,139.09290],[35.63354,139.09291]],[[35.63326,139.07214],[35.63292,139.07230]],[[35.63292,139.07230],[35.63282,139.07234]],[[35.63282,139.07234],[35.63238,139.07244]],[[35.63360,139.06931],[35.63341,139.07105],[35.63315,139.07137]],[[35.63238,139.07244],[35.63233,139.07245]],[[35.63330,139.05919],[35.63285,139.05924]],[[35.63315,139.07137],[35.63326,139.07214]],[[35.62884,139.11088],[35.62877,139.10955]],[[35.63107,139.08476],[35.63088,139.08391]],[[35.63285,139.09275],[35.63239,139.09228],[35.63235,139.09121]],[[35.63212,139.07816],[35.63171,139.08021],[35.63095,139.08140],[35.63101,139.08214]],[[35.62900,139.11131],[35.62884,139.11088]],[[35.63235,139.09121],[35.63183,139.09035]],[[35.62860,139.10602],[35.62868,139.10785]],[[35.63085,139.08683],[35.63107,139.08476]],[[35.62877,139.10947],[35.62868,139.10785]],[[35.62961,139.04157],[35.62814,139.03901],[35.62839,139.03854]],[[35.63233,139.07245],[35.63258,139.07557],[35.63212,139.07816]],[[35.63439,139.06569],[35.63428,139.06749],[35.63360,139.06931]],[[35.61585,138.98026],[35.61589,138.98024]],[[35.61096,138.99835],[35.61088,138.99686]],[[35.61088,138.99686],[35.61177,138.99522]],[[35.63789,138.77050],[35.63761,138.76976],[35.63731,138.77018],[35.63662,138.76998]],[[35.64193,138.77302],[35.64079,138.77234]],[[35.62196,139.17694],[35.62331,139.17413],[35.62418,139.17335],[35.62384,139.17262],[35.62406,139.17136],[35.62452,139.17061],[35.62446,139.16996]],[[35.62215,139.17732],[35.62136,139.17884],[35.62073,139.17923],[35.62036,139.18015],[35.62075,139.18036]],[[35.62469,139.16907],[35.62447,139.16938]],[[35.62447,139.16938],[35.62446,139.16996]],[[35.62469,139.16907],[35.62476,139.16884]],[[35.67210,139.61255],[35.67204,139.61197]],[[35.66302,139.52105],[35.66669,139.51333],[35.66830,139.50796]],[[35.68708,139.41067],[35.68640,139.41055]],[[35.61543,138.98029],[35.61508,138.98020]],[[35.61589,138.98024],[35.61598,138.98011]],[[35.67203,139.61189],[35.67171,139.60898]],[[35.65058,139.55704],[35.65234,139.56020]],[[35.63916,138.77202],[35.63858,138.77175],[35.63801,138.77064]],[[35.67171,139.60898],[35.67153,139.60628],[35.67015,139.60268]],[[35.66961,139.59990],[35.66937,139.59866]],[[35.66937,139.59866],[35.66907,139.59745],[35.66803,139.59579],[35.66718,139.59340]],[[35.65314,139.54411],[35.65123,139.55109]],[[35.66718,139.59340],[35.66483,139.58887]],[[35.61800,138.98445],[35.61834,138.98701]],[[35.65478,139.53888],[35.65355,139.54284]],[[35.65123,139.55109],[35.65017,139.55509],[35.65058,139.55704]],[[35.65766,139.53258],[35.65649,139.53399],[35.65478,139.53888]],[[35.65329,139.30318],[35.65543,139.30604]],[[35.63284,139.09539],[35.63367,139.09662],[35.63329,139.09691],[35.63385,139.09729],[35.63373,139.09906],[35.63474,139.10088]],[[35.66936,139.49847],[35.66943,139.49582]],[[35.66945,139.49465],[35.66943,139.49497]],[[35.66945,139.49465],[35.67000,139.48358]],[[35.67204,139.61197],[35.67203,139.61189]],[[35.66426,139.58683],[35.66427,139.58668]],[[35.66480,139.58873],[35.66471,139.58827]],[[35.66429,139.58699],[35.66426,139.58683]],[[35.65234,139.56020],[35.65247,139.56020]],[[35.66995,139.47082],[35.67017,139.46913]],[[35.67077,139.46702],[35.67227,139.46199]],[[35.63916,138.77202],[35.64079,138.77234]],[[35.61074,138.99840],[35.61096,138.99835]],[[35.60923,138.99887],[35.61038,138.99819],[35.61074,138.99840]],[[35.61556,138.98016],[35.61543,138.98029]],[[35.63237,139.04474],[35.63248,139.04558]],[[35.63248,139.04558],[35.63261,139.04616],[35.63204,139.04748]],[[35.62961,139.04157],[35.63037,139.04162],[35.63063,139.04231],[35.63108,139.04246],[35.63117,139.04331],[35.63174,139.04423],[35.63225,139.04434],[35.63237,139.04474]],[[35.61952,139.01823],[35.62059,139.01873]],[[35.61146,139.01326],[35.61253,139.01385]],[[35.63245,139.10523],[35.63239,139.10525]],[[35.63239,139.10536],[35.63161,139.10558]],[[35.63239,139.10525],[35.63239,139.10536]],[[35.63247,139.10498],[35.63245,139.10523]],[[35.63576,139.10165],[35.63601,139.10176]],[[35.63526,139.10165],[35.63576,139.10165]],[[35.63474,139.10088],[35.63526,139.10165]],[[35.62196,139.17694],[35.62215,139.17732]],[[35.62474,139.16865],[35.62465,139.16845]],[[35.62476,139.16884],[35.62474,139.16865]],[[35.66830,139.50796],[35.66886,139.50485]],[[35.66886,139.50485],[35.66936,139.49847]],[[35.66995,139.47682],[35.66995,139.47082]],[[35.65823,139.53118],[35.66147,139.52352]],[[35.65347,139.54310],[35.65320,139.54392]],[[35.67238,139.46169],[35.67253,139.46138]],[[35.67227,139.46199],[35.67232,139.46184]],[[35.66943,139.49497],[35.66943,139.49519]],[[35.66943,139.49519],[35.66952,139.49539]],[[35.66943,139.49582],[35.66943,139.49519]],[[35.66158,139.52333],[35.66302,139.52105]],[[35.67017,139.46913],[35.67077,139.46702]],[[35.67232,139.46184],[35.67238,139.46169]],[[35.67000,139.48358],[35.67002,139.48041]],[[35.61082,139.01305],[35.61140,139.01328]],[[35.61140,139.01328],[35.61146,139.01326]],[[35.65320,139.54392],[35.65314,139.54411]],[[35.65351,139.54298],[35.65347,139.54310]],[[35.65355,139.54284],[35.65351,139.54298]],[[35.66943,139.49582],[35.66952,139.49539]],[[35.67002,139.48041],[35.67001,139.47909]],[[35.67001,139.47909],[35.66995,139.47682]],[[35.66151,139.52345],[35.66158,139.52333]],[[35.66147,139.52352],[35.66151,139.52345]],[[35.66975,139.60064],[35.66961,139.59990]],[[35.67015,139.60268],[35.66975,139.60064]]]},
+{name:'日光街道', color:'#8b6914', segs:[[[36.57512,139.87144],[36.57024,139.87319]],[[36.41058,139.85800],[36.41034,139.85984]],[[35.89433,139.91190],[35.89134,139.91249]],[[36.72083,139.70764],[36.71986,139.70990],[36.71843,139.71207],[36.71763,139.71543],[36.71642,139.71876]],[[35.87782,139.91937],[35.87611,139.92012]],[[36.56419,139.87722],[36.56192,139.87711]],[[35.86842,139.92816],[35.86965,139.92884]],[[36.57024,139.87319],[36.56806,139.87444],[36.56506,139.87715],[36.56419,139.87722]],[[36.84816,139.98200],[36.85756,140.00716]],[[36.41052,139.85887],[36.40620,139.85710]],[[36.83763,139.95381],[36.83927,139.95820]],[[35.87419,139.92177],[35.87402,139.92204]],[[35.87402,139.92204],[35.87361,139.92247]],[[35.87436,139.92152],[35.87419,139.92177]],[[35.87563,139.92034],[35.87436,139.92152]],[[35.88919,139.91403],[35.87983,139.91850]],[[36.84686,139.97850],[36.84816,139.98200]],[[36.83927,139.95820],[36.84686,139.97850]],[[35.84858,139.95563],[35.85545,139.95015],[35.85898,139.94890],[35.86452,139.94345],[35.86455,139.94140],[35.86540,139.93670],[35.86802,139.92784]],[[35.74161,139.79864],[35.74117,139.79840]],[[35.74670,139.80130],[35.74381,139.79980]],[[35.86802,139.92784],[35.86842,139.92816]],[[35.74117,139.79840],[35.74106,139.79833]],[[36.72240,139.69309],[36.72115,139.69978],[36.72131,139.70273]],[[36.72131,139.70273],[36.72135,139.70411]],[[36.72135,139.70411],[36.72083,139.70764]],[[35.89134,139.91249],[35.89140,139.91299]],[[35.87611,139.92012],[35.87563,139.92034]],[[35.87983,139.91850],[35.87782,139.91937]],[[35.74381,139.79980],[35.74161,139.79864]],[[35.89140,139.91299],[35.88964,139.91382]],[[35.88964,139.91382],[35.88919,139.91403]]]},
+{name:'奥州街道', color:'#7b5e2e', segs:[[[36.96968,140.12100],[36.96976,140.12372],[36.96939,140.12427]],[[36.94330,140.10272],[36.94371,140.10382],[36.94406,140.10359]],[[36.94516,140.10557],[36.94481,140.10490]],[[36.80410,140.01599],[36.80262,140.01653],[36.80028,140.01653]],[[36.74988,140.02476],[36.74876,140.02501],[36.74733,140.02264],[36.74502,140.02156],[36.74205,140.02125]],[[36.78722,140.01108],[36.78268,140.01251],[36.77805,140.01321],[36.77447,140.01528],[36.77169,140.01821],[36.76823,140.02040],[36.76592,140.02113],[36.76403,140.01997]],[[36.71733,140.02633],[36.71494,140.02651]],[[37.04115,140.17073],[37.03806,140.16980],[37.03762,140.16999]],[[36.80410,140.01599],[36.80513,140.01472],[36.80621,140.01387],[36.80666,140.01394],[36.80693,140.01213]],[[36.99487,140.16776],[36.99159,140.16508],[36.99137,140.16433],[36.99031,140.16359]],[[36.99985,140.17147],[36.99921,140.16984],[36.99742,140.16875]],[[36.98650,140.16040],[36.98647,140.16073],[36.98750,140.16155],[36.98766,140.16213]],[[37.02269,140.17780],[37.01987,140.18029],[37.01773,140.17949],[37.01615,140.17840],[37.01435,140.17947],[37.01122,140.17996],[37.00578,140.17846]],[[37.00042,140.17239],[37.00118,140.17296],[37.00151,140.17440]],[[37.00246,140.17555],[37.00322,140.17692]],[[37.05075,140.17050],[37.04926,140.16934],[37.04755,140.17013],[37.04693,140.17001]],[[36.98159,140.14178],[36.98156,140.14339]],[[36.98637,140.15303],[36.98676,140.15312],[36.98760,140.15422],[36.98774,140.15594]],[[36.98771,140.15608],[36.98736,140.15698]],[[37.05697,140.17651],[37.05448,140.17345],[37.05457,140.17161]],[[37.00568,140.17845],[37.00453,140.17815],[37.00342,140.17713]],[[36.86867,140.02894],[36.86989,140.03096]],[[36.70760,140.01272],[36.70671,140.01143],[36.70238,140.00776],[36.70090,140.00475]],[[36.71427,140.02633],[36.71456,140.02256],[36.71081,140.01756]],[[36.70760,140.01272],[36.70781,140.01421],[36.70981,140.01727]],[[36.70981,140.01727],[36.71081,140.01756]],[[36.76392,140.01981],[36.76350,140.01910],[36.76331,140.01769]],[[36.73001,140.02167],[36.73112,140.02259]],[[36.72414,140.02042],[36.72432,140.02121],[36.72562,140.02112],[36.72583,140.02073]],[[36.72650,140.02109],[36.72586,140.02075]],[[36.80028,140.01653],[36.79976,140.01632]],[[36.98036,140.14550],[36.98170,140.14557],[36.98253,140.14673]],[[36.73640,140.02398],[36.73533,140.02406],[36.73401,140.02332],[36.73112,140.02259]],[[36.81380,140.00833],[36.81489,140.00879]],[[36.74205,140.02125],[36.73640,140.02398]],[[36.99031,140.16359],[36.98766,140.16213]],[[37.02720,140.17645],[37.02617,140.17712],[37.02502,140.17707]],[[37.06384,140.18152],[37.06532,140.18248]],[[36.96825,140.12015],[36.96944,140.12002]],[[38.88927,141.12584],[38.88571,141.12566],[38.88436,141.12498],[38.88306,141.12560],[38.88154,141.12529],[38.88086,141.12462],[38.87958,141.12418],[38.87785,141.12451],[38.87665,141.12430],[38.87625,141.12384],[38.87523,141.12430],[38.87403,141.12636],[38.87262,141.12685]],[[38.88931,141.12585],[38.88927,141.12584]],[[38.89395,141.12365],[38.89267,141.12394],[38.89061,141.12577],[38.88977,141.12607],[38.88931,141.12585]],[[36.86771,140.02987],[36.86867,140.02894]],[[36.86986,140.03345],[36.87027,140.03231],[36.86989,140.03096]],[[36.73001,140.02167],[36.72650,140.02109]],[[36.99742,140.16875],[36.99667,140.16836]],[[36.99985,140.17147],[37.00042,140.17239]]]},
+{name:'北国街道', color:'#6e5a3a', segs:[[[36.40724,138.24788],[36.40681,138.25268]],[[36.50822,138.14144],[36.51000,138.14010],[36.51143,138.13852],[36.51317,138.13749],[36.51411,138.13639]],[[36.41849,138.21149],[36.41862,138.21560]],[[36.41862,138.21560],[36.41893,138.21613]],[[36.41982,138.20408],[36.41978,138.20555],[36.41875,138.20835]],[[36.41982,138.20408],[36.42013,138.20158],[36.42121,138.19881],[36.42114,138.19800]],[[36.40758,138.24403],[36.40767,138.24301]],[[36.41275,138.23343],[36.41285,138.23315]],[[36.40802,138.23948],[36.40814,138.23877]],[[36.41430,138.22801],[36.41415,138.22862]],[[36.41909,138.21733],[36.41907,138.21805]],[[36.40767,138.24301],[36.40779,138.24162]],[[36.41173,138.23537],[36.41086,138.23625]],[[36.40737,138.24656],[36.40748,138.24532]],[[36.41888,138.21931],[36.41803,138.22160]],[[36.41430,138.22801],[36.41515,138.22717]],[[36.40872,138.23822],[36.40878,138.23789]],[[36.40748,138.24532],[36.40758,138.24403]],[[36.41285,138.23315],[36.41328,138.23170]],[[36.41515,138.22717],[36.41575,138.22614]],[[36.40878,138.23789],[36.41023,138.23803]],[[36.40814,138.23877],[36.40855,138.23818]],[[36.41907,138.21805],[36.41888,138.21931]],[[36.40781,138.24148],[36.40802,138.23948]],[[36.41575,138.22614],[36.41599,138.22486]],[[36.41173,138.23537],[36.41255,138.23387]],[[36.41415,138.22862],[36.41328,138.23170]],[[36.40662,138.25320],[36.40608,138.25314]],[[36.40665,138.25320],[36.40662,138.25320]],[[36.40483,138.25305],[36.40608,138.25314]],[[36.40724,138.24788],[36.40737,138.24656]],[[36.44112,138.19164],[36.44114,138.19164]],[[36.43508,138.19279],[36.43263,138.19235]],[[36.44462,138.19068],[36.44600,138.18978]],[[36.44120,138.19162],[36.44462,138.19068]],[[36.43508,138.19279],[36.43714,138.19268],[36.44112,138.19164]],[[36.45609,138.18682],[36.45834,138.18568]],[[36.45445,138.18714],[36.45609,138.18682]],[[36.45927,138.18515],[36.46077,138.18489]],[[36.49701,138.15040],[36.49868,138.14982],[36.50104,138.14783]],[[36.50534,138.14406],[36.50343,138.14519]],[[36.50315,138.14548],[36.50343,138.14519]],[[36.50281,138.14573],[36.50315,138.14548]],[[36.49487,138.15037],[36.49562,138.15063]],[[36.50187,138.14622],[36.50261,138.14586]],[[36.50822,138.14144],[36.50534,138.14406]],[[36.50187,138.14622],[36.50104,138.14783]],[[36.52054,138.13107],[36.52537,138.12857]],[[36.52632,138.12817],[36.52930,138.12712]],[[36.52537,138.12857],[36.52632,138.12817]],[[36.52930,138.12712],[36.52998,138.12696]],[[36.52998,138.12696],[36.53182,138.12669]],[[36.51902,138.13197],[36.52054,138.13107]],[[36.51762,138.13287],[36.51902,138.13197]],[[36.51411,138.13639],[36.51544,138.13452]],[[36.51544,138.13452],[36.51762,138.13287]],[[36.42414,138.19379],[36.42253,138.19518]],[[36.41255,138.23387],[36.41275,138.23343]],[[36.41723,138.22262],[36.41599,138.22486]],[[36.41893,138.21613],[36.41909,138.21733]],[[36.41803,138.22160],[36.41777,138.22204]],[[36.40680,138.25274],[36.40665,138.25320]],[[36.40868,138.23821],[36.40872,138.23822]],[[36.44114,138.19164],[36.44120,138.19162]],[[36.45922,138.18517],[36.45927,138.18515]],[[36.45834,138.18568],[36.45922,138.18517]],[[36.46538,138.17559],[36.46538,138.17667]],[[36.42421,138.19365],[36.42417,138.19374]],[[36.42247,138.19517],[36.42242,138.19517]],[[36.49562,138.15063],[36.49566,138.15063]],[[36.49566,138.15063],[36.49696,138.15041]],[[36.49696,138.15041],[36.49701,138.15040]],[[36.40483,138.25305],[36.40467,138.25382]],[[36.41827,138.21117],[36.41849,138.21149]]]},
+{name:'熊野古道 中辺路', color:'#5f4b32', segs:[[[33.71507,135.85132],[33.71592,135.85139],[33.71847,135.84995]],[[33.74056,135.84534],[33.74085,135.84427],[33.74246,135.84432]],[[33.75746,135.84213],[33.75737,135.84221]],[[33.71847,135.84995],[33.71956,135.85016],[33.72107,135.84887],[33.72219,135.84898]],[[33.75050,135.84395],[33.75089,135.84323]],[[33.73886,135.85190],[33.73767,135.85052],[33.73812,135.85005],[33.73777,135.84877],[33.73815,135.84745],[33.73960,135.84661],[33.74022,135.84562]],[[33.73178,135.85016],[33.73343,135.85063],[33.73375,135.85021],[33.73569,135.85213],[33.73889,135.85212],[33.73886,135.85190]],[[33.72379,135.84958],[33.72422,135.84903],[33.72595,135.84940],[33.72683,135.84876],[33.72813,135.84842],[33.73178,135.85016]],[[33.74022,135.84562],[33.74056,135.84534]],[[33.74246,135.84432],[33.74334,135.84414],[33.74391,135.84448],[33.74499,135.84416],[33.74724,135.84476],[33.74796,135.84417],[33.74942,135.84458],[33.75050,135.84395]],[[33.66928,135.89318],[33.66913,135.89331]],[[33.67154,135.87700],[33.67095,135.87871],[33.67029,135.87927],[33.66976,135.88042],[33.66949,135.88027],[33.66914,135.88132]],[[33.66983,135.88716],[33.67023,135.88721],[33.66967,135.88835],[33.66947,135.88958]],[[33.70217,135.85933],[33.70322,135.85896]],[[33.66973,135.89256],[33.66936,135.89167]],[[33.66964,135.89136],[33.66923,135.89050]],[[33.67058,135.88332],[33.66888,135.88191]],[[33.68647,135.87217],[33.68735,135.87152],[33.68790,135.87166],[33.68886,135.87124],[33.68890,135.87021],[33.68958,135.87054],[33.69039,135.86928],[33.69101,135.86892]],[[33.68647,135.87217],[33.68569,135.87281],[33.68355,135.87352],[33.68199,135.87292],[33.67949,135.87343],[33.67851,135.87292],[33.67784,135.87302]],[[33.69101,135.86892],[33.69227,135.86884],[33.69362,135.86787],[33.69445,135.86644],[33.69538,135.86593],[33.69561,135.86514],[33.69525,135.86428],[33.69543,135.86390]],[[33.67784,135.87302],[33.67729,135.87333],[33.67426,135.87234],[33.67336,135.87272],[33.67306,135.87394],[33.67268,135.87437],[33.67261,135.87534],[33.67154,135.87700]],[[33.66970,135.89148],[33.66936,135.89167]],[[33.84359,135.68877],[33.84538,135.69347],[33.84586,135.69359],[33.84592,135.69452],[33.84661,135.69499],[33.84671,135.69604],[33.84763,135.69671],[33.84777,135.69745]],[[33.73008,135.38569],[33.73079,135.38483]],[[33.85520,135.70700],[33.85521,135.70775],[33.85560,135.70840],[33.85653,135.70917],[33.85741,135.71066],[33.85722,135.71289]],[[33.81141,135.60266],[33.81199,135.60317]],[[33.83600,135.65859],[33.83658,135.65891],[33.83645,135.65938],[33.83615,135.65941],[33.83611,135.66040],[33.83649,135.66171],[33.83684,135.66200],[33.83706,135.66480],[33.83803,135.66562],[33.83859,135.66687],[33.83831,135.66698],[33.83898,135.66720],[33.83879,135.66762]],[[33.79777,135.55707],[33.79905,135.55863],[33.80165,135.56050],[33.80147,135.56133],[33.80230,135.56290],[33.80224,135.56386],[33.80255,135.56485],[33.80316,135.56560],[33.80325,135.56644],[33.80399,135.56668],[33.80484,135.56846]],[[33.84853,135.69846],[33.84905,135.69783],[33.84978,135.69812],[33.85016,135.69946],[33.85072,135.69960],[33.85159,135.69915],[33.85161,135.70172],[33.85222,135.70202]],[[33.81205,135.59754],[33.81173,135.59867],[33.81193,135.59913],[33.81106,135.60125]],[[33.81319,135.59296],[33.81257,135.59486]],[[33.73288,135.38204],[33.73321,135.38099]],[[33.79555,135.53696],[33.79538,135.53761],[33.79561,135.53844],[33.79708,135.54086],[33.79808,135.54180],[33.79794,135.54378]],[[33.80484,135.56846],[33.80488,135.57022],[33.80517,135.57084],[33.80642,135.57169],[33.80747,135.57294],[33.80739,135.57509],[33.80818,135.57595],[33.80873,135.57718]],[[33.80873,135.57718],[33.80950,135.57944],[33.81128,135.58061],[33.81353,135.58356],[33.81431,135.58398],[33.81427,135.58369]],[[33.85222,135.70202],[33.85287,135.70171],[33.85304,135.70313],[33.85359,135.70370],[33.85322,135.70411],[33.85335,135.70465],[33.85465,135.70537],[33.85520,135.70700]],[[33.79794,135.54378],[33.79837,135.54659],[33.79738,135.54709],[33.79685,135.54801],[33.79618,135.55002],[33.79620,135.55138],[33.79578,135.55224],[33.79600,135.55453],[33.79777,135.55707]],[[33.81258,135.60298],[33.81351,135.60338],[33.81380,135.60398]],[[33.73214,135.38340],[33.73164,135.38363]],[[33.81244,135.59530],[33.81228,135.59628]],[[33.73214,135.38340],[33.73278,135.38220]],[[33.73164,135.38363],[33.73109,135.38403],[33.73079,135.38483]],[[33.79517,135.53337],[33.79515,135.53398]],[[33.81205,135.59754],[33.81243,135.59711]],[[33.81581,135.61236],[33.81634,135.61295]],[[33.81807,135.61620],[33.81974,135.61804]],[[33.75577,135.84321],[33.75409,135.84342],[33.75333,135.84286]],[[33.67058,135.88375],[33.67066,135.88404]],[[33.70322,135.85896],[33.70330,135.85892]],[[33.70330,135.85892],[33.70429,135.85905],[33.70453,135.85877]],[[33.70209,135.85936],[33.70217,135.85933]],[[33.70102,135.86006],[33.70209,135.85936]],[[33.69775,135.86215],[33.69802,135.86185]],[[33.69767,135.86222],[33.69775,135.86215]],[[33.69625,135.86279],[33.69630,135.86279]],[[33.69574,135.86333],[33.69618,135.86325],[33.69625,135.86279]],[[33.69802,135.86185],[33.69951,135.86022],[33.70093,135.86006]],[[33.69630,135.86279],[33.69678,135.86303],[33.69767,135.86222]],[[33.72370,135.84960],[33.72379,135.84958]],[[33.75222,135.84295],[33.75305,135.84282]],[[33.75089,135.84323],[33.75140,135.84302]],[[33.75182,135.84282],[33.75222,135.84295]],[[33.86453,135.76190],[33.86542,135.76111],[33.86554,135.76203],[33.86521,135.76286],[33.86485,135.76281],[33.86453,135.76190]],[[33.66970,135.89148],[33.66964,135.89136]],[[33.87762,135.75809],[33.87707,135.75855],[33.87547,135.75887]],[[33.81245,135.59450],[33.81209,135.59549],[33.81199,135.59467],[33.81245,135.59450]],[[33.66932,135.89293],[33.66944,135.89271]],[[33.66946,135.89266],[33.66944,135.89271]],[[33.66932,135.89293],[33.66930,135.89315]],[[33.66930,135.89315],[33.66928,135.89318]],[[33.66974,135.89259],[33.66973,135.89256]],[[33.66947,135.88958],[33.66948,135.88965]],[[33.60383,135.48505],[33.60269,135.48587],[33.60195,135.48591],[33.60117,135.48701],[33.60127,135.48751],[33.60020,135.48708],[33.60003,135.48564],[33.59931,135.48543],[33.59860,135.48466],[33.59748,135.48598]],[[33.81469,135.58852],[33.81490,135.59029],[33.81446,135.59101]],[[33.81446,135.59101],[33.81445,135.59105]],[[33.79524,135.53559],[33.79555,135.53696]],[[33.81464,135.58817],[33.81448,135.58837]],[[33.81448,135.58837],[33.81452,135.58841]],[[33.81452,135.58841],[33.81463,135.58851]],[[33.81463,135.58851],[33.81469,135.58852]],[[33.81254,135.59497],[33.81249,135.59506]],[[33.81249,135.59506],[33.81244,135.59530]],[[33.81106,135.60125],[33.81141,135.60266]],[[33.75737,135.84221],[33.75716,135.84253]],[[33.75716,135.84253],[33.75708,135.84298]],[[33.75708,135.84298],[33.75665,135.84339],[33.75586,135.84330]],[[33.75586,135.84330],[33.75577,135.84321]],[[33.75165,135.84290],[33.75182,135.84282]],[[33.75161,135.84292],[33.75165,135.84290]],[[33.75145,135.84300],[33.75161,135.84292]],[[33.75140,135.84302],[33.75145,135.84300]],[[33.67066,135.88404],[33.67047,135.88456],[33.67065,135.88502],[33.67020,135.88603],[33.67056,135.88607],[33.66983,135.88716]],[[33.81257,135.59486],[33.81254,135.59497]],[[33.79488,135.53086],[33.79513,135.53140],[33.79517,135.53337]],[[33.79515,135.53398],[33.79524,135.53559]],[[33.75312,135.84282],[33.75333,135.84286]],[[33.75305,135.84282],[33.75312,135.84282]],[[33.72219,135.84898],[33.72239,135.84902]],[[33.81445,135.59105],[33.81351,135.59211],[33.81319,135.59296]],[[33.66913,135.89331],[33.66915,135.89363]],[[34.06283,135.66084],[34.05946,135.66279],[34.05790,135.66319],[34.05392,135.66518],[34.05311,135.66633],[34.05260,135.66643],[34.05237,135.66709],[34.05155,135.66760],[34.05129,135.66845],[34.05163,135.66932],[34.05109,135.66966],[34.05160,135.67145],[34.05123,135.67222],[34.04903,135.67396],[34.04813,135.67565],[34.04769,135.67589],[34.04736,135.67686],[34.04664,135.67751],[34.04627,135.67852],[34.04544,135.67817],[34.04432,135.67852],[34.04406,135.67800],[34.04337,135.67910],[34.04300,135.68041],[34.04297,135.68270],[34.04332,135.68456],[34.04302,135.68624],[34.04252,135.68599],[34.04209,135.68688],[34.04074,135.68755],[34.04042,135.68857],[34.03886,135.68943],[34.03862,135.68990],[34.03711,135.69033],[34.03742,135.69089],[34.03714,135.69211]],[[33.98268,135.72950],[33.98260,135.72877]],[[33.98025,135.72915],[33.98053,135.72966]],[[33.84321,135.68757],[33.84359,135.68877]]]},
+{name:'西国街道(山陽道)', color:'#7a5230', segs:[[[34.59421,133.46405],[34.59583,133.46937],[34.59618,133.47227],[34.59693,133.47456]],[[34.03883,131.82286],[34.04030,131.82092]],[[34.03782,131.82461],[34.03812,131.82572]],[[34.03835,131.82593],[34.03844,131.82693]],[[34.75816,135.35826],[34.75819,135.35852]],[[34.07622,131.70319],[34.07724,131.70403],[34.07624,131.70615]],[[34.07927,131.71410],[34.07845,131.71593]],[[34.07394,131.76464],[34.07406,131.76653]],[[34.07425,131.76749],[34.07454,131.76831]],[[34.07112,131.67198],[34.07084,131.67146]],[[34.07249,131.75577],[34.07175,131.75533]],[[34.07934,131.71186],[34.07733,131.70873]],[[34.07084,131.67146],[34.07042,131.67027],[34.06930,131.66871],[34.06798,131.66536],[34.06743,131.66497]],[[34.07503,131.72758],[34.07356,131.72920]],[[34.07676,131.69300],[34.07678,131.69119]],[[34.07681,131.69003],[34.07681,131.68805]],[[34.07279,131.77803],[34.07139,131.78311],[34.07022,131.79042],[34.06852,131.79420],[34.06761,131.79527],[34.06740,131.79512]],[[34.07179,131.74928],[34.07190,131.75275]],[[34.07845,131.71593],[34.07838,131.71786]],[[34.07934,131.71186],[34.07927,131.71375]],[[34.07398,131.75931],[34.07422,131.76247]],[[34.07733,131.70873],[34.07686,131.70809]],[[34.07377,131.75691],[34.07388,131.75808]],[[34.07422,131.76247],[34.07421,131.76253]],[[34.07406,131.76653],[34.07425,131.76749]],[[34.07786,131.72079],[34.07838,131.71786]],[[34.07370,131.75601],[34.07355,131.75600]],[[34.07179,131.74928],[34.07152,131.74858],[34.07179,131.74651]],[[34.07686,131.70809],[34.07611,131.70690]],[[34.07421,131.76253],[34.07376,131.76262]],[[34.07355,131.75600],[34.07249,131.75577]],[[34.07927,131.71375],[34.07927,131.71410]],[[34.07717,131.68282],[34.07703,131.68181],[34.07661,131.68138]],[[34.07663,131.69411],[34.07676,131.69300]],[[34.07622,131.70319],[34.07615,131.70060],[34.07726,131.69969],[34.07793,131.69864],[34.07758,131.69704],[34.07652,131.69535],[34.07663,131.69411]],[[34.07370,131.75601],[34.07377,131.75691]],[[34.83935,134.62261],[34.83790,134.62274],[34.83658,134.62228]],[[34.83554,134.62145],[34.83580,134.62225]],[[34.83554,134.62145],[34.83496,134.62137]],[[34.03532,131.83307],[34.03585,131.83273],[34.03628,131.83174]],[[34.03751,131.83038],[34.03812,131.82983],[34.03838,131.82863]],[[34.04030,131.82092],[34.04054,131.82036],[34.04032,131.81965]],[[34.03339,131.83710],[34.03397,131.83596]],[[34.03628,131.83174],[34.03642,131.83152]],[[34.03338,131.84463],[34.03277,131.84354],[34.03282,131.84163]],[[34.03642,131.83152],[34.03751,131.83038]],[[34.03281,131.84144],[34.03263,131.83938]],[[34.03282,131.84163],[34.03281,131.84144]],[[34.03331,131.83838],[34.03330,131.83787]],[[34.03263,131.83938],[34.03331,131.83838]],[[34.03479,131.83434],[34.03456,131.83503]],[[34.03397,131.83596],[34.03425,131.83549]],[[34.03838,131.82863],[34.03845,131.82810]],[[34.03330,131.83787],[34.03339,131.83710]],[[34.84025,134.62248],[34.84073,134.62565]],[[34.83935,134.62261],[34.84025,134.62248]],[[34.05407,131.59843],[34.05476,131.59741]],[[34.05307,131.60070],[34.05355,131.59924]],[[34.05868,131.65596],[34.05740,131.65462]],[[34.04768,131.63548],[34.04735,131.63379]],[[34.05279,131.60186],[34.05307,131.60070]],[[34.05032,131.61356],[34.05037,131.61273]],[[34.06465,131.66121],[34.06369,131.66079],[34.06335,131.66009]],[[34.04997,131.61575],[34.05032,131.61356]],[[34.04755,131.63580],[34.04768,131.63548]],[[34.05128,131.60744],[34.05150,131.60625]],[[34.05150,131.60625],[34.05212,131.60418]],[[34.05212,131.60418],[34.05216,131.60413]],[[34.05053,131.61131],[34.05103,131.60918]],[[34.05037,131.61273],[34.05053,131.61131]],[[34.04789,131.63847],[34.04785,131.63667],[34.04755,131.63580]],[[34.05221,131.60401],[34.05222,131.60396]],[[34.05740,131.65462],[34.05580,131.65314]],[[34.05361,131.59914],[34.05407,131.59843]],[[34.05499,131.59385],[34.05496,131.59509]],[[34.05476,131.59741],[34.05496,131.59509]],[[34.05464,131.65190],[34.05374,131.65073],[34.05372,131.64991]],[[34.05222,131.60396],[34.05256,131.60281]],[[34.05103,131.60918],[34.05128,131.60744]],[[34.06344,131.65956],[34.06306,131.65908],[34.06068,131.65788]],[[34.06335,131.66009],[34.06344,131.65956]],[[34.05580,131.65314],[34.05504,131.65244]],[[34.76487,135.36563],[34.76389,135.36560],[34.76396,135.36478]],[[34.76737,135.36919],[34.76554,135.36804]],[[34.75071,135.34659],[34.75265,135.34967]],[[34.75623,135.35550],[34.75791,135.35807]],[[34.76088,135.36149],[34.76191,135.36263]],[[34.75574,135.35477],[34.75429,135.35228]],[[34.83228,134.34182],[34.83205,134.34277],[34.83231,134.34343]],[[34.83023,134.36109],[34.83058,134.35934]],[[34.83058,134.35934],[34.83059,134.35920]],[[34.83174,134.34874],[34.83170,134.34880]],[[34.83231,134.34343],[34.83239,134.34444],[34.83196,134.34516]],[[34.83111,134.33228],[34.83123,134.33339],[34.83001,134.33730],[34.83161,134.33889],[34.83228,134.34182]],[[34.82518,134.37258],[34.82757,134.37001]],[[34.83177,134.35148],[34.83076,134.35618]],[[34.83196,134.34516],[34.83197,134.34575]],[[34.82702,134.36795],[34.82731,134.36730],[34.82814,134.36698],[34.82865,134.36581]],[[34.82731,134.38043],[34.82593,134.37656]],[[34.82757,134.37001],[34.82702,134.36795]],[[34.82593,134.37656],[34.82425,134.37304]],[[34.83170,134.34880],[34.83154,134.34904]],[[34.83059,134.35920],[34.83073,134.35721]],[[34.82997,134.36219],[34.83023,134.36109]],[[34.83197,134.34575],[34.83205,134.34700]],[[34.83232,134.32293],[34.83177,134.32489],[34.83181,134.32856],[34.83144,134.32948]],[[34.82811,134.38213],[34.82756,134.38199],[34.82731,134.38043]],[[34.83154,134.34904],[34.83148,134.34912]],[[34.82932,134.36424],[34.82942,134.36387]],[[34.82865,134.36581],[34.82868,134.36570]],[[34.82868,134.36570],[34.82932,134.36424]],[[34.83205,134.34700],[34.83174,134.34874]],[[34.82942,134.36387],[34.82963,134.36281]],[[34.83073,134.35721],[34.83066,134.35638]],[[34.83098,134.30719],[34.82960,134.30394],[34.82890,134.30307]],[[34.82736,134.29857],[34.82833,134.29957],[34.82870,134.30108]],[[34.83160,134.31066],[34.83147,134.31297],[34.83239,134.31394]],[[34.83224,134.31452],[34.83239,134.31394]],[[34.83164,134.31056],[34.83160,134.31066]],[[34.83226,134.32272],[34.83214,134.32134],[34.83145,134.31974],[34.83132,134.31857],[34.83174,134.31653]],[[34.81988,134.29236],[34.82054,134.29318],[34.82587,134.29723]],[[34.82870,134.30108],[34.82854,134.30201]],[[34.83164,134.31056],[34.83178,134.30947],[34.83098,134.30719]],[[34.81808,134.28946],[34.81808,134.28994],[34.81883,134.29093]],[[34.81808,134.28946],[34.81720,134.28910],[34.81624,134.28803],[34.81519,134.28812]],[[34.81883,134.29093],[34.81988,134.29236]],[[34.58423,133.43488],[34.58577,133.43657],[34.58794,133.44204]],[[34.58794,133.44204],[34.58725,133.44245],[34.58713,133.44297]],[[34.58693,133.44365],[34.58685,133.44453],[34.58839,133.44811],[34.58899,133.45104],[34.58893,133.45324],[34.59116,133.45770],[34.59182,133.45984]],[[34.58343,133.43303],[34.58146,133.42883],[34.58103,133.42639],[34.57911,133.42345],[34.57780,133.42010]],[[34.59347,133.46293],[34.59421,133.46405]],[[34.59903,133.47630],[34.59993,133.47760]],[[34.59774,133.47542],[34.59872,133.47583],[34.59903,133.47630]],[[34.07405,131.77006],[34.07387,131.77065]],[[34.07454,131.76831],[34.07418,131.76960]],[[34.07418,131.76960],[34.07405,131.77006]],[[34.07190,131.75275],[34.07187,131.75300]],[[34.07187,131.75300],[34.07183,131.75344]],[[34.07183,131.75344],[34.07181,131.75373]],[[34.07181,131.75373],[34.07178,131.75409]],[[34.07178,131.75409],[34.07178,131.75453]],[[34.07387,131.77065],[34.07319,131.77362],[34.07289,131.77757]],[[34.07334,131.73824],[34.07337,131.73877]],[[34.07337,131.73877],[34.07334,131.73916]],[[34.07301,131.74132],[34.07255,131.74258]],[[34.07334,131.73916],[34.07331,131.73931]],[[34.07331,131.73931],[34.07320,131.73989]],[[34.07320,131.73989],[34.07301,131.74132]],[[34.07319,131.73609],[34.07322,131.73648]],[[34.07333,131.73797],[34.07334,131.73824]],[[34.07310,131.73539],[34.07318,131.73599]],[[34.07322,131.73648],[34.07333,131.73797]],[[34.07318,131.73599],[34.07319,131.73609]],[[34.07382,131.73341],[34.07380,131.73449]],[[34.07335,131.73524],[34.07310,131.73539]],[[34.07354,131.73495],[34.07335,131.73524]],[[34.07363,131.73477],[34.07354,131.73495]],[[34.07380,131.73449],[34.07363,131.73477]],[[34.07337,131.73133],[34.07343,131.73146]],[[34.07368,131.73244],[34.07382,131.73341]],[[34.07364,131.73222],[34.07368,131.73244]],[[34.07343,131.73146],[34.07364,131.73222]],[[34.07337,131.73133],[34.07317,131.73080]],[[34.07317,131.73080],[34.07325,131.73055]],[[34.07325,131.73055],[34.07356,131.72920]],[[34.07503,131.72758],[34.07749,131.72256],[34.07786,131.72089]],[[34.04777,131.63999],[34.04789,131.63847]],[[34.07231,131.67601],[34.07245,131.67536],[34.07191,131.67468]],[[34.07624,131.70615],[34.07611,131.70690]],[[34.07371,131.76467],[34.07394,131.76464]],[[34.07178,131.75453],[34.07175,131.75533]],[[34.03844,131.82693],[34.03845,131.82810]],[[34.07661,131.68138],[34.07652,131.68142]],[[34.07191,131.67468],[34.07112,131.67198]],[[34.03883,131.82286],[34.03815,131.82386]],[[34.03812,131.82572],[34.03835,131.82593]],[[34.05256,131.60281],[34.05279,131.60186]],[[34.82997,134.36222],[34.83006,134.36259]],[[34.76487,135.36563],[34.76536,135.36792]],[[34.76396,135.36478],[34.76335,135.36441]],[[34.75265,135.34967],[34.75383,135.35149]],[[34.77014,135.37178],[34.77010,135.37102],[34.76901,135.37072],[34.76857,135.36984],[34.76784,135.36931]],[[34.76241,135.36313],[34.76254,135.36326]],[[34.76214,135.36274],[34.76241,135.36313]],[[34.75819,135.35852],[34.75950,135.36049]],[[34.07388,131.75808],[34.07398,131.75931]],[[34.76335,135.36441],[34.76254,135.36326]],[[34.05464,131.65199],[34.05464,131.65190]],[[34.05504,131.65244],[34.05464,131.65199]],[[34.07678,131.69111],[34.07681,131.69003]],[[34.07678,131.69119],[34.07678,131.69111]],[[34.05355,131.59924],[34.05361,131.59914]],[[34.59199,133.45990],[34.59243,133.46046],[34.59288,133.46220]],[[34.75950,135.36049],[34.76088,135.36149]],[[34.83202,134.31570],[34.83224,134.31452]],[[34.83200,134.31578],[34.83202,134.31570]],[[34.58693,133.44365],[34.58713,133.44297]],[[34.05372,131.64991],[34.05353,131.64992]],[[34.06061,131.65775],[34.06068,131.65788]],[[34.05872,131.65633],[34.05868,131.65596]],[[34.82592,134.29724],[34.82736,134.29857]],[[34.82587,134.29723],[34.82592,134.29724]],[[34.83580,134.62225],[34.83658,134.62228]],[[34.83494,134.62137],[34.83399,134.62154],[34.83340,134.62107]],[[34.83496,134.62137],[34.83494,134.62137]],[[34.07786,131.72086],[34.07786,131.72079]],[[34.07786,131.72089],[34.07786,131.72086]],[[34.83174,134.31653],[34.83200,134.31578]],[[34.83140,134.32957],[34.83111,134.33228]],[[34.83144,134.32948],[34.83140,134.32957]],[[34.05872,131.65633],[34.06061,131.65775]]]}
+];
+
+/* ---------- 古戦場カテゴリ(⚔️) ---------- */
+const KOSENJO = [
+['桶狭間古戦場','戦',35.0922,136.9408,'1560年、信長が今川義元を破る。愛知'],
+['川中島古戦場','戦',36.6417,138.1917,'信玄と謙信の五度の激戦。長野'],
+['姉川古戦場','戦',35.4042,136.3181,'1570年、信長・家康 vs 浅井・朝倉。滋賀'],
+['長篠城址','戦',34.9236,137.5600,'1575年、鉄砲三段撃ちで武田を破る。愛知'],
+['山崎古戦場(酒解神社)','戦',34.9003,135.6806,'天王山の決戦。京都'],
+['関ヶ原 石田三成陣跡(笹尾山)','戦',35.3550,136.4614,'三成の本陣。岐阜'],
+['関ヶ原 徳川家康陣跡(桃配山)','戦',35.3708,136.4631,'家康の本陣。岐阜'],
+['関ヶ原 小早川秀秋陣跡(松尾山)','戦',35.3572,136.4472,'裏切りの山。岐阜'],
+['関ヶ原 大谷吉継の墓','戦',35.3542,136.4572,'義に生きた武将の墓。岐阜'],
+['大坂冬の陣 真田丸跡','戦',34.6739,135.5247,'幸村の出城。大阪'],
+['大坂夏の陣 安居神社','戦',34.6492,135.5175,'真田幸村戦死の地。大阪'],
+['島原の乱 原城本丸跡','戦',32.6292,130.2536,'天草四郎と一揆の城。長崎'],
+['函館戦争 五稜郭最後の地','戦',41.7969,140.7572,'榎本武揚の降伏。北海道'],
+['函館戦争 碧血碑','戦',41.7558,140.7042,'旧幕府軍の慰霊碑。北海道'],
+['戊辰戦争 会津若松城 飯盛山','戦',37.4931,139.9550,'白虎隊自刃の地。福島'],
+['戊辰戦争 白河口の戦い跡','戦',37.1300,140.2200,'奥州越列藩同盟の戦い。福島'],
+['戊辰戦争 宇都宮城址','戦',36.5550,139.8850,'城攻防戦の跡。栃木'],
+['西南戦争 田原坂','戦',32.9067,130.6714,'官軍と薩軍の激戦地。熊本'],
+['西南戦争 城山 西郷隆盛終焉の地','戦',31.5981,130.5497,'西郷どん最期の地。鹿児島'],
+['鎌倉 畠山重忠の乱 二俣川','戦',35.4639,139.5367,'鎌倉武士の合戦。神奈川'],
+['屋島古戦場(源平合戦)','戦',34.3519,134.1039,'那須与一の扇の的。香川'],
+['壇ノ浦古戦場(みもすそ川公園)','戦',33.9617,130.9508,'平家滅亡の海戦。山口'],
+['一の谷古戦場(須磨浦公園)','戦',34.6469,135.1136,'義経の鵯越の逆落とし。兵庫'],
+['宇治川合戦 宇治橋','戦',34.8892,135.8056,'木曽義仲と宇治川の先陣争い。京都'],
+['篠ノ井の戦い 長福寺','戦',36.5600,138.1300,'応仁の乱の東北の戦い。長野'],
+['厩橋の戦い 上杉憲顕','戦',36.3900,139.0600,'南北朝の争乱。群馬'],
+['長久手古戦場','戦',35.1672,137.0469,'小牧・長久手の戦い。愛知'],
+['小牧山(小牧山城)','戦',35.2911,136.9156,'秀吉の本陣。愛知'],
+['賤ヶ岳古戦場','戦',35.5058,136.1886,'秀吉 vs 勝家。滋賀'],
+['耳川古戦場','戦',32.0167,131.4200,'島津 vs 大友の決戦。宮崎'],
+['沖田畷古戦場','戦',32.8500,130.1000,'島津 vs 龍造寺。佐賀'],
+['関ヶ原 島津義弘陣跡','戦',35.3667,136.4667,'敵中突破の島津。岐阜'],
+['三方ヶ原古戦場','戦',34.7500,137.6667,'家康最大の敗戦。静岡'],
+['高天神城跡','戦',34.7333,138.0333,'武田と徳川の争奪戦。静岡'],
+['鳥取城 渇え殺しの戦い','戦',35.5069,134.2383,'秀吉の兵糧攻め。鳥取'],
+['上月城跡','戦',34.9050,134.3800,'赤松円心の城。兵庫'],
+['忍城跡(行田)','戦',36.1389,139.4561,'秀吉の水攻めに耐えた城。埼玉'],
+['鉢形城跡','戦',36.1500,139.1900,'北条氏邦の城。埼玉'],
+['大凧の戦い 浜松','戦',34.7114,137.7261,'家康の旗本の奮戦。静岡'],
+['大坂の陣 真田信繁 顕彰碑','戦',34.6500,135.5183,'幸村の碑。大阪'],
+['新田義貞 藤島の戦い','戦',36.0600,136.2000,'南北朝の合戦。福井'],
+['湊川の戦い 湊川神社','戦',34.6908,135.1850,'楠木正成の殉じた地。兵庫'],
+['楠木正成の墓(観心寺)','墓',34.5167,135.6089,'大楠公の墓。大阪'],
+['児島高徳の碑(湊川神社)','戦',34.6900,135.1867,'桜の幹に詩を刻んだ忠臣。兵庫'],
+['新田義貞の首塚(称名寺)','墓',35.3200,139.5800,'鎌倉攻めの将。神奈川']
+];
+CHECKPOINTS.push.apply(CHECKPOINTS, KOSENJO);
+
+/* ---------- 追加の社寺仏閣(全国の一之宮・名刹・大社) ---------- */
+const SHAJA_EXTRA = [
+/* 北海道・東北 */
+['函館八幡宮','社',41.7550,140.7100,'函館の総鎮守。北海道'],
+['善知鳥神社','社',40.5267,140.0403,'青森の総鎮守。青森'],
+['盛岡八幡宮','社',39.7200,141.1300,'南部氏の鎮守。岩手'],
+['平泉 毛越寺 大泉が池','寺',38.9889,141.1089,'浄土庭園の池。岩手'],
+['宮城 塩竈 志波彦神社','社',38.3186,141.0117,'鹽竈神社の境内社。宮城'],
+['松島 瑞巌寺 宝物館','寺',38.3717,141.0594,'伊達家の宝物。宮城'],
+['山形 出羽神社','社',38.5311,139.9831,'羽黒山山頂の社。山形'],
+['米沢 上杉謙信公像','史',37.9139,140.1092,'謙信公の銅像。山形'],
+['会津 飯盛山 さざえ堂','寺',37.4933,139.9547,'二重螺旋の奇妙な堂。福島'],
+['会津 阿弥陀寺','寺',37.5100,139.9500,'会津五薬師。福島'],
+/* 関東 */
+['水戸 弘道館','史',36.3750,140.4667,'水戸学の学問所。茨城'],
+['筑波山神社','社',36.3778,140.1069,'筑波の霊山の社。茨城'],
+['那須温泉神社','社',37.1200,140.0100,'九尾の狐伝説。栃木'],
+['宇都宮二荒山神社','社',36.5569,139.8850,'下野一宮。栃木'],
+['日光 神橋','社',36.7531,139.6050,'山開き伝説の橋。栃木'],
+['高崎 少林山 達磨堂','寺',36.3553,139.0108,'だるま市の堂。群馬'],
+['前橋 上野総社神社','社',36.3900,139.0600,'上野国総社。群馬'],
+['伊香保 伊香保神社','社',36.4972,138.9247,'温泉街の社。群馬'],
+['川越 喜多院','寺',35.9167,139.4778,'天海僧正ゆかり。埼玉'],
+['川越 氷川神社','社',35.9236,139.4889,'縁結びの社。埼玉'],
+['秩父 三峰神社','社',35.9300,138.9900,'関東屈指のパワースポット。埼玉'],
+['埼玉 岩槻 久伊豆神社 本殿','社',36.0061,139.7525,'岩槻の古社。埼玉'],
+['千葉 香取神宮','社',35.8867,140.5314,'東国三社の一つ。千葉'],
+['千葉 佐原 小野川','道',35.8950,140.4967,'水郷の町並み。千葉'],
+['成田 成田山 大本堂','寺',35.7864,140.3194,'不動明王の総本山。千葉'],
+['東京 上野 寛永寺','寺',35.7211,139.7747,'徳川家の菩提寺。東京'],
+['東京 日枝神社','社',35.6772,139.7394,'山王祭の社。東京'],
+['東京 深川不動堂','寺',35.6697,139.7989,'富岡八幡宮の隣。東京'],
+['東京 亀戸天神社','社',35.7000,139.8200,'藤まつりの社。東京'],
+['東京 品川神社','社',35.6061,139.7428,'富士浅間の社。東京'],
+['東京 湯島天満宮','社',35.7050,139.7700,'学問の神。東京'],
+['東京 神田明神','社',35.7017,139.7678,'江戸総鎮守。東京'],
+['東京 芝東照宮','社',35.6550,139.7450,'増上寺の隣。東京'],
+['東京 根津神社','社',35.7200,139.7600,'つつじの社。東京'],
+['東京 氷川神社(赤坂)','社',35.6717,139.7250,'赤坂の鎮守。東京'],
+['神奈川 寒川神社','社',35.3739,139.3828,'八方除の相模一宮。神奈川'],
+['神奈川 三浦 三崎港','史',35.1350,139.6150,'マグロの港。神奈川'],
+['神奈川 鎌倉 明月院','寺',35.3339,139.5536,'あじさい寺。神奈川'],
+['神奈川 鎌倉 浄智寺','寺',35.3381,139.5472,'鎌倉五山第四位。神奈川'],
+['神奈川 江の島 江島神社','社',35.2989,139.4794,'日本三大弁財天。神奈川'],
+['神奈川 箱根 九頭龍神社','社',35.2050,139.0250,'芦ノ湖の水神。神奈川'],
+['神奈川 三嶋大社','社',35.1233,138.9186,'伊豆国一宮。静岡'],
+/* 中部 */
+['新潟 白山神社 本殿','社',37.9125,139.0361,'新潟の守り神。新潟'],
+['新潟 弥彦神社 宝物館','社',37.7033,138.8322,'越後一宮の宝物。新潟'],
+['新潟 佐渡 清水寺','寺',38.0200,138.2300,'佐渡の古刹。新潟'],
+['富山 高岡 瑞龍寺 仏殿','寺',36.7361,137.0111,'国宝の仏殿。富山'],
+['富山 射水神社','社',36.7800,137.1100,'越中一宮。富山'],
+['石川 金沢 尾山神社','社',36.5672,136.6550,'前田家を祀る。石川'],
+['石川 金沢 妙立寺','寺',36.5556,136.6494,'忍者寺の本堂。石川'],
+['石川 白山比咩神社','社',36.4300,136.6000,'加賀一宮。石川'],
+['福井 氣比神宮','社',35.6553,136.0747,'越前一宮。福井'],
+['福井 永平寺 承陽殿','寺',36.0828,136.3558,'道元の遺骨を祀る。福井'],
+['山梨 武田神社 宝物館','社',35.6889,138.5722,'武田家の宝物。山梨'],
+['山梨 河口湖 冨士御室浅間神社','社',35.5100,138.7400,'富士の麓の社。山梨'],
+['長野 善光寺 本堂','寺',36.6622,138.1883,'国宝の本堂。長野'],
+['長野 戸隠神社 中社','社',36.7400,138.0800,'戸隠信仰の中心。長野'],
+['長野 諏訪大社 下社春宮','社',36.0700,138.0900,'御柱の社。長野'],
+['岐阜 飛騨高山 櫻山八幡宮','社',36.1400,137.2500,'高山祭の社。岐阜'],
+['岐阜 飛騨一宮水無神社','社',36.3100,137.2100,'飛騨一宮。岐阜'],
+['岐阜 白川八幡神社','社',36.2700,136.9000,'白川郷の社。岐阜'],
+['静岡 久能山東照宮 本殿','社',34.9594,138.4672,'国宝の社殿。静岡'],
+['静岡 富士山本宮浅間大社 本殿','社',35.2269,138.6103,'浅間信仰の総本宮。静岡'],
+['静岡 五社神社','社',34.7150,137.7300,'浜松の総社。静岡'],
+['愛知 熱田神宮 宝物館','社',35.1283,136.9075,'草薙剣の神宝。愛知'],
+['愛知 名古屋 大須観音','寺',35.1594,136.9000,'日本三大観音。愛知'],
+['愛知 尾張一宮真清田神社','社',35.3000,136.8000,'尾張一宮。愛知'],
+['愛知 豊川稲荷 本殿','寺',34.8389,137.3936,'稲荷信仰の寺院。愛知'],
+['三重 伊勢神宮 外宮 豊受大神宮','社',34.4894,136.7086,'外宮の正宮。三重'],
+['三重 二見 二見興玉神社 夫婦岩','社',34.5100,136.7886,'夫婦岩の社。三重'],
+['三重 伊賀 阿波志神社','社',34.7600,136.1200,'伊賀の古社。三重'],
+/* 近畿 */
+['滋賀 多賀大社 本殿','社',35.2214,136.2867,'お多賀さんの本殿。滋賀'],
+['滋賀 近江神宮','社',35.0400,135.8500,'天智天皇を祀る。滋賀'],
+['滋賀 石山寺 本堂','寺',34.9603,135.9072,'国宝の本堂。滋賀'],
+['大阪 住吉大社 第一本宮','社',34.6131,135.4936,'住吉造の本宮。大阪'],
+['大阪 大阪天満宮','社',34.6950,135.5128,'天神さん。大阪'],
+['大阪 四天王寺 五重塔','寺',34.6539,135.5172,'聖徳太子の塔。大阪'],
+['兵庫 西宮神社 本殿','社',34.7381,135.3392,'えべっさんの本殿。兵庫'],
+['兵庫 生田神社 本殿','社',34.6950,135.1928,'神戸の守り神。兵庫'],
+['兵庫 廣峯神社','社',34.8600,134.6500,'播磨の総社。兵庫'],
+['奈良 春日大社 本殿','社',34.6817,135.8486,'朱塗りの本殿。奈良'],
+['奈良 東大寺 大仏殿','寺',34.6892,135.8400,'世界最大の木造建築。奈良'],
+['奈良 大神神社 拝殿','社',34.5356,135.8533,'三輪山を拝する社。奈良'],
+['和歌山 金剛峯寺 壇上伽藍','寺',34.2147,135.5850,'高野山の中心。和歌山'],
+['和歌山 熊野本宮大社','社',33.8900,135.7700,'熊野三山の中心。和歌山'],
+['和歌山 熊野速玉大社 本殿','社',33.7306,135.9844,'新宮の社。和歌山'],
+/* 中国・四国 */
+['鳥取 白兎神社 本殿','社',35.5172,134.2839,'因幡の白兎の社。鳥取'],
+['鳥取 樂樂福神社','社',35.4900,134.2300,'鳥取の総社。鳥取'],
+['島根 出雲大社 本殿','社',35.4022,132.6861,'神楽殿の大注連縄。島根'],
+['島根 八重垣神社 鏡の池','社',35.4378,132.9717,'縁占いの池。島根'],
+['岡山 吉備津神社 本殿','社',34.6703,133.8503,'備前一宮。岡山'],
+['岡山 吉備津彦神社 本殿','社',34.6653,133.8694,'桃太郎の社。岡山'],
+['広島 厳島神社 大鳥居','社',34.2961,132.3203,'海に浮かぶ鳥居。広島'],
+['広島 広島護国神社','社',34.3989,132.4589,'広島城の社。広島'],
+['山口 防府天満宮 本殿','社',34.0531,131.5756,'天神信仰の総本宮。山口'],
+['山口 住吉神社(下関)','社',33.9600,130.9500,'関門の社。山口'],
+['徳島 大麻比古神社','社',34.0100,134.5500,'阿波一宮。徳島'],
+['徳島 霊山寺 本堂','寺',34.1322,134.5314,'四国巡礼の出発点。徳島'],
+['香川 金刀比羅宮 本宮','社',34.1842,133.8078,'こんぴらさんの本宮。香川'],
+['香川 田村神社','社',34.2900,134.0600,'讃岐一宮。香川'],
+['愛媛 大山祇神社 本殿','社',34.2403,132.9906,'日本総鎮守。愛媛'],
+['愛媛 石鎚神社 成就社','社',33.8492,133.3108,'石鎚信仰の社。愛媛'],
+['高知 高知八幡宮','社',33.5600,133.5300,'土佐の総鎮守。高知'],
+['高知 土佐神社','社',33.5900,133.6200,'土佐一宮。高知'],
+/* 九州・沖縄 */
+['福岡 太宰府天満宮 本殿','社',33.5222,130.5356,'天神さんの本殿。福岡'],
+['福岡 宗像大社 沖津宮','社',34.2403,130.1011,'沖ノ島の社。福岡'],
+['福岡 香椎宮','社',33.6600,130.4400,'仲哀天皇を祀る。福岡'],
+['佐賀 祐徳稲荷神社 本殿','社',33.0725,130.0269,'朱塗りの楼門。佐賀'],
+['佐賀 多久聖廟','史',33.2900,130.1100,'孔子を祀る廟。佐賀'],
+['長崎 大浦天主堂 内部','寺',32.7344,132.8706,'世界遺産の教会。長崎'],
+['長崎 諏訪神社','社',32.7500,129.8800,'長崎の総鎮守。長崎'],
+['熊本 阿蘇神社 楼門','社',32.9733,131.1183,'阿蘇の総鎮守。熊本'],
+['熊本 青井阿蘇神社 本殿','社',32.2119,130.8100,'国宝の本殿。熊本'],
+['大分 宇佐神宮 上宮本殿','社',33.5267,131.3753,'八幡神の正殿。大分'],
+['大分 臼杵 臼杵磨崖仏','寺',33.1236,131.8075,'国宝の石仏。大分'],
+['宮崎 高千穂神社 本殿','社',32.7058,131.3075,'高千穂の総社。宮崎'],
+['宮崎 鵜戸神宮 本殿','社',31.6536,131.4692,'洞窟の中の社殿。宮崎'],
+['鹿児島 霧島神宮 本殿','社',31.8583,130.8728,'霧島の総鎮守。鹿児島'],
+['鹿児島 照国神社 本殿','社',31.5969,130.5553,'島津斉彬を祀る。鹿児島'],
+['沖縄 波上宮 本殿','社',26.2194,127.6711,'沖縄総鎮守の本殿。沖縄'],
+['沖縄 普天満宮','社',26.2900,127.7900,'鐘乳洞の中の社。沖縄']
+];
+CHECKPOINTS.push.apply(CHECKPOINTS, SHAJA_EXTRA);
+
+
+
+
+const TYPE_ICON = {'社':'⛩️','寺':'🛕','史':'🏛️','道':'🥾','墓':'🪦','城':'🏯','戦':'⚔️'};
+const TYPE_NAME = {'社':'神社','寺':'寺院','史':'史跡','道':'旧街道','墓':'墓所','城':'城郭','戦':'古戦場'};
+
+/* ---------- 街道ラインを地図に描画 ---------- */
+let kaidoOn = true;
+function drawKaidoLines(){
+  kaidoLayer.clearLayers();
+  KAIDO_LINES.forEach(function(k){
+    var lineData = k.segs ? k.segs : k.pts;
+    L.polyline(lineData, {color:k.color, weight:4, opacity:.7, dashArray:'10 6'})
+     .bindPopup('<b>🥾 '+k.name+'</b><br>国土地理院地図・OSMに登録された旧道の形状を表示しています。沿線の🏮マーカーが宿場町です。')
+     .addTo(kaidoLayer);
+  });
+}
+drawKaidoLines();
+
+
+function cpIcon(done, type, name, hasMemo){
+  let e = TYPE_ICON[type] || '📍';
+  if(type==='道' && name && (name.indexOf('宿')!==-1 || name.indexOf('大橋')!==-1)) e='🏮';
+  const badge = hasMemo ? '<span class="cp-badge">🗒</span>' : '';
+  return L.divIcon({className:'', html:'<div class="cp-wrap"><div class="cp'+(done?' cp-done':'')+'">'+e+'</div>'+badge+'</div>', iconSize:[22,22], iconAnchor:[11,11]});
+}
+function cpPopup(idx){
+  const c = CHECKPOINTS[idx];
+  const done = !!data.cp[idx];
+  const key = cpMemoKey(c);
+  const me = memoOf(key);
+  return '<b>'+memoEsc(c[0])+'</b>('+(TYPE_NAME[c[1]]||'名所')+')<br>'+memoEsc(c[4])+'<br>'
+    + '<span class="memo-sub">'+c[2].toFixed(5)+', '+c[3].toFixed(5)+'</span><br>'
+    + (done?'✅ <b>訪問済み</b>':'⬜ 未訪問 — 100m以内に近づくとチェック!')
+    + (me?' <span class="memo-has">🗒 メモあり</span>':'')
+    + memoBox(key, me?me.t:'');
+}
+const cpMarkers = [];
+CHECKPOINTS.forEach(function(c, idx){
+  const m = L.marker([c[2],c[3]], {icon: cpIcon(!!data.cp[idx], c[1], c[0], !!memoOf(cpMemoKey(c)))}).addTo(cpLayer);
+  m.bindPopup(function(){ return cpPopup(idx); }, {maxWidth:300, minWidth:240});
+  cpMarkers.push(m);
+});
+function checkCp(lat, lon){
+  let changed=false;
+  CHECKPOINTS.forEach(function(c, idx){
+    if(data.cp[idx]) return;
+    if(haversine([lat,lon],[c[2],c[3]]) <= CP_RADIUS){
+      data.cp[idx]=1; changed=true;
+      cpMarkers[idx].setIcon(cpIcon(true, c[1], c[0], !!memoOf(cpMemoKey(c))));
+      notice((TYPE_ICON[c[1]]||'📍')+' 「'+c[0]+'」に到達!');
+    }
+  });
+  if(changed){ updateStats(); save(); }
+}
+/* 過去の軌跡への遡及チェック(初回のみ) */
+if(!data._cpBackfill){
+  (data.track||[]).forEach(function(p){
+    CHECKPOINTS.forEach(function(c, idx){
+      if(!data.cp[idx] && haversine([p[0],p[1]],[c[2],c[3]]) <= CP_RADIUS) data.cp[idx]=1;
+    });
+  });
+  data._cpBackfill=1; save();
+}
+let cpOn = true;
+
+/* ---------- グリッド ---------- */
+let gridOn = false;
+function refreshGrid(){
+  gridLayer.clearLayers();
+  if(!gridOn || map.getZoom()<14) return;
+  const b = map.getBounds().pad(0.1);
+  const i0=Math.floor(b.getSouth()/CELL_LAT), i1=Math.floor(b.getNorth()/CELL_LAT);
+  const j0=Math.floor(b.getWest()/CELL_LON), j1=Math.floor(b.getEast()/CELL_LON);
+  if((i1-i0)*(j1-j0) > 6000) return;
+  for(let i=i0;i<=i1;i++) for(let j=j0;j<=j1;j++){
+    const key=i+'_'+j;
+    if(data.cells[key]) continue;
+    L.rectangle([[i*CELL_LAT,j*CELL_LON],[(i+1)*CELL_LAT,(j+1)*CELL_LON]],
+      {color:'#999',weight:0.4,fill:false,opacity:.5,interactive:false}).addTo(gridLayer);
+  }
+}
+map.on('moveend zoomend', refreshGrid);
+
+/* ---------- 市町村判定(国土地理院 逆ジオコーダ) ---------- */
+let lastGeoPos = null;
+function geocodeMuni(lat, lon){
+  if(lastGeoPos && haversine(lastGeoPos,[lat,lon]) < GEOCODE_MIN_M) return;
+  lastGeoPos=[lat,lon];
+  fetch('https://mreversegeocoder.gsi.go.jp/reverse-geocoder/LonLatToAddress?lon='+lon+'&lat='+lat)
+    .then(function(r){return r.json();})
+    .then(function(j){
+      if(!j.results) return;
+      const code = String(j.results.muniCd);
+      if(!data.muni[code]){
+        data.muni[code]=1;
+        const pref = PREF_NAME[parseInt(code.slice(0,2),10)] || '';
+        notice('🏙 新しい市町村: '+pref+(j.results.lv01Nm||''));
+        updateStats(); save();
+      }
+    }).catch(function(){});
+}
+
+/* ---------- 統計更新 ---------- */
+function updateStats(){
+  let inCityCount=0;
+  for(const k in data.cells) if(data.cells[k]) inCityCount++;
+  const rate = cityCellTotal ? (100*inCityCount/cityCellTotal) : 0;
+  document.getElementById('rate').textContent = rate.toFixed(1);
+  document.getElementById('cells').textContent = Object.keys(data.cells).length;
+  document.getElementById('dist').textContent = (data.totalDist/1000).toFixed(1);
+  document.getElementById('today').textContent = (data.todayDist/1000).toFixed(1);
+  let cpDone=0; for(const k in data.cp) if(data.cp[k]) cpDone++;
+  document.getElementById('cps').textContent = cpDone;
+  document.getElementById('cptotal').textContent = CHECKPOINTS.length;
+  document.getElementById('muni').textContent = Object.keys(data.muni).length;
+  const prefSet={};
+  for(const code in data.muni) prefSet[code.slice(0,2)]=1;
+  document.getElementById('prefs').textContent = Object.keys(prefSet).length;
+  document.getElementById('memocnt').textContent = Object.keys(data.memo||{}).length;
+}
+updateStats();
+
+function notice(msg){
+  const n=document.getElementById('notice');
+  n.textContent=msg; n.style.display='block';
+  clearTimeout(notice._t);
+  notice._t=setTimeout(function(){n.style.display='none';}, 4000);
+}
+
+/* ---------- GPS 記録 ---------- */
+let watchId=null, lastPos=null, meMarker=null, meCircle=null;
+const recBtn=document.getElementById('recBtn');
+
+function onPos(pos){
+  const lat=pos.coords.latitude, lon=pos.coords.longitude;
+  const acc=pos.coords.accuracy||99;
+  const cur=[lat,lon];
+
+  if(meMarker){ meMarker.setLatLng(cur); meCircle.setLatLng(cur).setRadius(acc); }
+  else{
+    meCircle=L.circle(cur,{radius:acc,color:'#1e88e5',weight:1,fillColor:'#1e88e5',fillOpacity:.12}).addTo(map);
+    meMarker=L.circleMarker(cur,{radius:7,color:'#fff',weight:2,fillColor:'#1e88e5',fillOpacity:1}).addTo(map);
+    map.setView(cur, Math.max(map.getZoom(),15));
+  }
+
+  if(watchId===null) return;
+  if(acc>50){ notice('⚠ GPS精度が低いです(±'+Math.round(acc)+'m)'); return; }
+  if(lastPos && haversine(lastPos,cur) < MIN_MOVE_M) return;
+
+  if(lastPos){
+    const d=haversine(lastPos,cur);
+    data.totalDist+=d; data.todayDist+=d;
+  }
+  lastPos=cur;
+  data.track.push([+lat.toFixed(6),+lon.toFixed(6)]);
+  trackLine.addLatLng(cur);
+
+  const key=cellKey(lat,lon);
+  if(!(key in data.cells)){
+    data.cells[key]=pointInPoly(lat,lon,KYOTO_POLY)?1:0;
+    drawCell(key);
+    notice('🎉 新しいマスを踏破!');
+  }
+  geocodeMuni(lat,lon);
+  checkCp(lat,lon);
+  refreshGrid(); updateStats(); save();
+}
+
+recBtn.addEventListener('click',function(){
+  if(watchId!==null){
+    navigator.geolocation.clearWatch(watchId);
+    watchId=null; lastPos=null;
+    recBtn.textContent='▶ 記録開始'; recBtn.classList.remove('recording');
+    notice('記録を停止しました');
+    save();
+  }else{
+    if(!navigator.geolocation){ notice('⚠ この端末はGPSに対応していません'); return; }
+    watchId=navigator.geolocation.watchPosition(onPos,
+      function(e){ notice('⚠ 位置エラー: '+e.message); },
+      {enableHighAccuracy:true, maximumAge:3000, timeout:15000});
+    recBtn.textContent='■ 記録停止'; recBtn.classList.add('recording');
+    notice('📡 記録中… 歩くとマスが塗られます');
+  }
+});
+
+if(navigator.geolocation){
+  navigator.geolocation.getCurrentPosition(onPos, function(){}, {enableHighAccuracy:true, timeout:10000});
+}
+
+/* ---------- ボタン ---------- */
+document.getElementById('addBtn').addEventListener('click',function(){
+  const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent);
+  document.getElementById('iosSteps').style.display = isIOS ? 'block' : 'none';
+  document.getElementById('androidSteps').style.display = isIOS ? 'none' : 'block';
+  document.getElementById('installModal').style.display='flex';
+});
+document.getElementById('locBtn').addEventListener('click',function(){
+  navigator.geolocation.getCurrentPosition(function(p){
+    map.setView([p.coords.latitude,p.coords.longitude],16);
+    onPos(p);
+  },function(){ notice('⚠ 現在地を取得できません'); },{enableHighAccuracy:true,timeout:10000});
+});
+document.getElementById('gridBtn').addEventListener('click',function(){
+  gridOn=!gridOn;
+  this.style.background = gridOn ? '#4caf50' : '#fff';
+  this.style.color = gridOn ? '#fff' : '#333';
+  refreshGrid();
+});
+document.getElementById('baseBtn').addEventListener('click',function(){
+  switchBase();
+  this.style.background = baseCur==='osm' ? '#1e88e5' : '#fff';
+  this.style.color = baseCur==='osm' ? '#fff' : '#333';
+  notice(baseCur==='osm' ? '🗺 OpenStreetMap表示(旧道の名称が見えます)' : '🗺 地理院地図に戻しました');
+});
+document.getElementById('kojikuBtn').addEventListener('click',function(){
+  kojikuOn=!kojikuOn;
+  if(kojikuOn){ setKojiku(); this.style.background='#8d5a2b'; this.style.color='#fff';
+    notice('📜 明治期の古地図を重ねました(当時の街道が正確に描かれています)');
+  } else { if(kojikuLayer) map.removeLayer(kojikuLayer); kojikuKey=null;
+    this.style.background='#fff'; this.style.color='#333'; }
+});
+document.getElementById('cpBtn').addEventListener('click',function(){
+  cpOn=!cpOn;
+  if(cpOn){ map.addLayer(cpLayer); } else { map.removeLayer(cpLayer); }
+  this.style.background = cpOn ? '#fff' : '#ddd';
+  this.style.color = cpOn ? '#333' : '#888';
+});
+document.getElementById('kaidoBtn').addEventListener('click',function(){
+  kaidoOn=!kaidoOn;
+  if(kaidoOn){ map.addLayer(kaidoLayer); } else { map.removeLayer(kaidoLayer); }
+  this.style.background = kaidoOn ? '#fff' : '#ddd';
+  this.style.color = kaidoOn ? '#333' : '#888';
+});
+document.getElementById('expBtn').addEventListener('click',function(){
+  const blob=new Blob([JSON.stringify(data)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='kumanaku_walk_'+todayStr()+'.json';
+  a.click();
+  notice('💾 記録をダウンロードしました');
+});
+document.getElementById('impBtn').addEventListener('click',function(){ document.getElementById('impFile').click(); });
+document.getElementById('impFile').addEventListener('change',function(){
+  const f=this.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=function(){ try{
+      const d=JSON.parse(r.result);
+      if(d.cells&&d.track){
+        data=Object.assign({totalDist:0,todayDist:0,todayDate:todayStr(),muni:{},memo:{},free:[]},d);
+        if(!data.memo) data.memo={}; if(!data.free) data.free=[];
+        cellLayer.clearLayers(); for(const k in drawnCells) delete drawnCells[k];
+        Object.keys(data.cells).forEach(drawCell);
+        trackLayer.clearLayers();
+        trackLine=L.polyline(data.track,{color:'#e53935',weight:3,opacity:.8}).addTo(trackLayer);
+        rebuildFreeMarkers(); refreshMemoIcons();
+        updateStats(); save(); notice('📂 記録を読み込みました');
+      }else notice('⚠ ファイル形式が違います');
+    }catch(e){ notice('⚠ 読み込みに失敗しました'); } };
+  r.readAsText(f);
+});
+document.getElementById('clearBtn').addEventListener('click',function(){
+  if(!confirm('すべての記録を消去しますか? (元に戻せません。先に「保存出力」推奨)')) return;
+  localStorage.removeItem(STORE_KEY); location.reload();
+});
+
+/* ---------- 訪問メモ(地点ごとの書き込み・端末内保存) ---------- */
+const memoLayer = L.layerGroup().addTo(map);
+const freeMarkers = {};
+let memoMode = false, memoListCache = [], pendingLatLng = null;
+
+function memoEsc(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function cpMemoKey(c){ return 'cp:'+c[0]+'|'+c[2]+','+c[3]; }
+function memoOf(key){ return (data.memo && data.memo[key]) ? data.memo[key] : null; }
+function memoBox(key, val){
+  return '<div class="memo-box">'
+    + '<div class="memo-lbl">🗒 訪問メモ(この端末に保存)</div>'
+    + '<textarea class="memo-ta" data-key="'+memoEsc(key)+'" rows="3" placeholder="見たもの・感想・日付など">'+memoEsc(val||'')+'</textarea>'
+    + '<div class="memo-row"><button class="memo-btn memo-save">💾 メモ保存</button><button class="memo-btn memo-del">🗑 削除</button></div>'
+    + '<div class="memo-note">書き込むと🗒バッジが付きます。データは端末のブラウザ内のみ(サーバー送信なし)。</div>'
+    + '</div>';
+}
+function freeIcon(){
+  return L.divIcon({className:'', html:'<div class="cp memo-pin">📝</div>', iconSize:[22,22], iconAnchor:[11,11]});
+}
+function addFreeMarker(f){
+  const key = 'free:'+f.id;
+  const m = L.marker([f.lat,f.lon], {icon:freeIcon()}).addTo(memoLayer);
+  m.bindPopup(function(){
+    const me = memoOf(key);
+    return '<b>📝 '+memoEsc(f.name||'メモ地点')+'</b><br><span class="memo-sub">'+f.lat.toFixed(5)+', '+f.lon.toFixed(5)+'</span>'
+      + memoBox(key, me?me.t:'')
+      + '<div class="memo-row"><button class="memo-btn memo-unpin">📍 この地点のピンを削除</button></div>';
+  }, {maxWidth:300, minWidth:240});
+  freeMarkers[f.id] = m;
+  return m;
+}
+function rebuildFreeMarkers(){
+  memoLayer.clearLayers();
+  for(const k in freeMarkers) delete freeMarkers[k];
+  (data.free||[]).forEach(addFreeMarker);
+}
+function refreshMemoIcons(){
+  for(let i=0;i<cpMarkers.length;i++){
+    const c = CHECKPOINTS[i];
+    cpMarkers[i].setIcon(cpIcon(!!data.cp[i], c[1], c[0], !!memoOf(cpMemoKey(c))));
+  }
+}
+function afterMemoChange(){ updateStats(); refreshMemoIcons(); }
+function saveMemo(key, text){
+  const t = String(text==null?'':text).trim();
+  if(!data.memo) data.memo = {};
+  if(!t){ if(data.memo[key]) delMemo(key); else notice('メモが空のままです'); return; }
+  data.memo[key] = {t:t, d:todayStr(), u:Date.now()};
+  save(); afterMemoChange(); notice('💾 メモを保存しました(端末内)');
+}
+function delMemo(key){
+  if(!data.memo || !data.memo[key]) return;
+  delete data.memo[key];
+  if(key.indexOf('free:')===0){
+    const id = key.slice(5);
+    data.free = (data.free||[]).filter(function(x){ return String(x.id)!==id; });
+    if(freeMarkers[id]){ memoLayer.removeLayer(freeMarkers[id]); delete freeMarkers[id]; }
+  }
+  save(); afterMemoChange(); notice('🗑 メモを削除しました');
+}
+function memoTarget(k){
+  if(k.indexOf('cp:')===0){
+    const c = CHECKPOINTS.filter(function(x){ return cpMemoKey(x)===k; })[0];
+    if(c) return {nm:c[0], lat:c[2], lon:c[3], pos:c[2].toFixed(4)+', '+c[3].toFixed(4)};
+    return {nm:k.slice(3), lat:null, lon:null, pos:''};
+  }
+  if(k.indexOf('free:')===0){
+    const id = k.slice(5);
+    const f = (data.free||[]).filter(function(x){ return String(x.id)===id; })[0];
+    if(f) return {nm:(f.name||'メモ地点'), lat:f.lat, lon:f.lon, pos:f.lat.toFixed(4)+', '+f.lon.toFixed(4)};
+  }
+  return {nm:k, lat:null, lon:null, pos:''};
+}
+function memoListRender(){
+  const mem = data.memo || {};
+  const keys = Object.keys(mem).sort(function(a,b){ return (mem[b].u||0)-(mem[a].u||0); });
+  const el = document.getElementById('memoList');
+  if(!keys.length){
+    el.innerHTML = '<div class="memo-item">まだメモがありません。地図の名所マーカーをタップして書き込むか、「📝 メモ追加」を押して地図上をタップすると、その場所にメモを追加できます。</div>';
+    memoListCache = []; return;
+  }
+  let h = '<div class="memo-sub">'+keys.length+'件(新しい順)</div>';
+  keys.forEach(function(k,i){
+    const m = mem[k], info = memoTarget(k);
+    h += '<div class="memo-item">'
+      + '<div class="nm">'+memoEsc(info.nm)+'</div>'
+      + '<div class="tx">'+memoEsc(m.t)+'</div>'
+      + '<div class="dt">'+(m.d||'')+' ・ '+memoEsc(info.pos)+'</div>'
+      + '<div class="memo-row">'
+      + (info.lat!=null ? '<button class="memo-btn memo-go" data-i="'+i+'">🗺 地図で見る</button>' : '')
+      + '<button class="memo-btn memo-rm" data-i="'+i+'">🗑 削除</button>'
+      + '</div></div>';
+  });
+  el.innerHTML = h;
+  memoListCache = keys;
+  el.querySelectorAll('.memo-go').forEach(function(b){
+    b.addEventListener('click', function(){
+      const info = memoTarget(memoListCache[+b.getAttribute('data-i')]);
+      if(info.lat!=null){ document.getElementById('memoModal').style.display='none'; map.setView([info.lat,info.lon],16); }
+    });
+  });
+  el.querySelectorAll('.memo-rm').forEach(function(b){
+    b.addEventListener('click', function(){
+      if(confirm('このメモを削除しますか?')){ delMemo(memoListCache[+b.getAttribute('data-i')]); memoListRender(); }
+    });
+  });
+}
+function openMemoAdd(latlng){
+  pendingLatLng = latlng;
+  document.getElementById('memoAddPos').textContent = '位置: '+latlng.lat.toFixed(5)+', '+latlng.lng.toFixed(5);
+  document.getElementById('memoAddName').value = '';
+  document.getElementById('memoAddText').value = '';
+  document.getElementById('memoAddModal').style.display = 'flex';
+}
+/* ポップアップ内のメモ操作を配線 */
+map.on('popupopen', function(e){
+  const el = e.popup.getElement(); if(!el) return;
+  const ta = el.querySelector('.memo-ta'); if(!ta) return;
+  const key = ta.getAttribute('data-key');
+  const sb = el.querySelector('.memo-save');
+  if(sb) sb.addEventListener('click', function(){ saveMemo(key, ta.value); });
+  const db = el.querySelector('.memo-del');
+  if(db) db.addEventListener('click', function(){ if(confirm('このメモを削除しますか?')) delMemo(key); });
+  const ub = el.querySelector('.memo-unpin');
+  if(ub) ub.addEventListener('click', function(){ if(confirm('この地点のメモとピンを削除しますか?')) delMemo(key); });
+});
+/* メニュー: メモ追加モード */
+document.getElementById('memoBtn').addEventListener('click', function(){
+  memoMode = !memoMode;
+  this.style.background = memoMode ? '#ff8f00' : 'rgba(255,255,255,.95)';
+  this.style.color = memoMode ? '#fff' : '#333';
+  notice(memoMode ? '📝 地図をタップした場所にメモできます(長押しでも可)' : 'メモ追加モードを解除しました');
+});
+map.on('click', function(e){
+  if(!memoMode) return;
+  memoMode = false;
+  const b = document.getElementById('memoBtn');
+  b.style.background = 'rgba(255,255,255,.95)'; b.style.color = '#333';
+  openMemoAdd(e.latlng);
+});
+map.on('contextmenu', function(e){ if(!memoMode) openMemoAdd(e.latlng); });
+document.getElementById('memoAddCancel').addEventListener('click', function(){
+  document.getElementById('memoAddModal').style.display='none'; pendingLatLng = null;
+});
+document.getElementById('memoAddSave').addEventListener('click', function(){
+  if(!pendingLatLng) return;
+  const nm = document.getElementById('memoAddName').value.trim();
+  const tx = document.getElementById('memoAddText').value.trim();
+  if(!nm && !tx){ notice('⚠ 名前かメモを入力してください'); return; }
+  const id = Date.now();
+  data.free = data.free || [];
+  data.free.push({id:id, name:nm||'メモ地点', lat:+pendingLatLng.lat.toFixed(6), lon:+pendingLatLng.lng.toFixed(6)});
+  data.memo = data.memo || {};
+  data.memo['free:'+id] = {t:tx, d:todayStr(), u:Date.now()};
+  save();
+  addFreeMarker(data.free[data.free.length-1]);
+  updateStats();
+  document.getElementById('memoAddModal').style.display='none';
+  pendingLatLng = null;
+  notice('📝 メモを追加しました');
+});
+document.getElementById('memoListBtn').addEventListener('click', function(){
+  memoListRender();
+  document.getElementById('memoModal').style.display='flex';
+});
+document.getElementById('memoModalClose').addEventListener('click', function(){
+  document.getElementById('memoModal').style.display='none';
+});
+document.getElementById('memoExportBtn').addEventListener('click', function(){
+  const blob = new Blob([JSON.stringify(data,null,1)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'kumanaku_memo_'+todayStr()+'.json';
+  a.click();
+  notice('💾 メモを含む全記録を出力しました');
+});
+document.getElementById('memoImportBtn').addEventListener('click', function(){
+  document.getElementById('impFile').click();
+});
+rebuildFreeMarkers();
+refreshMemoIcons();
+</script>
+</body>
+</html>
