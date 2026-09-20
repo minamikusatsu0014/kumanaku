@@ -112,7 +112,7 @@
 <div id="map"></div>
 
 <div id="stats" class="panel">
-  <div class="appname">全国くまなくウォーク <span style="font-weight:normal;color:#999">v25</span></div>
+  <div class="appname">全国くまなくウォーク <span style="font-weight:normal;color:#999">v29</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -147,6 +147,7 @@
   <button class="btn sub-btn" id="kaidoBtn">🥾 街道</button>
   <button class="btn sub-btn" id="nakaBtn">🛤 中山道</button>
   <button class="btn sub-btn" id="gridBtn">▦ グリッド</button>
+  <button class="btn sub-btn" id="drawBtn">✏️ 手描き</button>
   <button class="btn" id="recBtn">▶ 記録開始</button>
 </div>
 
@@ -2548,7 +2549,7 @@ function renderList(){
     if(cb.checked){var b=bboxOf(s);if(b)map.fitBounds(b,{padding:[30,30]});}};
   var nm=document.createElement("span");nm.className="kname";
   nm.innerHTML='<span class="kdot" style="background:'+s.color+'"></span>'+s.name+
-    (s.km!=null?'<span class="kmeta">'+s.km+' km'+(s.chains>3?"・"+s.chains+"区間":"")+'</span>':'');
+    (s.km!=null?'<span class="kmeta">'+s.km+' km'+(s.chains>3?"・"+s.chains+"区間":"")+(s.maxgap?"・最大間隔"+s.maxgap+"km":"")+'</span>':'');
   nm.onclick=function(){fitStreet(s);};
   var bd=document.createElement("span");bd.className="kbadge"+(s.geo?"":" no");
   bd.textContent=s.geo?"実線":"データ無";
@@ -2566,7 +2567,7 @@ function openPanel(){
  if(LOADED)return;
  fetch("kaido_data.json").then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(d){
    ALL=d.map(function(s){return{id:s.id,name:s.name,region:s.region||"その他",color:s.color||"#444",
-     km:s.km,geo:!!s.geo,src:s.src,chains:s.chains||1,segs:s.segs||[]};});
+     km:s.km,geo:!!s.geo,src:s.src,chains:s.chains||1,maxgap:s.maxgap!=null?s.maxgap:null,segs:s.segs||[]};});
    LOADED=true;renderTabs();renderList();applySaved();
  }).catch(function(){info("kaido_data.json を読み込めませんでした。GitHub に kaido_data.json をアップロードし、オンラインで再起動してください。");});
 }
@@ -2580,12 +2581,445 @@ loadOn();
 var ob=el("kaidoBtn");
 if(ob){var nb=ob.cloneNode(true);ob.parentNode.replaceChild(nb,ob);nb.textContent="🥾 街道一覧";
  nb.addEventListener("click",openPanel);}
-window.KAIDO_UI={version:"v25",open:openPanel,total:function(){return ALL.length;},
+window.KAIDO_UI={version:"v29",open:openPanel,total:function(){return ALL.length;},
  geoCount:function(){return ALL.filter(function(s){return s.geo;}).length;},
  names:function(){return ALL.map(function(s){return s.name;});},
  chainsOf:function(n){var s=ALL.filter(function(x){return x.name===n;})[0];return s?s.chains:null;},
  toggle:function(n){var s=ALL.filter(function(x){return x.name===n;})[0];if(s&&s.geo){ON[s.id]=1;drawStreet(s,true);return true;}return false;}};
 })();
+</script>
+
+<style>
+#drawPanel{position:fixed;left:0;right:0;bottom:0;z-index:10000;display:none;background:#fff;border-top:1px solid #ddd;border-radius:14px 14px 0 0;box-shadow:0 -4px 18px rgba(0,0,0,.2);font-size:13px;max-height:80vh;flex-direction:column;overflow:hidden}
+#drawPanel.on{display:flex}
+.dp-head{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border-bottom:1px solid #eee}
+.dp-body{padding:8px 12px 16px;overflow-y:auto}
+.dp-row{display:flex;gap:6px;align-items:center;margin-bottom:7px;flex-wrap:wrap}
+.dp-row select,.dp-row input[type=text]{flex:1;min-width:130px;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px}
+.dp-row button{padding:9px 11px;border:1px solid #ddd;background:#fafafa;border-radius:8px;font-size:12px}
+.dp-row button.pri{background:#0a84ff;border-color:#0a84ff;color:#fff}
+.dp-row button.danger{background:#fff0f0;border-color:#f3c2c2;color:#c92a2a}
+.dp-toggles{flex-direction:column;align-items:flex-start;gap:4px;background:#f8f9fa;border-radius:8px;padding:8px 10px}
+.dp-toggles label{display:flex;align-items:center;gap:6px;font-size:12px;color:#333}
+#dpStatus{font-size:11.5px;color:#555;line-height:1.55;background:#f8f9fa;border-radius:8px;padding:8px 10px;margin:6px 0}
+.dp-list{max-height:30vh;overflow-y:auto;border:1px solid #f0f0f0;border-radius:8px;margin-bottom:7px}
+.dp-list .it{display:flex;align-items:center;gap:7px;padding:8px 9px;border-bottom:1px solid #f5f5f5;font-size:12.5px}
+.dp-list .it:last-child{border-bottom:0}
+.dp-list .nm{flex:1}
+.dp-list .nm small{color:#888;margin-left:5px}
+.dp-list button{padding:5px 9px;border:1px solid #ddd;background:#fff;border-radius:7px;font-size:11.5px}
+.dp-note{font-size:11px;color:#777;line-height:1.5;margin-top:6px}
+.vtx{background:none;border:0}
+</style>
+<div id="drawPanel">
+ <div class="dp-head"><b>✏️ 街道を手で描く・直す</b><span id="dpClose" style="cursor:pointer;padding:4px 10px">✕</span></div>
+ <div class="dp-body">
+  <div class="dp-row">
+   <select id="dpStreet"></select>
+   <input type="text" id="dpName" placeholder="街道名（一覧に無い場合は自由入力）">
+  </div>
+  <div class="dp-row">
+   <button id="dpStart" class="pri">▶ 描画開始</button>
+   <button id="dpCommit">⏹ 確定して保存</button>
+   <button id="dpUndo">↶ 1つ戻す</button>
+   <button id="dpDel">✂ 選択頂点を削除</button>
+   <button id="dpDiscard">✖ 中止</button>
+  </div>
+  <div class="dp-row dp-toggles">
+   <label><input type="checkbox" id="dpBase"> 自動収録ラインを下敷き表示（なぞって描く）</label>
+   <label><input type="checkbox" id="dpGap"> 欠損箇所を赤で強調（手描きが必要な場所）</label>
+   <label><input type="checkbox" id="dpMine"> 手描きラインを表示</label>
+  </div>
+  <div id="dpStatus">読み込み中…</div>
+  <div class="dp-row">
+   <button id="dpFit">🔍 この街道へズーム</button>
+   <button id="dpMapGap">🔴 欠損の先頭へ移動</button>
+  </div>
+  <div class="dp-list" id="dpList"></div>
+  <div class="dp-row">
+   <button id="dpExp">⬇ GeoJSON書き出し</button>
+   <button id="dpImpBtn">⬆ GeoJSON読み込み</button>
+   <input type="file" id="dpImp" accept=".geojson,.json,application/json" style="display:none">
+   <button id="dpClear" class="danger">🗑 手描きを全て消去</button>
+  </div>
+  <div class="dp-note">地図をタップ = 頂点を追加　／　赤い点をドラッグ = 頂点を移動　／　頂点をタップして「選択頂点を削除」。作業内容は端末に自動保存（localStorage）。ブラウザのデータ削除で消えるため、時々「GeoJSON書き出し」で控えを取ってください。</div>
+ </div>
+</div>
+<script>
+/*== MANUAL_DRAW_START ==*/
+(function(){
+"use strict";
+var LS_MAN="kumanaku_manual_kaido_v29", LS_OPT="kumanaku_kaido_drawopt_v29";
+var D={man:{},data:null,edit:{on:false,name:"",pts:[],line:null,sel:-1,backup:null},
+       opt:{base:false,gap:true,mine:true},L:{my:null,base:null,gap:null,draw:null}};
+function gMap(){ try{ return (typeof map!=="undefined")?map:null; }catch(e){ return null; } }
+function gL(){ try{ return (typeof L!=="undefined")?L:null; }catch(e){ return null; } }
+function havKm(a,b){
+  var R=6371,d=Math.PI/180;
+  var la1=a[0]*d,lo1=a[1]*d,la2=b[0]*d,lo2=b[1]*d;
+  var h=Math.sin((la2-la1)/2)*Math.sin((la2-la1)/2)+Math.cos(la1)*Math.cos(la2)*Math.sin((lo2-lo1)/2)*Math.sin((lo2-lo1)/2);
+  return 2*R*Math.asin(Math.min(1,Math.sqrt(h)));
+}
+function on(id,ev,fn){ var e=document.getElementById(id); if(e) e.addEventListener(ev,fn); }
+function txt(id,t){ var e=document.getElementById(id); if(e) e.innerHTML=t; }
+function val(id){ var e=document.getElementById(id); return e?e.value:""; }
+function setVal(id,v){ var e=document.getElementById(id); if(e) e.value=v; }
+function chk(id){ var e=document.getElementById(id); return e?!!e.checked:false; }
+function setChk(id,v){ var e=document.getElementById(id); if(e) e.checked=!!v; }
+
+function loadAll(){
+  try{ var o=JSON.parse(localStorage.getItem(LS_MAN)||"{}"); if(o&&typeof o==="object") D.man=o; }catch(e){ D.man={}; }
+  try{ var q=JSON.parse(localStorage.getItem(LS_OPT)||"null");
+       if(q){ D.opt.base=!!q.base; D.opt.gap=!!q.gap; D.opt.mine=!!q.mine; } }catch(e){}
+}
+function saveMan(){ try{ localStorage.setItem(LS_MAN,JSON.stringify(D.man)); }catch(e){} }
+function saveOpt(){ try{ localStorage.setItem(LS_OPT,JSON.stringify(D.opt)); }catch(e){} }
+
+function manLines(n){ return D.man[n]||[]; }
+function manCount(){ var c=0; for(var k in D.man){ c+=manLines(k).length; } return c; }
+function manPoints(){ var c=0; for(var k in D.man){ manLines(k).forEach(function(l){ c+=l.length; }); } return c; }
+function streetOf(n){ if(!D.data) return null;
+  for(var i=0;i<D.data.length;i++){ if(D.data[i].name===n) return D.data[i]; } return null; }
+function gapsFor(street){
+  var segs=(street&&street.segs)||[], out=[];
+  for(var i=0;i<segs.length;i++){ for(var j=i+1;j<segs.length;j++){
+    var a=segs[i][segs[i].length-1], b=segs[j][0];
+    out.push({a:a,b:b,km:Math.round(havKm(a,b)*10)/10,from:i,to:j});
+  }}
+  out.sort(function(x,y){ return x.km-y.km; });
+  return out;
+}
+function chainsOf(street){ return ((street&&street.segs)||[]).length; }
+
+function ensureLayers(){
+  var M=gMap(), L=gL(); if(!M||!L) return;
+  if(!D.L.my){ D.L.my=L.layerGroup(); }
+  if(!D.L.base){ D.L.base=L.layerGroup(); }
+  if(!D.L.gap){ D.L.gap=L.layerGroup(); }
+  if(!D.L.draw){ D.L.draw=L.layerGroup().addTo(M); }
+}
+function setLayer(group,show){ var M=gMap(); if(!group||!M) return;
+  if(show){ if(!M.hasLayer(group)) M.addLayer(group); } else { if(M.hasLayer(group)) M.removeLayer(group); } }
+
+function drawMine(){
+  var L=gL(); if(!L) return; ensureLayers();
+  var g=D.L.my; if(!g) return; g.clearLayers();
+  setLayer(g,D.opt.mine);
+  if(!D.opt.mine) return;
+  for(var n in D.man){
+    manLines(n).forEach(function(ln){
+      if(ln.length<2) return;
+      L.polyline(ln,{color:"#00a6a6",weight:4,opacity:.9}).bindPopup(n+"（手描き "+ln.length+"点）").addTo(g);
+    });
+  }
+}
+function drawBase(street){
+  var L=gL(); if(!L) return; ensureLayers();
+  var g=D.L.base; if(!g) return; g.clearLayers();
+  if(!D.opt.base||!street){ setLayer(g,false); return; }
+  setLayer(g,true);
+  (street.segs||[]).forEach(function(sg){
+    L.polyline(sg,{color:street.color||"#888",weight:3,opacity:.5,dashArray:"5,6",interactive:false}).addTo(g);
+  });
+}
+function drawGap(street){
+  var L=gL(); if(!L) return; ensureLayers();
+  var g=D.L.gap; if(!g) return; g.clearLayers();
+  if(!D.opt.gap||!street||chainsOf(street)<2){ setLayer(g,false); return; }
+  setLayer(g,true);
+  var segs=street.segs||[], ends=[];
+  segs.forEach(function(sg,i){ ends.push({pt:sg[0],i:i}); ends.push({pt:sg[sg.length-1],i:i}); });
+  ends.forEach(function(e){
+    L.circleMarker(e.pt,{radius:4.5,color:"#c92a2a",weight:2,fillColor:"#ff6b6b",fillOpacity:.9,interactive:false}).addTo(g);
+  });
+  if(segs.length<=90){
+    var used={};
+    ends.forEach(function(e,ei){
+      var best=null;
+      ends.forEach(function(f,fi){
+        if(f.i===e.i) return;
+        var d=havKm(e.pt,f.pt);
+        if(best===null||d<best.d) best={d:d,pt:f.pt,fi:fi};
+      });
+      if(best&&best.d<=25&&!used[ei]&&!used[best.fi]){
+        used[ei]=1; used[best.fi]=1;
+        L.polyline([e.pt,best.pt],{color:"#e03131",weight:2,opacity:.85,dashArray:"6,5",interactive:false}).addTo(g);
+      }
+    });
+  }
+}
+function updateTempLine(){
+  if(D.edit.line){ try{ D.edit.line.setLatLngs(D.edit.pts); }catch(e){} }
+}
+function redrawTemp(){
+  var L=gL(); if(!L) return; ensureLayers();
+  var g=D.L.draw; if(!g) return; g.clearLayers(); D.edit.line=null;
+  if(!D.edit.pts.length) return;
+  D.edit.line=L.polyline(D.edit.pts,{color:"#ff2d55",weight:5,opacity:.95}).addTo(g);
+  D.edit.pts.forEach(function(pt,i){
+    var mk=L.marker(pt,{draggable:true,icon:L.divIcon({className:"vtx",
+      html:"<div style='width:15px;height:15px;border-radius:50%;background:#ff2d55;border:2px solid #fff;box-shadow:0 0 3px rgba(0,0,0,.55)'></div>",
+      iconSize:[15,15],iconAnchor:[7.5,7.5]})});
+    mk.on("drag",function(e){ var ll=e.target.getLatLng(); D.edit.pts[i]=[ll.lat,ll.lng]; updateTempLine(); });
+    mk.on("dragend",function(){ syncUI(); });
+    mk.on("click",function(e){ try{ L.DomEvent.stopPropagation(e.originalEvent||e); }catch(x){} D.edit.sel=i; syncUI(); });
+    mk.addTo(g);
+  });
+  if(D.edit.pts.length>=2){
+    L.circleMarker(D.edit.pts[0],{radius:8,color:"#0a84ff",weight:3,fillColor:"#fff",fillOpacity:1,interactive:false}).addTo(g);
+    L.circleMarker(D.edit.pts[D.edit.pts.length-1],{radius:8,color:"#34c759",weight:3,fillColor:"#fff",fillOpacity:1,interactive:false}).addTo(g);
+  }
+}
+function addPoint(lat,lng){
+  if(!D.edit.on) return false;
+  if(typeof lat!=="number"||typeof lng!=="number"||!isFinite(lat)||!isFinite(lng)) return false;
+  D.edit.pts.push([lat,lng]); redrawTemp(); syncUI(); return true;
+}
+function undoPoint(){ if(!D.edit.on||!D.edit.pts.length) return false; D.edit.pts.pop(); redrawTemp(); syncUI(); return true; }
+function delVertex(i){
+  if(!D.edit.on) return false;
+  if(typeof i!=="number") i=D.edit.sel;
+  if(i<0||i>=D.edit.pts.length) return false;
+  D.edit.pts.splice(i,1); D.edit.sel=-1; redrawTemp(); syncUI(); return true;
+}
+function moveVertex(i,lat,lng){
+  if(!D.edit.on||i<0||i>=D.edit.pts.length) return false;
+  D.edit.pts[i]=[+lat,+lng]; redrawTemp(); syncUI(); return true;
+}
+function start(name,idx){
+  if(!name) return false;
+  ensureLayers();
+  D.edit.on=true; D.edit.name=name; D.edit.sel=-1; D.edit.backup=null;
+  if(typeof idx==="number" && manLines(name)[idx]){
+    var ln=manLines(name)[idx].map(function(q){ return [q[0],q[1]]; });
+    D.edit.backup={name:name,idx:idx,line:ln.slice()};
+    D.edit.pts=ln; manLines(name).splice(idx,1); saveMan();
+    drawMine();
+  } else { D.edit.pts=[]; }
+  var st=streetOf(name); drawBase(st); drawGap(st);
+  redrawTemp(); syncUI(); refreshList();
+  return true;
+}
+function commit(){
+  if(!D.edit.on) return {ok:false,reason:"not-drawing"};
+  var pts=D.edit.pts.filter(function(q){ return isFinite(q[0])&&isFinite(q[1]); });
+  if(pts.length<2) return {ok:false,reason:"少なくとも2点必要"};
+  var n=D.edit.name||"名称未設定";
+  (D.man[n]=D.man[n]||[]).push(pts.map(function(q){ return [+q[0],+q[1]]; }));
+  var done=n, added=pts.length;
+  D.edit.backup=null; D.edit.on=false; D.edit.pts=[]; D.edit.sel=-1;
+  saveMan(); redrawTemp(); drawMine(); refreshList(); syncUI();
+  return {ok:true,name:done,points:added};
+}
+function discard(){
+  if(D.edit.backup){
+    var b=D.edit.backup;
+    (D.man[b.name]=D.man[b.name]||[]).splice(b.idx,0,b.line); saveMan();
+  }
+  D.edit.on=false; D.edit.pts=[]; D.edit.sel=-1; D.edit.backup=null;
+  redrawTemp(); drawMine(); refreshList(); syncUI(); return true;
+}
+function toGeoJSON(){
+  var feats=[];
+  for(var n in D.man){
+    manLines(n).forEach(function(ln,i){
+      if(ln.length<2) return;
+      feats.push({type:"Feature",
+        properties:{name:n,manual:true,index:i,source:"kumanaku-manual-draw",points:ln.length},
+        geometry:{type:"LineString",coordinates:ln.map(function(q){ return [+q[1],+q[0]]; })}});
+    });
+  }
+  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v29",at:new Date().toISOString()},features:feats};
+}
+function fromGeoJSON(gj){
+  if(!gj||!gj.features) return 0;
+  var added=0;
+  gj.features.forEach(function(f){
+    if(!f||!f.geometry) return;
+    var nm=(f.properties&&f.properties.name)||"名称未設定";
+    var c=f.geometry.coordinates, t=f.geometry.type;
+    function push(coords){
+      var ln=[];
+      (coords||[]).forEach(function(q){ if(q&&q.length>=2) ln.push([+q[1],+q[0]]); });
+      if(ln.length>=2){ (D.man[nm]=D.man[nm]||[]).push(ln); added++; }
+    }
+    if(t==="LineString") push(c);
+    else if(t==="MultiLineString") (c||[]).forEach(push);
+  });
+  if(added){ saveMan(); drawMine(); refreshList(); syncUI(); }
+  return added;
+}
+function clearAll(){ D.man={}; saveMan(); drawMine(); refreshList(); syncUI(); return true; }
+function syncUI(){
+  var n=(document.getElementById("dpStreet"))?val("dpStreet"):"";
+  if(!n && D.edit.name) n=D.edit.name;
+  if(!n) n=val("dpName");
+  var st=streetOf(n);
+  var lines=[];
+  lines.push("選択中の街道: <b>"+(n||"（未選択）")+"</b>"
+    +(st?("　自動収録: <b>"+(st.geo?"あり":"なし")+"</b>　区間 "+chainsOf(st)+"　最大間隔 "+((st.maxgap!=null)?st.maxgap+" km":"-")
+        +"　距離 "+((st.km!=null)?st.km+" km":"-")):""));
+  if(D.edit.on){
+    lines.push("✏️ 描画中: <b>"+D.edit.pts.length+"</b> 点"
+      +(D.edit.sel>=0?("　（選択中の頂点 No."+(D.edit.sel+1)+"）"):"")
+      +(D.edit.backup?"　※既存ラインを編集中":""));
+  } else {
+    lines.push("描画モード: 停止中（「▶ 描画開始」で地図タップ追加が有効になります）");
+  }
+  lines.push("手描き保存済: <b>"+manCount()+"</b> 本 / <b>"+manPoints()+"</b> 点　端末保存: "+(function(){
+    try{ return (localStorage.getItem(LS_MAN)?("あり "+Math.round(localStorage.getItem(LS_MAN).length/1024*10)/10+" KB"):"なし"); }catch(e){ return "不明"; }
+  })());
+  if(st && st.geo===false) lines.push("⚠ この街道は自動データが未収録です。手描きで作成できます。");
+  var gp=st?gapsFor(st):[];
+  if(gp.length) lines.push("最大の欠損: <b>"+gp[0].km+" km</b>（区間"+gp[0].from+"→"+gp[0].to+"）　欠損候補 "+gp.length+" 件");
+  txt("dpStatus",lines.join("<br>"));
+}
+function refreshList(){
+  var el=document.getElementById("dpList"); if(!el) return;
+  var names=[]; for(var n in D.man){ if(manLines(n).length) names.push(n); }
+  if(!names.length){ el.innerHTML='<div class="it"><span class="nm">手描きラインはまだありません。地図をタップして描いてください。</span></div>'; return; }
+  var h="";
+  names.forEach(function(n){
+    manLines(n).forEach(function(ln,i){
+      h+='<div class="it"><span class="nm">'+n+'<small> '+ln.length+'点</small></span>'
+        +'<button data-a="fit" data-n="'+n+'" data-i="'+i+'">🔍</button>'
+        +'<button data-a="edit" data-n="'+n+'" data-i="'+i+'">✏ 編集</button>'
+        +'<button data-a="del" data-n="'+n+'" data-i="'+i+'">🗑</button></div>';
+    });
+  });
+  el.innerHTML=h;
+  Array.prototype.forEach.call(el.querySelectorAll("button"),function(b){
+    b.onclick=function(){
+      var a=b.getAttribute("data-a"), n=b.getAttribute("data-n"), i=+b.getAttribute("data-i");
+      var ln=manLines(n)[i]; if(!ln) return;
+      if(a==="fit"){ fitLine(ln); }
+      else if(a==="edit"){ start(n,i); setVal("dpName",n); setVal("dpStreet",n); }
+      else if(a==="del"){ manLines(n).splice(i,1); if(!manLines(n).length) delete D.man[n]; saveMan(); drawMine(); refreshList(); syncUI(); }
+    };
+  });
+}
+function fitLine(ln){
+  var M=gMap(), L=gL(); if(!M||!L||!ln||ln.length<1) return;
+  try{ M.fitBounds(L.latLngBounds(ln),{padding:[40,40]}); }catch(e){}
+}
+function fitStreet(){
+  var n=val("dpStreet")||val("dpName"), st=streetOf(n);
+  if(st&&st.segs&&st.segs.length){
+    var M=gMap(), L=gL(); if(!M||!L) return;
+    var pts=[]; st.segs.forEach(function(sg){ pts=pts.concat(sg); });
+    if(pts.length){ try{ M.fitBounds(L.latLngBounds(pts),{padding:[30,30]}); }catch(e){} }
+    return;
+  }
+  var ln=manLines(n)[0]; if(ln) fitLine(ln);
+}
+function gotoGap(){
+  var n=val("dpStreet")||val("dpName"), st=streetOf(n); if(!st) return;
+  var g=gapsFor(st); if(!g.length){ txt("dpStatus","この街道に欠損はありません（または自動データ未収録）。"); return; }
+  fitLine([g[0].a,g[0].b]);
+}
+function fillStreets(){
+  var sel=document.getElementById("dpStreet"); if(!sel||!D.data) return;
+  var cur=sel.value; sel.innerHTML="";
+  var o0=document.createElement("option"); o0.value=""; o0.textContent="（街道を選択）"; sel.appendChild(o0);
+  D.data.forEach(function(d){
+    var o=document.createElement("option"); o.value=d.name;
+    o.textContent=d.name+(d.geo===false?"（データ無）":"");
+    sel.appendChild(o);
+  });
+  if(cur) sel.value=cur;
+}
+function loadData(cb){
+  if(D.data){ cb&&cb(); return; }
+  try{
+    fetch("kaido_data.json").then(function(r){ return r.json(); }).then(function(d){
+      D.data=d; fillStreets(); cb&&cb(); syncUI();
+    }).catch(function(){ syncUI(); cb&&cb(); });
+  }catch(e){ syncUI(); cb&&cb(); }
+}
+function open(){
+  var p=document.getElementById("drawPanel"); if(p) p.classList.add("on");
+  ensureLayers(); loadData(function(){ drawMine(); syncUI(); refreshList(); });
+  setChk("dpBase",D.opt.base); setChk("dpGap",D.opt.gap); setChk("dpMine",D.opt.mine);
+}
+function closePanel(){ var p=document.getElementById("drawPanel"); if(p) p.classList.remove("on"); }
+function download(name,text,type){
+  try{
+    var b=new Blob([text],{type:type||"application/json"});
+    var u=URL.createObjectURL(b), a=document.createElement("a");
+    a.href=u; a.download=name; document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(u); a.remove(); },1500);
+  }catch(e){ window.prompt("コピーして保存してください",text.slice(0,4000)); }
+}
+function init(){
+  loadAll(); ensureLayers();
+  var M=gMap();
+  if(M){
+    M.on("click",function(e){
+      if(!D.edit.on) return;
+      addPoint(e.latlng.lat,e.latlng.lng);
+    });
+  }
+  on("drawBtn","click",function(){ open(); });
+  on("dpClose","click",closePanel);
+  on("dpStart","click",function(){
+    var n=val("dpName")||val("dpStreet"); if(!n){ txt("dpStatus","先に街道名を選ぶか入力してください。"); return; }
+    start(n);
+  });
+  on("dpCommit","click",function(){
+    var r=commit();
+    if(!r.ok) txt("dpStatus","確定できません: "+r.reason);
+  });
+  on("dpUndo","click",function(){ if(!undoPoint()) txt("dpStatus","戻せる点がありません。"); });
+  on("dpDel","click",function(){
+    if(D.edit.on && delVertex(D.edit.sel)) return;
+    txt("dpStatus","削除する頂点を地図上でタップして選択してください。");
+  });
+  on("dpDiscard","click",function(){ discard(); });
+  on("dpBase","change",function(){ D.opt.base=chk("dpBase"); saveOpt(); drawBase(streetOf(val("dpStreet")||val("dpName"))); });
+  on("dpGap","change",function(){ D.opt.gap=chk("dpGap"); saveOpt(); drawGap(streetOf(val("dpStreet")||val("dpName"))); });
+  on("dpMine","change",function(){ D.opt.mine=chk("dpMine"); saveOpt(); drawMine(); });
+  on("dpFit","click",fitStreet);
+  on("dpMapGap","click",gotoGap);
+  on("dpStreet","change",function(){
+    var n=val("dpStreet"); setVal("dpName",n);
+    var st=streetOf(n); drawBase(st); drawGap(st); syncUI();
+  });
+  on("dpName","input",function(){ syncUI(); });
+  on("dpExp","click",function(){
+    var gj=toGeoJSON();
+    if(!gj.features.length){ txt("dpStatus","書き出せる手描きラインがありません。"); return; }
+    download("kumanaku_kaido_manual.geojson",JSON.stringify(gj,null,1),"application/geo+json");
+    txt("dpStatus","GeoJSON を書き出しました（"+gj.features.length+" 本）。");
+  });
+  on("dpImpBtn","click",function(){ var f=document.getElementById("dpImp"); if(f) f.click(); });
+  on("dpImp","change",function(e){
+    var f=e.target.files&&e.target.files[0]; if(!f) return;
+    var rd=new FileReader();
+    rd.onload=function(){
+      var n=0;
+      try{ n=fromGeoJSON(JSON.parse(rd.result)); }catch(err){ n=-1; }
+      txt("dpStatus",(n>0?("GeoJSON から "+n+" 本のラインを読み込みました。"):(n===0?"該当ラインがありませんでした。":"読み込みに失敗しました（JSON形式をご確認ください）。")));
+    };
+    rd.readAsText(f); e.target.value="";
+  });
+  on("dpClear","click",function(){
+    if(window.confirm("手描きラインを全て消去します。よろしいですか？")) clearAll();
+  });
+  syncUI(); refreshList();
+}
+window.MANUAL_DRAW={version:"v29",open:open,closePanel:closePanel,api:{
+  setData:function(d){ D.data=d; fillStreets(); syncUI(); },
+  streetNames:function(){ return (D.data||[]).map(function(x){ return x.name; }); },
+  start:start,add:addPoint,undo:undoPoint,del:delVertex,move:moveVertex,
+  commit:commit,discard:discard,
+  toGeoJSON:toGeoJSON,fromGeoJSON:fromGeoJSON,clear:clearAll,
+  gaps:gapsFor,chains:chainsOf,
+  man:function(){ return D.man; },state:function(){ return D; },
+  syncUI:syncUI,refreshList:refreshList
+}};
+init();
+})();
+/*== MANUAL_DRAW_END ==*/
 </script>
 
 </body>

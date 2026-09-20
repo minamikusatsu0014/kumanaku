@@ -1,5 +1,5 @@
 /* 京都くまなくウォーク Service Worker (GitHub Pages用) */
-const CACHE = 'kyoto-kumanaku-v25';
+const CACHE = 'kyoto-kumanaku-v29';
 const BASE = self.registration.scope;
 const APP_SHELL = [
   BASE,
