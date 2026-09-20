@@ -3504,6 +3504,12 @@ function init(){
   }
   on("drawBtn","click",function(){ open(); });
   on("dpClose","click",closePanel);
+  /*== ADV_TOGGLE (早期結線: 以降で例外が出ても必ず動く) ==*/
+  on("dpTogAdv","click",function(){
+    var a=document.getElementById("dpAdv"); if(!a) return;
+    a.style.display=(a.style.display!=="none")?"none":"block";
+    try{ if(typeof ghQuickInit==="function") ghQuickInit(); }catch(e){}
+  });
   on("dpStart","click",function(){
     var n=val("dpName")||val("dpStreet"); if(!n){ txt("dpStatus","先に街道名を選ぶか入力してください。"); return; }
     start(n);
@@ -3599,24 +3605,27 @@ function init(){
       if(window.KAIDO_UI&&window.KAIDO_UI.reloadDiffs) setTimeout(function(){ window.KAIDO_UI.reloadDiffs(); },600);
     });
   });
-  on("dpDiffQuick","click",function(){ var b=document.getElementById("dpDiff"); if(b) b.click(); });
-  on("dpDiffAdv","click",function(){ var b=document.getElementById("dpDiff"); if(b) b.click(); });
-  on("ghQuick","click",ghQuickRun);
+  try{ on("dpDiffQuick","click",function(){ var b=document.getElementById("dpDiff"); if(b) b.click(); }); }catch(e){}
+  try{ on("dpDiffAdv","click",function(){ var b=document.getElementById("dpDiff"); if(b) b.click(); }); }catch(e){}
+  try{ on("ghQuick","click",function(){
+    if(typeof ghQuickRun==="function") return ghQuickRun();
+    txt("ghQuickStatus",'<span class="ng">かんたん保存を利用できません。「⚙ 詳細設定」→「🔧 GitHub設定」から設定してください。</span>');
+  }); }catch(e){}
   on("ghQuickTokenSave","click",function(){
     var t=val("ghQuickToken");
     if(!t){ txt("ghQuickStatus",'<span class="ng">トークンが空です。</span>'); return; }
     var o=ghLoad();
     ghSave({owner:o.owner||"",repo:o.repo||"",branch:o.branch||"main",path:o.path||"",token:t});
-    setVal("ghQuickToken",""); ghQuickInit();
+    setVal("ghQuickToken","");
+    try{ if(typeof ghQuickInit==="function") ghQuickInit(); }catch(e){}
+    var _f=document.getElementById("ghFirst"); if(_f) _f.style.display="none";
     txt("ghQuickStatus",'<span class="ok">トークンを保存しました。以後は「☁ 保存して反映」を押すだけです。</span>');
   });
-  on("dpTogAdv","click",function(){
-    var a=document.getElementById("dpAdv"); if(!a) return;
-    a.style.display=(a.style.display!=="none")?"none":"block";
-    try{ ghQuickInit(); }catch(e){}
-  });
-  on("dpSaveLocal","click",function(){ var b=document.getElementById("dpMerge"); if(b) b.click(); });
-  try{ ghQuickInit(); }catch(e){}
+  try{ on("dpSaveLocal","click",function(){ var b=document.getElementById("dpMerge"); if(b) b.click(); }); }catch(e){}
+  try{
+    if(typeof ghQuickInit==="function") ghQuickInit();
+    else { var _gf=document.getElementById("ghFirst"); if(_gf) _gf.style.display="flex"; }
+  }catch(e){}
   on("dpFit","click",fitStreet);
   on("dpMapGap","click",gotoGap);
   on("dpStreet","change",function(){
