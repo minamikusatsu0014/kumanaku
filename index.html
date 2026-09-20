@@ -2767,9 +2767,42 @@ loadDiffState();
 var LS_GH="kumanaku_gh_settings_v1", GH_STATE={ok:null,msg:"",last:null};
 function ghLoad(){ try{ var o=JSON.parse(localStorage.getItem(LS_GH)||"null"); return o||{}; }catch(e){ return {}; } }
 function ghSave(o){ try{ localStorage.setItem(LS_GH,JSON.stringify(o)); }catch(e){} return true; }
+/*== GH_QUICK_START ==*/
+var GH_DEF={owner:"minamikusatsu0014", repo:"kumanaku", branch:"main"};
 function ghCfg(){ var o=ghLoad();
-  return {owner:(o.owner||"").trim(), repo:(o.repo||"").trim(), branch:((o.branch||"main").trim()||"main"),
+  return {owner:(o.owner||"").trim()||GH_DEF.owner, repo:(o.repo||"").trim()||GH_DEF.repo,
+    branch:((o.branch||"").trim()||GH_DEF.branch),
     path:(o.path||"").trim(), token:(o.token||"").trim()}; }
+function ghQuickInit(){
+  var cfg=ghCfg(), f=document.getElementById("ghFirst");
+  if(f) f.style.display=cfg.token?"none":"flex";
+  var c=document.getElementById("ghQuickHint");
+  if(c) c.innerHTML=cfg.token?("保存先: <b>"+cfg.owner+"/"+cfg.repo+"</b>（"+cfg.branch+"）／トークン設定済み。ボタン1つでコミットします。")
+    :"手描きをGitHubへ自動コミットして全端末に反映します。<b>初回だけトークンを1回貼るだけ</b>、以後はこのボタン1つです。";
+}
+function ghQuickRun(){
+  var cfg=ghCfg();
+  if(!cfg.token){
+    var f=document.getElementById("ghFirst"); if(f) f.style.display="flex";
+    txt("ghQuickStatus",'<span class="ng">初回設定: トークンを貼って「これで保存」を押してください。次回からは1ボタンで完了します。</span>');
+    return;
+  }
+  if(!window.MANUAL_DRAW||!window.MANUAL_DRAW.api){ txt("ghQuickStatus",'<span class="ng">手描きモジュール未初期化です。</span>'); return; }
+  var pv=ghPreviewText();
+  if(!pv.ok){ txt("ghQuickStatus",'<span class="ng">'+pv.text+'</span>'); return; }
+  var q=pv.plan;
+  if(!window.confirm("保存して全端末に反映します。\n\n対象: "+q.streets.map(function(x){ return x.name; }).join("、")
+    +"\n昇格 "+q.promoted+" 件 / 追記 "+q.updated+" 件\nファイル: "+q.path+"\n\nよろしいですか？")){
+    txt("ghQuickStatus","キャンセルしました。"); return;
+  }
+  txt("ghQuickStatus","GitHubへコミット中…");
+  ghCommitDiff(function(ok,res){
+    if(!ok){ txt("ghQuickStatus",'<span class="ng">'+res+'</span>'); return; }
+    txt("ghQuickStatus",'<span class="ok">保存しました。次回起動時に全端末へ自動反映されます。</span><br>対象: '+res.ids.join("、"));
+    if(window.KAIDO_UI&&window.KAIDO_UI.reloadDiffs) setTimeout(function(){ window.KAIDO_UI.reloadDiffs(); },600);
+  });
+}
+/*== GH_QUICK_END ==*/
 function b64utf8(str){
   var bytes=new TextEncoder().encode(String(str)), bin="";
   for(var i=0;i<bytes.length;i++){ bin+=String.fromCharCode(bytes[i]); }
@@ -2872,7 +2905,7 @@ function ghCommitDiff(cb){
   GH_STATE={ok:null,msg:"コミット中…",last:null};
   ghPut(cfg,base,text,plan.msg).then(function(r1){
     return ghGetFile(cfg,manP).then(function(cur){
-      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v34",files:[]};
+      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v35",files:[]};
       if(cur.exists && cur.base64){ try{ var j=JSON.parse(unb64utf8(cur.base64)); if(j&&j.files) o=j; }catch(e){} }
       o.files=o.files||[]; o.version="v34";
       var nm=base.slice(dir.length);
@@ -2920,7 +2953,7 @@ function tombRender(){
   });
 }
 
-window.KAIDO_UI={version:"v34",open:openPanel,total:function(){return ALL.length;},
+window.KAIDO_UI={version:"v35",open:openPanel,total:function(){return ALL.length;},
  refresh:function(){ if(LOADED){ renderTabs(); renderList(); } },
  reloadDiffs:reloadDiffs,
  diffState:function(){ return DIFF_STATE; },
@@ -2997,6 +3030,9 @@ try{ if(document.readyState==="loading"){ document.addEventListener("DOMContentL
 .dp-row button{padding:9px 11px;border:1px solid #ddd;background:#fafafa;border-radius:8px;font-size:12px}
 .dp-row button.pri{background:#0a84ff;border-color:#0a84ff;color:#fff}
 .dp-row button.danger{background:#fff0f0;border-color:#f3c2c2;color:#c92a2a}
+.dp-quick{margin:10px 0;padding:11px;border:1px solid #cfe8ff;background:#f2f9ff;border-radius:10px}
+.dp-quick button.big{width:100%;padding:14px;font-size:15px;font-weight:700}
+.dp-hint{font-size:11px;color:#41637a;margin:6px 0;line-height:1.5}
 .dp-toggles{flex-direction:column;align-items:flex-start;gap:4px;background:#f8f9fa;border-radius:8px;padding:8px 10px}
 .dp-toggles label{display:flex;align-items:center;gap:6px;font-size:12px;color:#333}
 #dpStatus{font-size:11.5px;color:#555;line-height:1.55;background:#f8f9fa;border-radius:8px;padding:8px 10px;margin:6px 0}
@@ -3035,10 +3071,25 @@ try{ if(document.readyState==="loading"){ document.addEventListener("DOMContentL
    <button id="dpMapGap">🔴 欠損の先頭へ移動</button>
   </div>
   <div class="dp-list" id="dpList"></div>
+  <div class="dp-quick">
+   <button id="ghQuick" class="pri big">☁ 保存して反映（かんたん）</button>
+    <div class="dp-hint" id="ghQuickHint">手描きをGitHubへ自動コミットして全端末に反映します。<b>初回だけトークンを1回貼るだけ</b>、以後はこのボタン1つです。</div>
+   <div id="ghFirst" class="dp-row" style="display:none">
+    <input id="ghQuickToken" type="password" placeholder="初回のみ: GitHubトークン（Contents: Read and write）">
+    <button id="ghQuickTokenSave">これで保存</button>
+   </div>
+   <div class="dp-row">
+    <button id="dpSaveLocal">⬇ 端末に保存（大・全体）</button>
+     <button id="dpDiffQuick">⬇ 差分だけ保存（小）</button>
+    <button id="dpTogAdv">⚙ 詳細設定（上級者向け）</button>
+   </div>
+   <div id="ghQuickStatus"></div>
+  </div>
+  <div id="dpAdv" style="display:none">
   <div class="dp-row">
    <button id="dpExp">⬇ GeoJSON書き出し</button>
    <div class="dp-row"><button id="dpMerge" class="pri">📦 kaido_data.json 統合書き出し</button><span style="font-size:11px;color:#666">手描きを自動収録と同列に統合した本番データ</span></div>
-   <div class="dp-row"><button id="dpDiff" class="pri">📄 昇格分だけ差分を書き出し</button><span style="font-size:11px;color:#666">昇格・追記した街道のみ＋ids/日時（小さいJSON）</span></div>
+   <div class="dp-row"><button id="dpDiffAdv" class="pri">📄 昇格分だけ差分を書き出し</button><span style="font-size:11px;color:#666">昇格・追記した街道のみ＋ids/日時（小さいJSON）</span></div>
    <button id="dpImpBtn">⬆ GeoJSON読み込み</button>
    <button id="dpDiffImpBtn">📥 差分JSONを読み込んで適用</button>
    <input type="file" id="dpDiffImp" accept=".json,application/json" style="display:none">
@@ -3061,6 +3112,7 @@ try{ if(document.readyState==="loading"){ document.addEventListener("DOMContentL
     <div class="dp-warn">⚠ トークンはこの端末の localStorage にのみ保存され、送信先は GitHub API だけです。共有端末では使わないでください。権限は対象リポジトリの「Contents: Read and write」のみに絞った fine-grained token を推奨します。トークンをHTMLに埋め込まないでください。</div>
     <div id="ghStatus"></div>
    </div>
+  </div>
   </div>
   <div class="dp-note">地図をタップ = 頂点を追加　／　赤い点をドラッグ = 頂点を移動　／　頂点をタップして「選択頂点を削除」。各区間は「確定／下書き」を切替でき、<b>下書きは書き出し（📦統合・📄差分）に含まれません</b>。作業内容は端末に自動保存（localStorage）。ブラウザのデータ削除で消えるため、時点の「⬇ GeoJSON書き出し」で控えを取ってください。</div>
  </div>
@@ -3284,7 +3336,7 @@ function toGeoJSON(){
         geometry:{type:"LineString",coordinates:ln.map(function(q){ return [+q[1],+q[0]]; })}});
     });
   }
-  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v34",at:new Date().toISOString()},features:feats};
+  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v35",at:new Date().toISOString()},features:feats};
 }
 function fromGeoJSON(gj){
   if(!gj||!gj.features) return 0;
@@ -3526,6 +3578,24 @@ function init(){
       if(window.KAIDO_UI&&window.KAIDO_UI.reloadDiffs) setTimeout(function(){ window.KAIDO_UI.reloadDiffs(); },600);
     });
   });
+  on("dpDiffQuick","click",function(){ var b=document.getElementById("dpDiff"); if(b) b.click(); });
+  on("dpDiffAdv","click",function(){ var b=document.getElementById("dpDiff"); if(b) b.click(); });
+  on("ghQuick","click",ghQuickRun);
+  on("ghQuickTokenSave","click",function(){
+    var t=val("ghQuickToken");
+    if(!t){ txt("ghQuickStatus",'<span class="ng">トークンが空です。</span>'); return; }
+    var o=ghLoad();
+    ghSave({owner:o.owner||"",repo:o.repo||"",branch:o.branch||"main",path:o.path||"",token:t});
+    setVal("ghQuickToken",""); ghQuickInit();
+    txt("ghQuickStatus",'<span class="ok">トークンを保存しました。以後は「☁ 保存して反映」を押すだけです。</span>');
+  });
+  on("dpTogAdv","click",function(){
+    var a=document.getElementById("dpAdv"); if(!a) return;
+    a.style.display=(a.style.display!=="none")?"none":"block";
+    try{ ghQuickInit(); }catch(e){}
+  });
+  on("dpSaveLocal","click",function(){ var b=document.getElementById("dpMerge"); if(b) b.click(); });
+  try{ ghQuickInit(); }catch(e){}
   on("dpFit","click",fitStreet);
   on("dpMapGap","click",gotoGap);
   on("dpStreet","change",function(){
@@ -3647,7 +3717,7 @@ function applyDiff(obj){
   notifyKaido();
   return n;
 }
-window.MANUAL_DRAW={version:"v34",open:open,closePanel:closePanel,api:{
+window.MANUAL_DRAW={version:"v35",open:open,closePanel:closePanel,api:{
   setData:function(d){ D.data=d; fillStreets(); syncUI(); },
   streetNames:function(){ return (D.data||[]).map(function(x){ return x.name; }); },
   start:start,add:addPoint,undo:undoPoint,del:delVertex,move:moveVertex,
