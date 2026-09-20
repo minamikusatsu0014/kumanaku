@@ -112,7 +112,7 @@
 <div id="map"></div>
 
 <div id="stats" class="panel">
-  <div class="appname">全国くまなくウォーク <span style="font-weight:normal;color:#999">v39</span></div>
+  <div class="appname">全国くまなくウォーク <span style="font-weight:normal;color:#999">v40</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -436,6 +436,9 @@ function setKojiku(){
 map.on('moveend', function(){ if(kojikuOn) setKojiku(); });
 
 const kaidoLayer = L.layerGroup().addTo(map);
+/* 旧街道専用ペイン: 訪問マス/グリッド/現在地より前面に描く */
+const kaidoPane = map.createPane('kaidoPane'); kaidoPane.style.zIndex = 432;
+const kaidoHaloPane = map.createPane('kaidoHaloPane'); kaidoHaloPane.style.zIndex = 431;
 
 /* ---------- 旧街道ラインの描画 ---------- */
 const KAIDO_LINE_DATA = [];
@@ -1469,16 +1472,40 @@ const NAKASENDO_ROUTE = [[35.68409,139.77436],[35.69735,139.76945],[35.70438,139
 const NAKASENDO_SHUKUBA = [["板橋",10,35.75349,139.71009,1],["蕨",19,35.82622,139.67496,1],["浦和",24,35.86543,139.65129,1],["大宮",30,35.91453,139.62476,1],["上尾",38,35.97797,139.58579,1],["桶川",42,36.00677,139.55931,1],["鴻巣",50,36.06437,139.5066,1],["熊谷",66,36.15124,139.37374,1],["深谷",78,36.19797,139.26037,1],["本庄",89,36.25133,139.1671,1],["新町",97,36.28455,139.09098,1],["倉賀野",104,36.30967,139.02147,1],["高崎",110,36.33344,138.96854,1],["板鼻",117,36.32635,138.89423,1],["安中",121,36.31246,138.85306,1],["松井田",130,36.32708,138.75986,1],["坂本",139,36.36967,138.67987,1],["軽井沢",150,36.34419,138.57571,1],["沓掛",155,36.32948,138.52475,1],["追分",160,36.29503,138.49224,1],["小田井",165,36.26892,138.45605,1],["岩村田",169,36.27224,138.41419,1],["塩名田",175,36.26793,138.35354,1],["八幡",178,36.27138,138.32314,1],["望月",182,36.25655,138.28636,1],["芦田",187,36.23262,138.24555,1],["長久保",192,36.20031,138.20785,1],["和田",200,36.15243,138.14731,1],["下諏訪",221,36.09841,137.99131,1],["塩尻",233,36.05501,137.89834,1],["洗馬",239,36.01172,137.85948,1],["本山",243,35.98422,137.83621,1],["贄川",251,35.93405,137.78441,1],["奈良井",258,35.88162,137.75589,1],["藪原",263,35.85592,137.71148,1],["宮ノ越",271,35.79587,137.68849,1],["福島",279,35.73353,137.71418,1],["上松",287,35.68284,137.6722,1],["須原",300,35.59645,137.60772,1],["野尻",307,35.5387,137.58464,1],["三留野",316,35.50036,137.50719,1],["妻籠",321,35.47663,137.46672,1],["馬籠",328,35.452,137.40004,1],["落合",333,35.44607,137.34775,1],["中津川",337,35.43867,137.3074,1],["大井",347,35.42628,137.20871,1],["大湫",360,35.43764,137.07558,1],["細久手",367,35.43073,137.00222,1],["御嵩",378,35.40286,136.89183,1],["伏見",383,35.39766,136.83721,1],["太田",390,35.40514,136.76154,1],["鵜沼",399,35.41178,136.66625,1],["加納",416,35.36972,136.49921,1],["河渡",422,35.35036,136.44121,1],["美江寺",426,35.34213,136.39985,1],["赤坂",435,35.3135,136.31342,1],["垂井",441,35.27189,136.28042,1],["関ヶ原",446,35.23288,136.25435,1],["今須",450,35.20254,136.23097,1],["柏原",454,35.17204,136.20765,1],["醒ヶ井",459,35.13885,136.17161,1],["番場",463,35.11813,136.13719,1],["鳥居本",468,35.09326,136.09199,1],["高宮",474,35.06933,136.03483,1],["愛知川",482,35.02767,135.9688,1],["武佐",492,35.01808,135.96079,0],["守山",507,35.01808,135.96079,0],["草津",513,35.01808,135.96079,0],["大津",528,35.01808,135.96079,0]];
 /* ---------- 街道ラインを地図に描画 ---------- */
 let kaidoOn = true;
+function kaidoWeight(){
+  var z = map.getZoom();
+  if(z >= 16) return 9;
+  if(z >= 14) return 8;
+  if(z >= 12) return 7;
+  if(z >= 10) return 6;
+  return 5;
+}
 function drawKaidoLines(){
   kaidoLayer.clearLayers();
+  var w = kaidoWeight();
   KAIDO_LINES.forEach(function(k){
     var lineData = k.segs ? k.segs : k.pts;
-    L.polyline(lineData, {color:k.color, weight:4, opacity:.7, dashArray:'10 6'})
+    var opt = {lineJoin:'round', lineCap:'round', interactive:false};
+    /* 外側の白ハロー: 地図の色に関係なく輪郭を浮き立たせる */
+    L.polyline(lineData, Object.assign({},opt,{pane:'kaidoHaloPane', color:'#ffffff', weight:w+5, opacity:.9}))
+     .addTo(kaidoLayer);
+    /* 濃い縁取り: 旧街道の輪郭を締める */
+    L.polyline(lineData, Object.assign({},opt,{pane:'kaidoPane', color:'#4a3520', weight:w+3, opacity:.95}))
+     .addTo(kaidoLayer);
+    /* 本線: 街道ごとの色を不透明で描く */
+    L.polyline(lineData, Object.assign({},opt,{pane:'kaidoPane', color:k.color, weight:w, opacity:1}))
      .bindPopup('<b>🥾 '+k.name+'</b><br>国土地理院地図・OSMに登録された旧道の形状を表示しています。沿線の🏮マーカーが宿場町です。')
      .addTo(kaidoLayer);
   });
 }
 drawKaidoLines();
+var _kaidoW = kaidoWeight();
+map.on('zoomend', function(){
+  var w = kaidoWeight();
+  if(w === _kaidoW) return;          /* 段が変わらないズームでは再生成しない */
+  _kaidoW = w;
+  if(map.hasLayer(kaidoLayer)) drawKaidoLines();
+});
 
 
 function cpIcon(done, type, name, hasMemo){
@@ -2541,9 +2568,17 @@ function drawStreet(s,on){
   if(!(s.segs||[]).length && !mn.length)return;
   clearOne(s.id);
   if(!map.hasLayer(kLayer))map.addLayer(kLayer);
-  var w=FIVE[s.name]?4:2.6,ls=[];
-  (s.segs||[]).forEach(function(seg){var l=L.polyline(seg,{color:s.color,weight:w,opacity:0.9,interactive:false});l.addTo(kLayer);ls.push(l);});
-  mn.forEach(function(seg){var l=L.polyline(seg,{color:s.color||"#e65100",weight:w+0.6,opacity:1,dashArray:"8,6",interactive:false});l.addTo(kLayer);ls.push(l);});
+  var w=FIVE[s.name]?5.5:4,ls=[];
+  (s.segs||[]).forEach(function(seg){
+    ls.push(L.polyline(seg,{color:"#ffffff",weight:w+4,opacity:.85,lineJoin:"round",lineCap:"round",pane:"kaidoHaloPane",interactive:false}).addTo(kLayer));
+    ls.push(L.polyline(seg,{color:"#4a3520",weight:w+2.5,opacity:.95,lineJoin:"round",lineCap:"round",pane:"kaidoPane",interactive:false}).addTo(kLayer));
+    ls.push(L.polyline(seg,{color:s.color,weight:w,opacity:1,lineJoin:"round",lineCap:"round",pane:"kaidoPane",interactive:false}).addTo(kLayer));
+  });
+  mn.forEach(function(seg){
+    ls.push(L.polyline(seg,{color:"#ffffff",weight:w+4,opacity:.85,lineJoin:"round",lineCap:"round",pane:"kaidoHaloPane",interactive:false}).addTo(kLayer));
+    ls.push(L.polyline(seg,{color:s.color||"#e65100",weight:w+2.5,opacity:1,lineJoin:"round",lineCap:"round",pane:"kaidoPane",interactive:false}).addTo(kLayer));
+    ls.push(L.polyline(seg,{color:"#ffd54f",weight:w,opacity:1,lineJoin:"round",lineCap:"round",pane:"kaidoPane",interactive:false}).addTo(kLayer));
+  });
   LINES[s.id]=ls;
 }
 function bboxOf(s){if(BB[s.id])return BB[s.id];var p=[];(s.segs||[]).forEach(function(g){p=p.concat(g);});MANSEGS(s.name).forEach(function(g){p=p.concat(g);});if(!p.length)return null;BB[s.id]=L.latLngBounds(p);return BB[s.id];}
@@ -2602,7 +2637,7 @@ var ob=el("kaidoBtn");
 if(ob){var nb=ob.cloneNode(true);ob.parentNode.replaceChild(nb,ob);nb.textContent="🥾 街道一覧";
  nb.addEventListener("click",openPanel);}
 
-/*---- kaido_diff auto-merge / generation manager (v39) ----*/
+/*---- kaido_diff auto-merge / generation manager (v40) ----*/
 var RAW=null, LS_DIFF="kumanaku_kaido_diffs_v1";
 var DIFF_STATE={loaded:[],applied:0,tomb:0,miss:0,last:0};
 var LS_TOMB="kumanaku_kaido_tomb_v1", TOMB=[];
@@ -2763,7 +2798,7 @@ function reloadDiffs(){
 loadDiffState();
 
 
-/*---- GitHub direct commit (Contents API) + tombstone history (v39) ----*/
+/*---- GitHub direct commit (Contents API) + tombstone history (v40) ----*/
 var LS_GH="kumanaku_gh_settings_v1", GH_STATE={ok:null,msg:"",last:null};
 function ghLoad(){ try{ var o=JSON.parse(localStorage.getItem(LS_GH)||"null"); return o||{}; }catch(e){ return {}; } }
 function ghSave(o){ try{ localStorage.setItem(LS_GH,JSON.stringify(o)); }catch(e){} return true; }
@@ -2927,9 +2962,9 @@ function ghCommitDiff(cb){
   GH_STATE={ok:null,msg:"コミット中…",last:null};
   ghPut(cfg,base,text,plan.msg).then(function(r1){
     return ghGetFile(cfg,manP).then(function(cur){
-      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v39",files:[]};
+      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v40",files:[]};
       if(cur.exists && cur.base64){ try{ var j=JSON.parse(unb64utf8(cur.base64)); if(j&&j.files) o=j; }catch(e){} }
-      o.files=o.files||[]; o.version="v39";
+      o.files=o.files||[]; o.version="v40";
       var _dir=(base.indexOf("/")>=0)? base.slice(0,base.lastIndexOf("/")+1) : "";
       var nm=base.slice(_dir.length);
       if(o.files.indexOf(nm)<0) o.files.push(nm);
@@ -2976,7 +3011,7 @@ function tombRender(){
   });
 }
 
-window.KAIDO_UI={version:"v39",open:openPanel,total:function(){return ALL.length;},
+window.KAIDO_UI={version:"v40",open:openPanel,total:function(){return ALL.length;},
  refresh:function(){ if(LOADED){ renderTabs(); renderList(); } },
  reloadDiffs:reloadDiffs,
  diffState:function(){ return DIFF_STATE; },
@@ -3375,7 +3410,7 @@ function toGeoJSON(){
         geometry:{type:"LineString",coordinates:ln.map(function(q){ return [+q[1],+q[0]]; })}});
     });
   }
-  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v39",at:new Date().toISOString()},features:feats};
+  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v40",at:new Date().toISOString()},features:feats};
 }
 function fromGeoJSON(gj){
   if(!gj||!gj.features) return 0;
@@ -3731,7 +3766,7 @@ function promotedData(){
   full.forEach(function(s){
     if(s.manual && s.geo && s.segs && s.segs.length){ out.push(s); ids.push(s.name); }
   });
-  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v39",
+  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v40",
     "generated":new Date().toISOString(), "base":"kaido_data.json", "mode":"promoted-only",
     "count":out.length, "ids":ids, "streets":out };
 }
@@ -3765,7 +3800,7 @@ function applyDiff(obj){
   notifyKaido();
   return n;
 }
-window.MANUAL_DRAW={version:"v39",open:open,closePanel:closePanel,api:{
+window.MANUAL_DRAW={version:"v40",open:open,closePanel:closePanel,api:{
   setData:function(d){ D.data=d; fillStreets(); syncUI(); },
   streetNames:function(){ return (D.data||[]).map(function(x){ return x.name; }); },
   start:start,add:addPoint,undo:undoPoint,del:delVertex,move:moveVertex,
