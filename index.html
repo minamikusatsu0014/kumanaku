@@ -112,7 +112,7 @@
 <div id="map"></div>
 
 <div id="stats" class="panel">
-  <div class="appname">全国くまなくウォーク <span style="font-weight:normal;color:#999">v37</span></div>
+  <div class="appname">全国くまなくウォーク <span style="font-weight:normal;color:#999">v38</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -2602,7 +2602,7 @@ var ob=el("kaidoBtn");
 if(ob){var nb=ob.cloneNode(true);ob.parentNode.replaceChild(nb,ob);nb.textContent="🥾 街道一覧";
  nb.addEventListener("click",openPanel);}
 
-/*---- kaido_diff auto-merge / generation manager (v37) ----*/
+/*---- kaido_diff auto-merge / generation manager (v38) ----*/
 var RAW=null, LS_DIFF="kumanaku_kaido_diffs_v1";
 var DIFF_STATE={loaded:[],applied:0,tomb:0,miss:0,last:0};
 var LS_TOMB="kumanaku_kaido_tomb_v1", TOMB=[];
@@ -2763,7 +2763,7 @@ function reloadDiffs(){
 loadDiffState();
 
 
-/*---- GitHub direct commit (Contents API) + tombstone history (v37) ----*/
+/*---- GitHub direct commit (Contents API) + tombstone history (v38) ----*/
 var LS_GH="kumanaku_gh_settings_v1", GH_STATE={ok:null,msg:"",last:null};
 function ghLoad(){ try{ var o=JSON.parse(localStorage.getItem(LS_GH)||"null"); return o||{}; }catch(e){ return {}; } }
 function ghSave(o){ try{ localStorage.setItem(LS_GH,JSON.stringify(o)); }catch(e){} return true; }
@@ -2835,14 +2835,14 @@ function unb64utf8(b){
 function ghReq(method,url,token,body){
   var h={"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"};
   if(token) h["Authorization"]="Bearer "+token;
-  var o={method:method,headers:h};
+  var o={method:method,headers:h,cache:"no-store"};
   if(body!==undefined) o.body=JSON.stringify(body);
   return fetch(url,o);
 }
 function ghRepoUrl(cfg,path){ return "https://api.github.com/repos/"+encodeURIComponent(cfg.owner)+"/"+encodeURIComponent(cfg.repo)+
   (path?"/contents/"+String(path).split("/").map(function(x){ return encodeURIComponent(x); }).join("/"):""); }
 function ghGetFile(cfg,path){
-  return ghReq("GET",ghRepoUrl(cfg,path)+"?ref="+encodeURIComponent(cfg.branch),cfg.token).then(function(r){
+  return ghReq("GET",ghRepoUrl(cfg,path)+"?ref="+encodeURIComponent(cfg.branch)+"&_="+Date.now(),cfg.token).then(function(r){
     if(r.status===200) return r.json().then(function(j){ return {exists:true,sha:j.sha,base64:j.content||""}; });
     if(r.status===404) return {exists:false,sha:null,base64:""};
     return r.text().then(function(t){ throw new Error("GET "+path+" -> HTTP "+r.status+" "+String(t).slice(0,160)); });
@@ -2858,7 +2858,10 @@ function ghPut(cfg,path,text,msg){
     }).then(function(r){
       if(r.status===200 || r.status===201) return r.json().then(function(j){ return {ok:true,path:path,created:r.status===201,
         sha:(j.content&&j.content.sha)||null,commit:(j.commit&&j.commit.html_url)||null}; });
-      if((r.status===409 || r.status===422) && n<2) return once(n+1);
+      if((r.status===409 || r.status===422) && n<4)
+        return new Promise(function(res){ setTimeout(res,400); }).then(function(){ return once(n+1); });
+      if(r.status===409 || r.status===422)
+        return r.text().then(function(t){ throw new Error("PUT "+path+" -> HTTP "+r.status+"（同じ名前のファイルが更新されて内容が競合しました。再取得して自動再試行しましたが一致しませんでした。もう一度「⏹ 確定して保存」を押してください）"); });
       return r.text().then(function(t){ throw new Error("PUT "+path+" -> HTTP "+r.status+" "+String(t).slice(0,160)); });
     });
   }
@@ -2924,9 +2927,9 @@ function ghCommitDiff(cb){
   GH_STATE={ok:null,msg:"コミット中…",last:null};
   ghPut(cfg,base,text,plan.msg).then(function(r1){
     return ghGetFile(cfg,manP).then(function(cur){
-      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v37",files:[]};
+      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v38",files:[]};
       if(cur.exists && cur.base64){ try{ var j=JSON.parse(unb64utf8(cur.base64)); if(j&&j.files) o=j; }catch(e){} }
-      o.files=o.files||[]; o.version="v37";
+      o.files=o.files||[]; o.version="v38";
       var nm=base.slice(dir.length);
       if(o.files.indexOf(nm)<0) o.files.push(nm);
       return ghPut(cfg,manP,JSON.stringify(o,null,2),"差分マニフェスト更新: "+nm);
@@ -2972,7 +2975,7 @@ function tombRender(){
   });
 }
 
-window.KAIDO_UI={version:"v37",open:openPanel,total:function(){return ALL.length;},
+window.KAIDO_UI={version:"v38",open:openPanel,total:function(){return ALL.length;},
  refresh:function(){ if(LOADED){ renderTabs(); renderList(); } },
  reloadDiffs:reloadDiffs,
  diffState:function(){ return DIFF_STATE; },
@@ -3161,6 +3164,12 @@ function havKm(a,b){
   return 2*R*Math.asin(Math.min(1,Math.sqrt(h)));
 }
 function on(id,ev,fn){ var e=document.getElementById(id); if(e) e.addEventListener(ev,fn); }
+try{ if(typeof window.txt!=="function") window.txt=function(id,t){ var e=document.getElementById(id); if(e) e.innerHTML=t; };
+     if(typeof window.val!=="function") window.val=function(id){ var e=document.getElementById(id); return e?e.value:""; };
+     if(typeof window.setVal!=="function") window.setVal=function(id,v){ var e=document.getElementById(id); if(e) e.value=v; };
+     if(typeof window.chk!=="function") window.chk=function(id){ var e=document.getElementById(id); return !!(e&&e.checked); };
+     if(typeof window.setChk!=="function") window.setChk=function(id,v){ var e=document.getElementById(id); if(e) e.checked=!!v; };
+     if(typeof window.on!=="function") window.on=on; }catch(e){}
 function txt(id,t){ var e=document.getElementById(id); if(e) e.innerHTML=t; }
 function val(id){ var e=document.getElementById(id); return e?e.value:""; }
 function setVal(id,v){ var e=document.getElementById(id); if(e) e.value=v; }
@@ -3365,7 +3374,7 @@ function toGeoJSON(){
         geometry:{type:"LineString",coordinates:ln.map(function(q){ return [+q[1],+q[0]]; })}});
     });
   }
-  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v37",at:new Date().toISOString()},features:feats};
+  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v38",at:new Date().toISOString()},features:feats};
 }
 function fromGeoJSON(gj){
   if(!gj||!gj.features) return 0;
@@ -3721,7 +3730,7 @@ function promotedData(){
   full.forEach(function(s){
     if(s.manual && s.geo && s.segs && s.segs.length){ out.push(s); ids.push(s.name); }
   });
-  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v37",
+  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v38",
     "generated":new Date().toISOString(), "base":"kaido_data.json", "mode":"promoted-only",
     "count":out.length, "ids":ids, "streets":out };
 }
@@ -3755,7 +3764,7 @@ function applyDiff(obj){
   notifyKaido();
   return n;
 }
-window.MANUAL_DRAW={version:"v37",open:open,closePanel:closePanel,api:{
+window.MANUAL_DRAW={version:"v38",open:open,closePanel:closePanel,api:{
   setData:function(d){ D.data=d; fillStreets(); syncUI(); },
   streetNames:function(){ return (D.data||[]).map(function(x){ return x.name; }); },
   start:start,add:addPoint,undo:undoPoint,del:delVertex,move:moveVertex,
