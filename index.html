@@ -112,7 +112,7 @@
 <div id="map"></div>
 
 <div id="stats" class="panel">
-  <div class="appname">全国くまなくウォーク <span style="font-weight:normal;color:#999">v43</span></div>
+  <div class="appname">全国くまなくウォーク <span style="font-weight:normal;color:#999">v44</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -440,18 +440,18 @@ const kaidoLayer = L.layerGroup().addTo(map);
 const kaidoPane = map.createPane('kaidoPane'); kaidoPane.style.zIndex = 432;
 const kaidoHaloPane = map.createPane('kaidoHaloPane'); kaidoHaloPane.style.zIndex = 431;
 
-/* ===== 街道名ラベル: 線に沿って所々へ常時表示（全街道共通の単一実装） ===== */
+/* ===== 街道名ラベル: 線の上に一定間隔で文字を置く（全街道共通の単一実装） ===== */
 const kaidoLabelPane = map.createPane('kaidoLabelPane'); kaidoLabelPane.style.zIndex = 433;
 const kaidoLabelLayer = L.layerGroup().addTo(map);
-function kaidoLabelMinZoom(){ return 10; }                                   /* 低ズームでは非表示 */
-function kaidoLabelStep(){                                                   /* ラベル間隔(m): 拡大ほど密 */
-  var z = map.getZoom();
-  if(z >= 16) return 0.018;
-  if(z >= 14) return 0.035;
-  if(z >= 12) return 0.07;
-  if(z >= 10) return 0.14;
-  return 0.3;
+
+function kaidoLabelMinZoom(){ return 10; }          /* これ未満のズームでは非表示 */
+function kaidoLabelPx(){ return 300; }              /* 画面上の間隔(px)。見た目の間隔を常に揃える */
+function kkMetersPerPixel(){
+  var z = map.getZoom(), lat = (map.getCenter().lat || 0) * Math.PI/180;
+  return 156543.03392 * Math.cos(lat) / Math.pow(2, z);
 }
+function kaidoLabelStep(){ return kaidoLabelPx() * kkMetersPerPixel(); }   /* 互換用 */
+
 function kkDist(a,b){
   var R=6371000, r=Math.PI/180;
   var dLat=(b[0]-a[0])*r, dLon=(b[1]-a[1])*r, l1=a[0]*r, l2=b[0]*r;
@@ -460,37 +460,57 @@ function kkDist(a,b){
 }
 function kaidoGeomOf(nm){                     /* 全描画経路の幾何を合算（データ由来＋手描き由来） */
   var pieces=[];
-  /* ① KAIDO_LINES に内蔵された旧街道ルート（東海道・中山道 等） */
   try{ KAIDO_LINES.forEach(function(k){ if(k.name===nm) pieces=pieces.concat(k.segs||k.pts||[]); }); }catch(e){}
-  /* ② kaido_data.json の収録済み街道（街道一覧から表示した分。s.segs が本体） */
   try{ ALL.forEach(function(s){ if(s.name===nm && s.segs) pieces=pieces.concat(s.segs); }); }catch(e){}
-  /* ③ 手描きで収録したライン */
   try{ pieces=pieces.concat(MANSEGS(nm)||[]); }catch(e){}
   return pieces;
 }
-function kaidoNameLayers(nm){                                                /* 1街道ぶんのラベルを生成 */
-  var out=[], pieces=kaidoGeomOf(nm); if(!pieces.length) return out;
-  var step=kaidoLabelStep(), MAX=120;
-  pieces.forEach(function(seg){
-    if(!seg||seg.length<2||out.length>=MAX) return;
-    var acc=0;
-    for(var i=1;i<seg.length && out.length<MAX;i++){
-      acc += kkDist(seg[i-1],seg[i]);
-      if(acc < step) continue;
-      acc -= step;
-      var ang = Math.atan2(seg[i][0]-seg[i-1][0],
-                (seg[i][1]-seg[i-1][1])*Math.cos(seg[i][0]*Math.PI/180))*180/Math.PI;
-      if(ang > 90) ang -= 180; else if(ang < -90) ang += 180;                /* 逆さ文字を防ぐ */
-      var cls = 'kk-label' + (/古道|往還/.test(nm) ? ' kk-sub' : '');
-      var html = '<div class="'+cls+'" style="transform:translate(-50%,-50%) rotate('+ang.toFixed(1)+'deg)">'+nm+'</div>';
-      out.push(L.marker([seg[i][0],seg[i][1]],
-        {icon:L.divIcon({className:'',html:html,iconSize:[0,0],iconAnchor:[0,0]}),
-         pane:'kaidoLabelPane',interactive:false,keyboard:false}).addTo(kaidoLabelLayer));
+/* 線全体を1本の弧長としてたどり、等間隔の点（＝必ず線の上）と方位を返す */
+function kaidoLabelSpots(nm){
+  var spots=[], geom=kaidoGeomOf(nm), CAP=8;
+  if(!geom.length) return spots;
+  var total=0;
+  geom.forEach(function(seg){ for(var i=1; seg&&i<seg.length; i++) total+=kkDist(seg[i-1],seg[i]); });
+  if(!(total>0)) return spots;
+  var step=kaidoLabelStep(); if(!(step>0)) step = total/3;
+  var n = Math.min(CAP, Math.max(1, Math.floor(total/step)));     /* 多い街道でも数個に絞る */
+  var gap = total/(n+1);                                           /* 端を避けて等分＝一定間隔 */
+  for(var k=1;k<=n;k++){
+    var target=gap*k, run=0, done=false;
+    for(var si=0; si<geom.length && !done; si++){
+      var seg=geom[si]; if(!seg||seg.length<2) continue;
+      for(var i=1;i<seg.length;i++){
+        var A=seg[i-1], B=seg[i], d=kkDist(A,B);
+        if(d>0 && run+d>=target){
+          var t=(target-run)/d;
+          var lat=A[0]+(B[0]-A[0])*t, lon=A[1]+(B[1]-A[1])*t;      /* 区間上の補間＝線の真上 */
+          var ang=Math.atan2((B[0]-A[0]),(B[1]-A[1])*Math.cos(lat*Math.PI/180))*180/Math.PI;
+          if(ang>90) ang-=180; else if(ang<-90) ang+=180;          /* 逆さ文字を防ぐ */
+          spots.push({ll:[lat,lon], ang:ang}); done=true; break;
+        }
+        run+=d;
+      }
     }
+  }
+  return spots;
+}
+function kkLabelSize(nm){
+  var fs=14, w=Math.round(nm.length*fs*1.05+24), h=Math.round(fs*1.5+10);
+  return [Math.max(48,w), h];
+}
+function kaidoNameLayers(nm){                 /* 1街道ぶんのラベル（中心＝線上の点） */
+  var out=[], sz=kkLabelSize(nm);
+  var cls='kk-label' + (/古道|往還/.test(nm) ? ' kk-sub' : '');
+  kaidoLabelSpots(nm).forEach(function(sp){
+    var html='<div class="kk-rot" style="width:'+sz[0]+'px;height:'+sz[1]+'px;transform:rotate('+sp.ang.toFixed(1)+'deg)">'
+           + '<span class="'+cls+'">'+nm+'</span></div>';
+    out.push(L.marker(sp.ll,
+      {icon:L.divIcon({className:'', html:html, iconSize:sz, iconAnchor:[sz[0]/2, sz[1]/2]}),
+       pane:'kaidoLabelPane', interactive:false, keyboard:false}).addTo(kaidoLabelLayer));
   });
   return out;
 }
-function visibleKaidoNames(){                                                /* いま地図に出ている街道名 */
+function visibleKaidoNames(){                 /* いま地図に出ている街道名 */
   var names=[];
   try{ if(map.hasLayer(kaidoLayer)) KAIDO_LINES.forEach(function(k){ if(names.indexOf(k.name)<0) names.push(k.name); }); }catch(e){}
   try{ ALL.forEach(function(s){
@@ -500,7 +520,7 @@ function visibleKaidoNames(){                                                /* 
       }); }catch(e){}
   return names;
 }
-function redrawKaidoLabels(){                                                /* 唯一の再描画入口 */
+function redrawKaidoLabels(){                 /* 唯一の再描画入口 */
   kaidoLabelLayer.clearLayers();
   kaidoLabelLayer._names=[];
   if(map.getZoom() < kaidoLabelMinZoom()) return;
@@ -511,13 +531,8 @@ function redrawKaidoLabels(){                                                /* 
   });
   kaidoLabelLayer._count = total;
 }
-var _kaidoLabelStepNow = kaidoLabelStep();
-map.on('zoomend', function(){
-  var st = kaidoLabelStep();
-  if(st === _kaidoLabelStepNow) return;                                      /* 間隔段が変わった時だけ再生成 */
-  _kaidoLabelStepNow = st;
-  redrawKaidoLabels();
-});
+var _kkTimer=null;                            /* 一定間隔は画面基準なのでズーム後に作り直す */
+map.on('zoomend', function(){ if(_kkTimer) clearTimeout(_kkTimer); _kkTimer=setTimeout(redrawKaidoLabels, 150); });
 
 /* ---------- 旧街道ラインの描画 ---------- */
 const KAIDO_LINE_DATA = [];
@@ -1803,6 +1818,7 @@ document.getElementById('cpBtn').addEventListener('click',function(){
 document.getElementById('kaidoBtn').addEventListener('click',function(){
   kaidoOn=!kaidoOn;
   if(kaidoOn){ map.addLayer(kaidoLayer); } else { map.removeLayer(kaidoLayer); }
+  if(typeof redrawKaidoLabels==='function') redrawKaidoLabels();
   this.style.background = kaidoOn ? '#fff' : '#ddd';
   this.style.color = kaidoOn ? '#333' : '#888';
 });
@@ -2602,12 +2618,13 @@ openPhotoDB(function(){ photoMigrate(); save(); renderPhotoLayer(); updateStats(
 #kaidoList .krow{display:flex;align-items:center;gap:9px;padding:9px 6px;border-bottom:1px solid #f5f5f5}
 #kaidoList .krow input{width:19px;height:19px;flex:none}
 #kaidoList .kname{flex:1;cursor:pointer;color:#111}
-/* 街道名ラベル（地図上に常時表示） */
-.kk-label{white-space:nowrap;font-weight:800;font-size:12px;line-height:1.1;color:#3b2a18;
- background:rgba(255,255,255,.92);border:1.6px solid #4a3520;border-radius:11px;padding:2px 8px;
- box-shadow:0 1px 3px rgba(0,0,0,.35);letter-spacing:.03em;pointer-events:none;
- -webkit-text-stroke:.3px #fff}
-.kk-label.kk-sub{background:rgba(255,253,231,.94);border-color:#b8860b}
+/* 街道名ラベル（地図上・線の上に一定間隔で表示） */
+.kk-rot{display:flex;align-items:center;justify-content:center;transform-origin:50% 50%;pointer-events:none}
+.kk-label{white-space:nowrap;font-weight:900;font-size:14px;line-height:1.15;color:#2b1d0e;
+ background:rgba(255,255,255,.96);border:2px solid #3b2a18;border-radius:13px;padding:2px 9px;
+ box-shadow:0 2px 5px rgba(0,0,0,.5);letter-spacing:.04em;pointer-events:none;
+ text-shadow:1px 1px 0 #fff,-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,0 0 5px #fff,0 0 5px #fff}
+.kk-label.kk-sub{background:rgba(255,252,224,.97);border-color:#8a6a00}
 #kaidoList .kmeta{font-size:11px;color:#888;margin-left:5px}
 #kaidoList .kbadge{font-size:10px;padding:2px 6px;border-radius:8px;background:#e8f5e9;color:#2e7d32;flex:none}
 #kaidoList .kbadge.no{background:#f4f4f4;color:#9e9e9e}
@@ -2729,7 +2746,7 @@ var ob=el("kaidoBtn");
 if(ob){var nb=ob.cloneNode(true);ob.parentNode.replaceChild(nb,ob);nb.textContent="🥾 街道一覧";
  nb.addEventListener("click",openPanel);}
 
-/*---- kaido_diff auto-merge / generation manager (v43) ----*/
+/*---- kaido_diff auto-merge / generation manager (v44) ----*/
 var RAW=null, LS_DIFF="kumanaku_kaido_diffs_v1";
 var DIFF_STATE={loaded:[],applied:0,tomb:0,miss:0,last:0};
 var LS_TOMB="kumanaku_kaido_tomb_v1", TOMB=[];
@@ -2890,7 +2907,7 @@ function reloadDiffs(){
 loadDiffState();
 
 
-/*---- GitHub direct commit (Contents API) + tombstone history (v43) ----*/
+/*---- GitHub direct commit (Contents API) + tombstone history (v44) ----*/
 var LS_GH="kumanaku_gh_settings_v1", GH_STATE={ok:null,msg:"",last:null};
 function ghLoad(){ try{ var o=JSON.parse(localStorage.getItem(LS_GH)||"null"); return o||{}; }catch(e){ return {}; } }
 function ghSave(o){ try{ localStorage.setItem(LS_GH,JSON.stringify(o)); }catch(e){} return true; }
@@ -3054,9 +3071,9 @@ function ghCommitDiff(cb){
   GH_STATE={ok:null,msg:"コミット中…",last:null};
   ghPut(cfg,base,text,plan.msg).then(function(r1){
     return ghGetFile(cfg,manP).then(function(cur){
-      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v43",files:[]};
+      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v44",files:[]};
       if(cur.exists && cur.base64){ try{ var j=JSON.parse(unb64utf8(cur.base64)); if(j&&j.files) o=j; }catch(e){} }
-      o.files=o.files||[]; o.version="v43";
+      o.files=o.files||[]; o.version="v44";
       var _dir=(base.indexOf("/")>=0)? base.slice(0,base.lastIndexOf("/")+1) : "";
       var nm=base.slice(_dir.length);
       if(o.files.indexOf(nm)<0) o.files.push(nm);
@@ -3103,7 +3120,7 @@ function tombRender(){
   });
 }
 
-window.KAIDO_UI={version:"v43",open:openPanel,total:function(){return ALL.length;},
+window.KAIDO_UI={version:"v44",open:openPanel,total:function(){return ALL.length;},
  refresh:function(){ if(LOADED){ renderTabs(); renderList(); } },
  reloadDiffs:reloadDiffs,
  diffState:function(){ return DIFF_STATE; },
@@ -3502,7 +3519,7 @@ function toGeoJSON(){
         geometry:{type:"LineString",coordinates:ln.map(function(q){ return [+q[1],+q[0]]; })}});
     });
   }
-  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v43",at:new Date().toISOString()},features:feats};
+  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v44",at:new Date().toISOString()},features:feats};
 }
 function fromGeoJSON(gj){
   if(!gj||!gj.features) return 0;
@@ -3858,7 +3875,7 @@ function promotedData(){
   full.forEach(function(s){
     if(s.manual && s.geo && s.segs && s.segs.length){ out.push(s); ids.push(s.name); }
   });
-  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v43",
+  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v44",
     "generated":new Date().toISOString(), "base":"kaido_data.json", "mode":"promoted-only",
     "count":out.length, "ids":ids, "streets":out };
 }
@@ -3892,7 +3909,7 @@ function applyDiff(obj){
   notifyKaido();
   return n;
 }
-window.MANUAL_DRAW={version:"v43",open:open,closePanel:closePanel,api:{
+window.MANUAL_DRAW={version:"v44",open:open,closePanel:closePanel,api:{
   setData:function(d){ D.data=d; fillStreets(); syncUI(); },
   streetNames:function(){ return (D.data||[]).map(function(x){ return x.name; }); },
   start:start,add:addPoint,undo:undoPoint,del:delVertex,move:moveVertex,
