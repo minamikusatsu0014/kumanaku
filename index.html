@@ -77,6 +77,19 @@
   .photo-item .nm{font-weight:bold;font-size:12px;color:#333;}
   .photo-thumb{width:100%;border-radius:8px;display:block;margin-top:5px;max-height:230px;object-fit:contain;background:#000;}
   .photo-mini{width:74px;height:74px;object-fit:cover;border-radius:6px;border:1px solid #ddd;}
+  .ph-bar{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:6px;}
+  .ph-bar select,.ph-bar input{font-size:11px;border:1px solid #ccc;border-radius:6px;padding:4px 6px;font-family:inherit;background:#fff;}
+  .ph-bar input[type=text]{flex:1 1 120px;min-width:110px;}
+  .ph-chip{font-size:10px;border:1px solid #ccc;border-radius:11px;padding:4px 9px;background:#fff;cursor:pointer;}
+  .ph-chip.on{background:#2e7d32;color:#fff;border-color:#2e7d32;}
+  #photoNudge{position:absolute;z-index:2700;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:14px;}
+  #photoNudge .card{background:#fff;border-radius:14px;padding:14px 16px;width:100%;max-width:360px;font-size:12px;color:#333;line-height:1.6;}
+  #photoNudge h2{font-size:15px;margin:0 0 8px;color:#2e7d32;}
+  #photoNudge input{width:100%;box-sizing:border-box;font-size:12px;border:1px solid #ccc;border-radius:6px;padding:6px;margin-top:4px;font-family:inherit;}
+  .ph-nudge-row{display:flex;gap:5px;align-items:center;margin-top:6px;}
+  .ph-step{flex:1 1 auto;font-size:11px;padding:6px 4px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer;}
+  .ph-daygrp{border:1px solid #eee;border-radius:8px;padding:7px 9px;margin-bottom:7px;background:#f7fbff;}
+  .ph-daygrp .hd{font-weight:bold;font-size:12px;color:#1565c0;}
   #photoModal,#photoView{position:absolute;z-index:2600;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:14px;}
   #photoModal .card{background:#fff;border-radius:14px;padding:14px 16px;width:100%;max-width:380px;max-height:84vh;overflow:auto;font-size:12px;color:#333;line-height:1.6;}
   #photoModal h2{font-size:15px;margin:0 0 8px;color:#2e7d32;}
@@ -91,7 +104,7 @@
 <div id="map"></div>
 
 <div id="stats" class="panel">
-  <div class="appname">全国くまなくウォーク <span style="font-weight:normal;color:#999">v19</span></div>
+  <div class="appname">全国くまなくウォーク <span style="font-weight:normal;color:#999">v20</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -187,6 +200,19 @@
       <button id="photoImportBtn" class="memo-btn">📂 写真を読み込み</button>
     </div>
     <div class="memo-note">写真はこの端末のブラウザ内(IndexedDB)に保存され、サーバーには送信されません。撮影場所は写真のEXIF情報を優先し、無い場合は現在地で記録します(どちらを使ったかを各写真に表示)。</div>
+    <div class="ph-bar">
+      <select id="phSort">
+        <option value="new">新しい順</option>
+        <option value="old">古い順</option>
+      </select>
+      <input type="date" id="phFrom" title="いつから">
+      <input type="date" id="phTo" title="いつまで">
+      <input type="text" id="phSearch" placeholder="🔍 メモ・名前で検索">
+      <button class="ph-chip" id="phGroupBtn">📅 日付でまとめる</button>
+      <button class="ph-chip" id="phTodayBtn">今日</button>
+      <button class="ph-chip" id="phClearBtn">条件クリア</button>
+    </div>
+    <div id="phCount" class="memo-sub" style="margin-top:6px"></div>
     <div id="photoList" style="margin-top:8px"></div>
     <button class="close" id="photoModalClose">閉じる</button>
   </div>
@@ -197,6 +223,30 @@
     <img id="photoViewImg" src="" alt="写真">
     <div class="cap" id="photoViewCap"></div>
     <button class="close" id="photoViewClose">閉じる</button>
+  </div>
+</div>
+
+<div id="photoNudge">
+  <div class="card">
+    <h2>📍 位置の調整</h2>
+    <div class="memo-sub">対象: <b id="nudgeName"></b></div>
+    <label class="memo-sub">緯度(lat)</label>
+    <input type="text" id="nudgeLat" inputmode="decimal" placeholder="35.011600">
+    <label class="memo-sub">経度(lng)</label>
+    <input type="text" id="nudgeLng" inputmode="decimal" placeholder="135.768100">
+    <div class="ph-nudge-row">
+      <button class="ph-step" id="nudgeN">↑ 北</button>
+      <button class="ph-step" id="nudgeS">↓ 南</button>
+      <button class="ph-step" id="nudgeW">← 西</button>
+      <button class="ph-step" id="nudgeE">→ 東</button>
+    </div>
+    <div class="memo-sub">「↑↓←→」1回で約10m動きます。数字を直接書き換えてもOK。</div>
+    <div class="memo-row">
+      <button class="memo-btn memo-save" id="nudgeSave">💾 保存</button>
+      <button class="memo-btn" id="nudgeHere">📡 現在地に合わせる</button>
+      <button class="memo-btn" id="nudgeReset">↩ 元に戻す</button>
+      <button class="memo-btn memo-del" id="nudgeClose">閉じる</button>
+    </div>
   </div>
 </div>
 
@@ -1609,6 +1659,7 @@ document.getElementById('impFile').addEventListener('change',function(){
       if(d.cells&&d.track){
         data=Object.assign({totalDist:0,todayDist:0,todayDate:todayStr(),muni:{},memo:{},free:[],photos:[]},d);
         if(!data.memo) data.memo={}; if(!data.free) data.free=[]; if(!data.photos) data.photos=[];
+        if(typeof photoMigrate==='function') photoMigrate();
         cellLayer.clearLayers(); for(const k in drawnCells) delete drawnCells[k];
         Object.keys(data.cells).forEach(drawCell);
         trackLayer.clearLayers();
@@ -1816,6 +1867,87 @@ let photoDB = null, photoLocCache = null;
 
 function locSrcName(s){ return s==='exif' ? 'EXIFの撮影地' : s==='gps' ? '現在地から取得' : '位置情報なし'; }
 function findPhoto(id){ return (data.photos||[]).filter(function(x){ return String(x.id)===String(id); })[0] || null; }
+
+/* ---- 写真の日付・位置の補助(古いデータにも対応) ---- */
+var photoGroupMode = false;
+var nudgeId = null;
+function photoDayKey(p){ const s = p.takenAt || p.d || ''; return s ? String(s).slice(0,10) : 'unknown'; }
+function photoWhen(p){ const s = p.takenAt || (p.d ? p.d + 'T00:00:00.000Z' : ''); const t = s ? Date.parse(s) : NaN; return isNaN(t) ? 0 : t; }
+function photoShow(p){ const s = p.takenAt || p.d || ''; return s ? String(s).slice(0,16).replace('T',' ') : ''; }
+function photoEffLat(p){ return (p.latOverride != null && p.latOverride !== '') ? +p.latOverride : p.lat; }
+function photoEffLon(p){ return (p.lonOverride != null && p.lonOverride !== '') ? +p.lonOverride : p.lon; }
+function photoHasLoc(p){ return photoEffLat(p) != null && photoEffLon(p) != null; }
+function photoMoved(p){ return (p.latOverride != null && p.latOverride !== '') || (p.lonOverride != null && p.lonOverride !== ''); }
+function photoNote(p){ return p.note || ''; }
+function photoMigrate(){
+  (data.photos || []).forEach(function(p){
+    if(!p.d) p.d = '';
+    if(p.note == null) p.note = '';
+    if(p.takenAt == null) p.takenAt = p.d ? (p.d + 'T00:00:00.000Z') : new Date().toISOString();
+    if(p.name == null) p.name = '写真';
+  });
+}
+function photoFiltered(){
+  const qEl = document.getElementById('phSearch');
+  const q = (qEl && qEl.value ? qEl.value : '').trim().toLowerCase();
+  const from = (document.getElementById('phFrom') || {}).value || '';
+  const to = (document.getElementById('phTo') || {}).value || '';
+  const sort = (document.getElementById('phSort') || {}).value || 'new';
+  let arr = (data.photos || []).slice();
+  arr = arr.filter(function(p){
+    const k = photoDayKey(p);
+    if(from && k < from) return false;
+    if(to && k > to) return false;
+    if(q){
+      const hay = (String(p.name||'') + ' ' + String(p.note||'') + ' ' + k).toLowerCase();
+      if(hay.indexOf(q) < 0) return false;
+    }
+    return true;
+  });
+  arr.sort(function(a,b){ return sort === 'old' ? photoWhen(a) - photoWhen(b) : photoWhen(b) - photoWhen(a); });
+  return arr;
+}
+function photoMapDay(k){
+  const g = (data.photos||[]).filter(function(p){ return photoDayKey(p) === k && photoHasLoc(p); });
+  if(!g.length){ notice('⚠ この日は地図に出せる写真がありません'); return; }
+  document.getElementById('photoModal').style.display = 'none';
+  const pts = g.map(function(p){ return [photoEffLat(p), photoEffLon(p)]; });
+  if(pts.length === 1) map.setView(pts[0], 17); else map.fitBounds(L.latLngBounds(pts).pad(0.25));
+  notice('📷 ' + k + ' の写真 ' + g.length + '枚を地図に表示');
+}
+function photoRenderDayGroups(el, arr){
+  const groups = {};
+  arr.forEach(function(p){ const k = photoDayKey(p); (groups[k] = groups[k] || []).push(p); });
+  const keys = Object.keys(groups).sort().reverse();
+  let h = '';
+  keys.forEach(function(k){
+    const g = groups[k];
+    const withLoc = g.filter(photoHasLoc).length;
+    h += '<div class="ph-daygrp"><div class="hd">📅 ' + memoEsc(k) + ' ・ ' + g.length + '枚' + (withLoc ? ' (地図' + withLoc + '枚)' : ' (位置なし)') + '</div>'
+      + '<div class="memo-row">'
+      + (withLoc ? '<button class="memo-btn ph-daymap" data-day="' + memoEsc(k) + '">🗺 この日の全部を地図で見る</button>' : '')
+      + '<button class="memo-btn ph-daylist" data-day="' + memoEsc(k) + '">📷 この日だけ表示</button>'
+      + '</div></div>';
+  });
+  el.innerHTML = h;
+  el.querySelectorAll('.ph-daymap').forEach(function(b){ b.onclick = function(){ photoMapDay(b.getAttribute('data-day')); }; });
+  el.querySelectorAll('.ph-daylist').forEach(function(b){ b.onclick = function(){ const k = b.getAttribute('data-day'); document.getElementById('phFrom').value = k; document.getElementById('phTo').value = k; photoListRender(); }; });
+}
+function openNudge(id){
+  const p = findPhoto(id); if(!p) return;
+  nudgeId = id;
+  document.getElementById('nudgeName').textContent = p.name + ' ・ ' + photoShow(p);
+  document.getElementById('nudgeLat').value = (photoEffLat(p) != null ? photoEffLat(p) : '');
+  document.getElementById('nudgeLng').value = (photoEffLon(p) != null ? photoEffLon(p) : '');
+  document.getElementById('photoNudge').style.display = 'flex';
+}
+function nudgeStep(dlat, dlon){
+  const a = document.getElementById('nudgeLat'), b = document.getElementById('nudgeLng');
+  let la = parseFloat(a.value), lo = parseFloat(b.value);
+  if(isNaN(la)) la = 0; if(isNaN(lo)) lo = 0;
+  a.value = (la + dlat).toFixed(6);
+  b.value = (lo + dlon).toFixed(6);
+}
 function openPhotoDB(cb){
   if(photoDB){ cb&&cb(); return; }
   try{
@@ -1912,31 +2044,59 @@ function downscaleToDataUrl(buf, cb){
   img.src = url;
 }
 
-function photoIcon(){
-  return L.divIcon({className:'', html:'<div class="cp memo-pin" style="background:#e3f2fd">📷</div>', iconSize:[22,22], iconAnchor:[11,11]});
+function photoIcon(badge){
+  const b = (badge && badge > 1) ? '<b style="position:absolute;top:-7px;right:-7px;background:#d32f2f;color:#fff;border-radius:9px;font-size:9px;line-height:15px;padding:0 4px">' + badge + '</b>' : '';
+  return L.divIcon({className:'', html:'<div class="cp memo-pin" style="background:#e3f2fd;position:relative;overflow:visible">📷' + b + '</div>', iconSize:[22,22], iconAnchor:[11,11]});
 }
 function photoPopup(p){
-  return '<b>📷 '+memoEsc(p.name)+'</b><br><span class="memo-sub">'+p.d+' ・ '+(p.lat!=null ? (p.lat.toFixed(5)+', '+p.lon.toFixed(5)+' ・ '+locSrcName(p.src)) : '位置情報なし')+'</span>'
+  const la = photoEffLat(p), lo = photoEffLon(p);
+  const mv = photoMoved(p) ? ' ・ 位置調整済' : '';
+  return '<b>📷 '+memoEsc(p.name)+'</b><br><span class="memo-sub">'+photoShow(p)+' ・ '+(la!=null ? (la.toFixed(5)+', '+lo.toFixed(5)+' ・ '+locSrcName(p.src)+mv) : '位置情報なし')+'</span>'
+    + (photoNote(p) ? '<div class="memo-sub" style="margin-top:3px">🗒 '+memoEsc(photoNote(p))+'</div>' : '')
     + '<div class="photo-slot" data-pid="'+p.id+'" style="margin-top:5px">読み込み中…</div>'
     + '<div class="memo-row"><button class="memo-btn photo-big" data-pid="'+p.id+'">🔍 大きく見る</button></div>';
 }
 function renderPhotoLayer(){
   photoLayer.clearLayers();
   for(const k in photoMarkers) delete photoMarkers[k];
-  (data.photos||[]).forEach(function(p){
-    if(p.lat==null || p.lon==null) return;
-    const m = L.marker([p.lat,p.lon], {icon:photoIcon()}).addTo(photoLayer);
+  const list = (data.photos||[]).filter(photoHasLoc);
+  if(photoGroupMode){
+    const groups = {};
+    list.forEach(function(p){ const k = photoDayKey(p); (groups[k] = groups[k] || []).push(p); });
+    Object.keys(groups).forEach(function(k){
+      const arr = groups[k];
+      if(arr.length === 1){
+        const p = arr[0];
+        const m = L.marker([photoEffLat(p), photoEffLon(p)], {icon:photoIcon(0)}).addTo(photoLayer);
+        m.bindPopup(function(){ return photoPopup(p); }, {maxWidth:300, minWidth:240});
+        photoMarkers[p.id] = m;
+        return;
+      }
+      let la = 0, lo = 0;
+      arr.forEach(function(p){ la += photoEffLat(p); lo += photoEffLon(p); });
+      la /= arr.length; lo /= arr.length;
+      const m = L.marker([la, lo], {icon:photoIcon(arr.length)}).addTo(photoLayer);
+      m.bindPopup(function(){
+        return '<b>📷 ' + memoEsc(k) + ' の写真 ' + arr.length + '枚</b><br><span class="memo-sub">同じ日に撮った写真をまとめています</span>'
+          + '<div class="memo-row"><button class="memo-btn photo-daymap2" data-day="' + memoEsc(k) + '">🗺 まとめて地図で見る</button></div>';
+      }, {maxWidth:300, minWidth:240});
+      photoMarkers['day:' + k] = m;
+    });
+    return;
+  }
+  list.forEach(function(p){
+    const m = L.marker([photoEffLat(p), photoEffLon(p)], {icon:photoIcon(0)}).addTo(photoLayer);
     m.bindPopup(function(){ return photoPopup(p); }, {maxWidth:300, minWidth:240});
     photoMarkers[p.id] = m;
   });
 }
-function savePhoto(dataUrl, lat, lon, src){
+function savePhoto(dataUrl, lat, lon, src, takenAt){
   if(!dataUrl){ notice('⚠ 画像を読み込めませんでした'); return; }
   openPhotoDB(function(){
     const id = 'p' + Date.now() + '' + Math.floor(Math.random()*1000);
     const n = (data.photos||[]).length + 1;
     data.photos = data.photos || [];
-    data.photos.push({id:id, name:'写真'+n, lat:(lat!=null?+lat.toFixed(6):null), lon:(lon!=null?+lon.toFixed(6):null), src:src||'none', d:todayStr()});
+    data.photos.push({id:id, name:'写真'+n, lat:(lat!=null?+lat.toFixed(6):null), lon:(lon!=null?+lon.toFixed(6):null), src:src||'none', d:todayStr(), takenAt:(takenAt||new Date().toISOString()), note:''});
     photoCache[id] = dataUrl;
     pdbPut(id, dataUrl);
     save(); renderPhotoLayer(); updateStats();
@@ -1961,38 +2121,54 @@ function openPhotoView(id){
   const show = function(d){
     if(!d){ notice('⚠ 画像が見つかりません'); return; }
     document.getElementById('photoViewImg').src = d;
-    document.getElementById('photoViewCap').textContent = p.name + ' ・ ' + p.d + ' ・ ' + (p.lat!=null ? (p.lat.toFixed(5)+', '+p.lon.toFixed(5)+' ・ '+locSrcName(p.src)) : '位置情報なし');
+    const _la = photoEffLat(p), _lo = photoEffLon(p);
+    document.getElementById('photoViewCap').textContent = p.name + ' ・ ' + photoShow(p) + ' ・ ' + (_la!=null ? (_la.toFixed(5)+', '+_lo.toFixed(5)+' ・ '+locSrcName(p.src)+(photoMoved(p)?' ・ 位置調整済':'')) : '位置情報なし') + (photoNote(p) ? (' ・ 🗒 '+photoNote(p)) : '');
     document.getElementById('photoView').style.display = 'flex';
   };
   if(photoCache[id]) show(photoCache[id]); else pdbGet(id, show);
 }
 function photoListRender(){
   const el = document.getElementById('photoList');
-  const arr = (data.photos||[]).slice().reverse();
+  const cnt = document.getElementById('phCount');
+  const total = (data.photos||[]).length;
+  const arr = photoFiltered();
+  if(cnt) cnt.textContent = arr.length + '枚を表示中' + (arr.length !== total ? ' (全' + total + '枚)' : '') + (photoGroupMode ? ' ・ 日付ごとにまとめ' : '');
   if(!arr.length){
-    el.innerHTML = '<div class="memo-item">まだ写真がありません。上の「📷 写真を追加」を押すとカメラが開き、撮った写真に位置情報(EXIFまたは現在地)が付いて地図に📷ピンが立ちます。</div>';
+    el.innerHTML = '<div class="memo-item">' + (total ? '条件に合う写真がありません。上の「条件クリア」を押してください。' : 'まだ写真がありません。上の「📷 写真を追加」を押すとカメラが開き、撮った写真に位置情報(EXIFまたは現在地)が付いて地図に📷ピンが立ちます。') + '</div>';
     return;
   }
-  let h = '<div class="memo-sub">'+arr.length+'枚(新しい順)</div>';
+  if(photoGroupMode){ photoRenderDayGroups(el, arr); return; }
+  const gcnt = {};
+  arr.forEach(function(p){ const k = photoDayKey(p); gcnt[k] = (gcnt[k]||0) + 1; });
+  let h = '';
   arr.forEach(function(p){
+    const la = photoEffLat(p), lo = photoEffLon(p);
+    const k = photoDayKey(p);
     h += '<div class="photo-item">'
       + '<div class="nm">📷 '+memoEsc(p.name)+'</div>'
-      + '<div class="memo-sub">'+p.d+' ・ '+(p.lat!=null ? (p.lat.toFixed(5)+', '+p.lon.toFixed(5)+' ・ '+locSrcName(p.src)) : '位置情報なし')+'</div>'
+      + '<div class="memo-sub">'+photoShow(p)+' ・ '+(la!=null ? (la.toFixed(5)+', '+lo.toFixed(5)+' ・ '+locSrcName(p.src)+(photoMoved(p)?' ・ 位置調整済':'')) : '位置情報なし')+'</div>'
+      + (photoNote(p) ? '<div class="memo-sub" style="margin-top:2px">🗒 '+memoEsc(photoNote(p))+'</div>' : '<div class="memo-sub" style="margin-top:2px;color:#bbb">🗒 メモなし</div>')
       + '<div class="photo-slot" data-pid="'+p.id+'" style="margin-top:5px">読み込み中…</div>'
       + '<div class="memo-row">'
-      + (p.lat!=null ? '<button class="memo-btn photo-go" data-pid="'+p.id+'">🗺 地図で見る</button>' : '')
+      + (la!=null ? '<button class="memo-btn photo-go" data-pid="'+p.id+'">🗺 地図で見る</button>' : '')
       + '<button class="memo-btn photo-big" data-pid="'+p.id+'">🔍 拡大</button>'
-      + '<button class="memo-btn photo-name" data-pid="'+p.id+'">✏ 名前変更</button>'
+      + '<button class="memo-btn photo-name" data-pid="'+p.id+'">✏ 名前</button>'
+      + '<button class="memo-btn photo-note" data-pid="'+p.id+'">🗒 メモ</button>'
+      + '<button class="memo-btn photo-nudge" data-pid="'+p.id+'">📍 位置調整</button>'
+      + (gcnt[k] > 1 ? '<button class="memo-btn photo-dayone" data-day="'+memoEsc(k)+'">📅 同じ日('+gcnt[k]+')</button>' : '')
       + '<button class="memo-btn memo-del photo-rm" data-pid="'+p.id+'">🗑 削除</button>'
       + '</div></div>';
   });
   el.innerHTML = h;
   el.querySelectorAll('.photo-slot').forEach(function(s){ photoThumbInto(s, s.getAttribute('data-pid')); });
   const byId = function(b){ return findPhoto(b.getAttribute('data-pid')); };
-  el.querySelectorAll('.photo-go').forEach(function(b){ b.onclick = function(){ const p=byId(b); if(p&&p.lat!=null){ document.getElementById('photoModal').style.display='none'; map.setView([p.lat,p.lon], 17); } }; });
+  el.querySelectorAll('.photo-go').forEach(function(b){ b.onclick = function(){ const p=byId(b); if(p&&photoHasLoc(p)){ document.getElementById('photoModal').style.display='none'; map.setView([photoEffLat(p),photoEffLon(p)], 17); } }; });
   el.querySelectorAll('.photo-big').forEach(function(b){ b.onclick = function(){ openPhotoView(b.getAttribute('data-pid')); }; });
   el.querySelectorAll('.photo-rm').forEach(function(b){ b.onclick = function(){ const p=byId(b); if(!p) return; if(!confirm('この写真「'+p.name+'」を削除しますか?')) return; pdbDel(p.id); delete photoCache[p.id]; data.photos = (data.photos||[]).filter(function(x){ return String(x.id)!==String(p.id); }); save(); renderPhotoLayer(); updateStats(); photoListRender(); }; });
   el.querySelectorAll('.photo-name').forEach(function(b){ b.onclick = function(){ const p=byId(b); if(!p) return; const v=prompt('写真の名前', p.name); if(v==null) return; p.name = String(v).trim() || p.name; save(); photoListRender(); renderPhotoLayer(); }; });
+  el.querySelectorAll('.photo-note').forEach(function(b){ b.onclick = function(){ const p=byId(b); if(!p) return; const v=prompt('この写真のメモ(後で検索できます)', photoNote(p)); if(v==null) return; p.note = String(v); save(); photoListRender(); renderPhotoLayer(); }; });
+  el.querySelectorAll('.photo-nudge').forEach(function(b){ b.onclick = function(){ openNudge(b.getAttribute('data-pid')); }; });
+  el.querySelectorAll('.photo-dayone').forEach(function(b){ b.onclick = function(){ const k=b.getAttribute('data-day'); document.getElementById('phFrom').value=k; document.getElementById('phTo').value=k; photoListRender(); }; });
 }
 function openPhotoList(){ photoListRender(); document.getElementById('photoModal').style.display = 'flex'; }
 
@@ -2020,14 +2196,15 @@ document.getElementById('photoFile').onchange = function(){
     let ex = null;
     try{ ex = readExifGps(buf) || readExifGps(buf.slice(0, 300000)); }catch(e){}
     downscaleToDataUrl(buf, function(dataUrl){
-      if(ex) savePhoto(dataUrl, ex.lat, ex.lon, 'exif');
-      else if(photoLocCache) savePhoto(dataUrl, photoLocCache.lat, photoLocCache.lon, 'gps');
+      const tk = (f && f.lastModified) ? new Date(f.lastModified).toISOString() : new Date().toISOString();
+      if(ex) savePhoto(dataUrl, ex.lat, ex.lon, 'exif', tk);
+      else if(photoLocCache) savePhoto(dataUrl, photoLocCache.lat, photoLocCache.lon, 'gps', tk);
       else if(navigator.geolocation){
         notice('📷 撮影地を取得中…');
         navigator.geolocation.getCurrentPosition(function(p){
-          savePhoto(dataUrl, p.coords.latitude, p.coords.longitude, 'gps');
-        }, function(){ savePhoto(dataUrl, null, null, 'none'); }, {enableHighAccuracy:true, timeout:12000});
-      } else savePhoto(dataUrl, null, null, 'none');
+          savePhoto(dataUrl, p.coords.latitude, p.coords.longitude, 'gps', tk);
+        }, function(){ savePhoto(dataUrl, null, null, 'none', tk); }, {enableHighAccuracy:true, timeout:12000});
+      } else savePhoto(dataUrl, null, null, 'none', tk);
     });
   };
   rd.readAsArrayBuffer(f);
@@ -2038,14 +2215,60 @@ map.on('popupopen', function(e){
   const el = e.popup.getElement(); if(!el) return;
   const slot = el.querySelector('.photo-slot'); if(slot) photoThumbInto(slot, slot.getAttribute('data-pid'));
   const big = el.querySelector('.photo-big'); if(big){ big.onclick = function(){ openPhotoView(big.getAttribute('data-pid')); }; }
+  const dm = el.querySelector('.photo-daymap2'); if(dm){ dm.onclick = function(){ photoMapDay(dm.getAttribute('data-day')); }; }
 });
+
+/* ---- 絞り込み・並べ替え・まとめのUI ---- */
+document.getElementById('phSort').onchange = photoListRender;
+document.getElementById('phFrom').onchange = photoListRender;
+document.getElementById('phTo').onchange = photoListRender;
+document.getElementById('phSearch').oninput = photoListRender;
+document.getElementById('phGroupBtn').onclick = function(){
+  photoGroupMode = !photoGroupMode;
+  this.classList.toggle('on', photoGroupMode);
+  this.textContent = photoGroupMode ? '📅 まとめ中(解除)' : '📅 日付でまとめる';
+  renderPhotoLayer(); photoListRender();
+};
+document.getElementById('phTodayBtn').onclick = function(){ const t = todayStr(); document.getElementById('phFrom').value = t; document.getElementById('phTo').value = t; photoListRender(); };
+document.getElementById('phClearBtn').onclick = function(){ document.getElementById('phFrom').value=''; document.getElementById('phTo').value=''; document.getElementById('phSearch').value=''; document.getElementById('phSort').value='new'; photoListRender(); };
+
+/* ---- 位置調整モーダル ---- */
+document.getElementById('nudgeN').onclick = function(){ nudgeStep(0.00009, 0); };
+document.getElementById('nudgeS').onclick = function(){ nudgeStep(-0.00009, 0); };
+document.getElementById('nudgeE').onclick = function(){ nudgeStep(0, 0.00011); };
+document.getElementById('nudgeW').onclick = function(){ nudgeStep(0, -0.00011); };
+document.getElementById('nudgeSave').onclick = function(){
+  const p = findPhoto(nudgeId); if(!p) return;
+  const la = parseFloat(document.getElementById('nudgeLat').value), lo = parseFloat(document.getElementById('nudgeLng').value);
+  if(isNaN(la) || isNaN(lo)){ notice('⚠ 緯度・経度を数字で入れてください'); return; }
+  p.latOverride = +la.toFixed(6); p.lonOverride = +lo.toFixed(6);
+  if(p.src === 'none') p.src = 'gps';
+  save(); renderPhotoLayer(); photoListRender();
+  document.getElementById('photoNudge').style.display = 'none';
+  notice('📍 位置を調整しました');
+};
+document.getElementById('nudgeHere').onclick = function(){
+  if(!navigator.geolocation){ notice('⚠ 位置情報が使えません'); return; }
+  notice('📡 現在地を取得中…');
+  navigator.geolocation.getCurrentPosition(function(q){
+    document.getElementById('nudgeLat').value = q.coords.latitude.toFixed(6);
+    document.getElementById('nudgeLng').value = q.coords.longitude.toFixed(6);
+  }, function(){ notice('⚠ 現在地を取得できませんでした'); }, {enableHighAccuracy:true, timeout:10000});
+};
+document.getElementById('nudgeReset').onclick = function(){
+  const p = findPhoto(nudgeId); if(!p) return;
+  document.getElementById('nudgeLat').value = (p.lat != null ? p.lat : '');
+  document.getElementById('nudgeLng').value = (p.lon != null ? p.lon : '');
+};
+document.getElementById('nudgeClose').onclick = function(){ document.getElementById('photoNudge').style.display = 'none'; };
+document.getElementById('photoNudge').onclick = function(e){ if(e.target === this) this.style.display = 'none'; };
 document.getElementById('photoModalClose').onclick = function(){ document.getElementById('photoModal').style.display='none'; };
 document.getElementById('photoViewClose').onclick = function(){ document.getElementById('photoView').style.display='none'; };
 document.getElementById('photoView').onclick = function(e){ if(e.target === this) this.style.display='none'; };
 document.getElementById('photoExportBtn').onclick = function(){
   const ids = (data.photos||[]).map(function(p){ return p.id; });
   if(!ids.length){ notice('写真がありません'); return; }
-  const obj = {kind:'kumanaku_photos', version:18, exported:new Date().toISOString(), meta:(data.photos||[]), photos:{}};
+  const obj = {kind:'kumanaku_photos', version:20, exported:new Date().toISOString(), meta:(data.photos||[]), photos:{}};
   let done = 0;
   ids.forEach(function(id){
     if(photoCache[id]){ obj.photos[id] = photoCache[id]; done++; if(done===ids.length) dlPhotoJson(obj); return; }
@@ -2084,7 +2307,7 @@ document.getElementById('photoImpFile').onchange = function(){
   r.readAsText(f);
 };
 
-openPhotoDB(function(){ renderPhotoLayer(); photoListRender(); });
+openPhotoDB(function(){ photoMigrate(); save(); renderPhotoLayer(); updateStats(); photoListRender(); });
 </script>
 </body>
 </html>
