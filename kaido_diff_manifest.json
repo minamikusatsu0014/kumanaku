@@ -1,7 +1,9 @@
 {
   "type": "kumanaku-kaido-diff-manifest",
   "app": "全国くまなくウォーク",
-  "version": "v32",
+  "version": "v39",
   "note": "差分配置の一覧。古い順でOK（日付で自動整列）。空配列なら kaido_diff.json と kaido_diff_YYYYMMDD.json を自動探索します。",
-  "files": []
+  "files": [
+    "kaido_diff_20260921.json"
+  ]
 }
