@@ -112,7 +112,7 @@
 <div id="map"></div>
 
 <div id="stats" class="panel">
-  <div class="appname">全国くまなくウォーク <span style="font-weight:normal;color:#999">v31</span></div>
+  <div class="appname">全国くまなくウォーク <span style="font-weight:normal;color:#999">v32</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -2494,6 +2494,10 @@ openPhotoDB(function(){ photoMigrate(); save(); renderPhotoLayer(); updateStats(
 #kaidoList .kbadge{font-size:10px;padding:2px 6px;border-radius:8px;background:#e8f5e9;color:#2e7d32;flex:none}
 #kaidoList .kbadge.no{background:#f4f4f4;color:#9e9e9e}
 #kaidoList .kbadge.mp{background:#fff3e0;color:#e65100;font-weight:600}
+#kaidoList .kdiff{font-size:11px;color:#37474f;background:#eef7ff;border:1px solid #cfe6ff;border-radius:8px;padding:6px 8px;margin:6px 2px;cursor:pointer;line-height:1.45}
+#kaidoList .kdiff:hover{background:#e3f0ff}
+#kaidoList .kdiff .kdiffnone{color:#78909c;font-weight:400}
+#kaidoList .kdiff .kdiffbtn{color:#0277bd;font-weight:600;white-space:nowrap}
 #kaidoInfo{padding:9px 14px;border-top:1px solid #eee;font-size:11px;color:#666;line-height:1.5}
 .kdot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
 #kaidoFit{position:absolute;right:14px;top:6px;z-index:5;padding:7px 12px;border-radius:10px;border:1px solid #ddd;background:#fff;font-size:12px}
@@ -2548,6 +2552,10 @@ function renderTabs(){var t=el("kaidoTabs");t.innerHTML="";REGDEF.forEach(functi
 function renderList(){
  var q=(el("kaidoSearch").value||"").trim(),L=el("kaidoList"),fit=el("kaidoFit");
  L.innerHTML="";L.appendChild(fit);
+ var dif=document.createElement("div");dif.className="kdiff";
+ dif.innerHTML=diffSummary()+' <span class="kdiffbtn">🔄 差分を再読込</span>';
+ dif.onclick=function(){ reloadDiffs(); };
+ L.appendChild(dif);
  var shown=0;
  ALL.forEach(function(s){
   if(CURREG!=="すべて"&&s.region!==CURREG)return;
@@ -2577,13 +2585,11 @@ function renderList(){
 function applySaved(){ALL.forEach(function(s){if(ON[s.id]&&s.geo)drawStreet(s,true);});}
 function openPanel(){
  el("kaidoModal").classList.add("on");
- if(LOADED)return;
- fetch("kaido_data.json").then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(d){
-   ALL=d.map(function(s){return{id:s.id,name:s.name,region:s.region||"その他",color:s.color||"#444",
-     km:s.km,geo:!!s.geo,src:s.src,chains:s.chains||1,maxgap:s.maxgap!=null?s.maxgap:null,segs:s.segs||[]};});
-   if(window.MANUAL_DRAW&&window.MANUAL_DRAW.api) window.MANUAL_DRAW.api.setData(d);
-   LOADED=true;renderTabs();renderList();applySaved();
- }).catch(function(){info("kaido_data.json を読み込めませんでした。GitHub に kaido_data.json をアップロードし、オンラインで再起動してください。");});
+ if(LOADED){ feedManual(); renderTabs(); renderList(); applySaved(); return; }
+ loadKaidoAll(function(err){
+   if(err){ info("kaido_data.json を読み込めませんでした。GitHub に kaido_data.json をアップロードし、オンラインで再起動してください。"); return; }
+   LOADED=true; feedManual(); renderTabs(); renderList(); applySaved();
+ });
 }
 el("kaidoClose").onclick=function(){el("kaidoModal").classList.remove("on");};
 el("kaidoModal").addEventListener("click",function(e){if(e.target===el("kaidoModal"))el("kaidoModal").classList.remove("on");});
@@ -2595,8 +2601,148 @@ loadOn();
 var ob=el("kaidoBtn");
 if(ob){var nb=ob.cloneNode(true);ob.parentNode.replaceChild(nb,ob);nb.textContent="🥾 街道一覧";
  nb.addEventListener("click",openPanel);}
-window.KAIDO_UI={version:"v31",open:openPanel,total:function(){return ALL.length;},
+
+/*---- kaido_diff auto-merge / generation manager (v32) ----*/
+var RAW=null, LS_DIFF="kumanaku_kaido_diffs_v1";
+var DIFF_STATE={loaded:[],applied:0,tomb:0,miss:0,last:0};
+function pad2(n){ return (n<10?"0":"")+n; }
+function ymd(d){ return ""+d.getFullYear()+pad2(d.getMonth()+1)+pad2(d.getDate()); }
+function bs(f){ return f+(f.indexOf("?")<0?"?":"&")+"_cb="+Date.now(); }
+function fromRaw(d){ return (d||[]).map(function(s){ return {id:s.id,name:s.name,region:s.region||"その他",color:s.color||"#444",
+  km:s.km,geo:!!s.geo,src:s.src,chains:s.chains||1,maxgap:s.maxgap!=null?s.maxgap:null,segs:s.segs||[],
+  manual:!!s.manual,promoted:!!s.promoted}; }); }
+function feedManual(){
+  if(!window.MANUAL_DRAW || !window.MANUAL_DRAW.api) return false;
+  try{ window.MANUAL_DRAW.api.setData(ALL.map(function(s){ return {id:s.id,name:s.name,region:s.region||"その他",
+    color:s.color||"#444",geo:!!s.geo,src:s.src,km:s.km,chains:s.chains,maxgap:s.maxgap,segs:s.segs,
+    manual:!!s.manual,promoted:!!s.promoted}; })); return true; }catch(e){ return false; }
+}
+function saveDiffState(){ try{ localStorage.setItem(LS_DIFF,JSON.stringify({loaded:DIFF_STATE.loaded,
+  applied:DIFF_STATE.applied,tomb:DIFF_STATE.tomb,last:DIFF_STATE.last,at:new Date().toISOString()})); }catch(e){} }
+function loadDiffState(){ try{ var o=JSON.parse(localStorage.getItem(LS_DIFF)||"null");
+  if(o&&o.loaded&&o.loaded.length){ DIFF_STATE.loaded=o.loaded; DIFF_STATE.applied=o.applied||0;
+    DIFF_STATE.tomb=o.tomb||0; DIFF_STATE.last=o.last||0; } }catch(e){} }
+function fallbackFiles(){ var a=["kaido_diff.json"], d=new Date();
+  for(var i=0;i<7;i++){ a.push("kaido_diff_"+ymd(d)+".json"); d.setDate(d.getDate()-1); }
+  return a; }
+function dateKey(fn,o){
+  var m=String(fn||"").match(/(\d{4})(\d{2})(\d{2})/);
+  if(m) return (+m[1])*10000+(+m[2])*100+(+m[3]);
+  if(o&&o.generated){ var d=new Date(o.generated); if(!isNaN(d.getTime())) return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate(); }
+  return 0;
+}
+function diffCandidates(cb){
+  fetch(bs("kaido_diff_manifest.json")).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(o){
+    var files=[], dmap={};
+    var srcs = (Object.prototype.toString.call(o)==="[object Array]") ? o : (o ? (o.files||o.diffs||o.list||[]) : []);
+    if(Object.prototype.toString.call(srcs)==="[object Array]"){
+      srcs.forEach(function(x){
+        if(typeof x==="string"){ if(x) files.push(x); }
+        else if(x && (x.file||x.name)){ var f=x.file||x.name; files.push(f); if(x.date) dmap[f]=x.date; }
+      });
+    }
+    var out=[]; files.forEach(function(f){ if(out.indexOf(f)<0) out.push(f); });
+    cfManifestDates=dmap;
+    cb(out.length?out:fallbackFiles());
+  }).catch(function(){ cfManifestDates={}; cb(fallbackFiles()); });
+}
+var cfManifestDates={};
+function mergeDiff(o){
+  var n=0, t=0, dels=[];
+  if(!o) return {n:0,t:0};
+  if(Object.prototype.toString.call(o)==="[object Array]") { /* ok */ }
+  if(o && o.deletes && o.deletes.length) dels=o.deletes.slice();
+  var arr=null;
+  if(o && o.streets && o.streets.length) arr=o.streets;
+  else if(Object.prototype.toString.call(o)==="[object Array]") arr=o;
+  else if(o && o.name && o.segs) arr=[o];
+  function kill(nm){
+    var cur=null; ALL.forEach(function(y,i){ if(y.name===nm) cur=y; });
+    if(!cur) return false;
+    cur.geo=false; cur.segs=[]; cur.manual=false; cur.promoted=false;
+    cur.src="未収録"; cur.km=null; cur.chains=0; cur.maxgap=null;
+    if(ON[cur.id]) ON[cur.id]=0;
+    try{ clearOne(cur.id); }catch(e){}
+    delete BB[cur.id];
+    return true;
+  }
+  (arr||[]).forEach(function(x){
+    if(!x||!x.name) return;
+    if(x.deleted || x.remove){ kill(x.name); t++; return; }
+    var cur=null; ALL.forEach(function(y){ if(y.name===x.name) cur=y; });
+    if(cur){
+      if(x.segs && x.segs.length){ cur.geo=true; cur.segs=x.segs; }
+      if(x.km!=null) cur.km=x.km;
+      if(x.chains!=null) cur.chains=x.chains;
+      if(x.maxgap!=null) cur.maxgap=x.maxgap;
+      if(x.color) cur.color=x.color;
+      if(x.region) cur.region=x.region;
+      if(x.src) cur.src=x.src;
+      if(x.manual) cur.manual=true;
+      if(x.promoted) cur.promoted=true;
+      delete BB[cur.id]; n++;
+    } else if(x.segs && x.segs.length){
+      ALL.push({id:x.id||("diff_"+(ALL.length+1)),name:x.name,region:x.region||"手描き",color:x.color||"#e65100",
+        geo:true,src:x.src||"手描き",segs:x.segs,km:x.km,chains:x.chains,maxgap:x.maxgap,
+        manual:!!x.manual,promoted:!!x.promoted});
+      n++;
+    }
+  });
+  dels.forEach(function(nm){ if(kill(nm)) t++; });
+  return {n:n,t:t};
+}
+function loadDiffs(cb){
+  DIFF_STATE={loaded:[],applied:0,tomb:0,miss:0,last:0};
+  diffCandidates(function(files){
+    var jobs=(files||[]).map(function(fn){
+      return fetch(bs(fn)).then(function(r){
+        if(!r.ok) throw 0;
+        return r.json().then(function(o){ return {fn:fn,o:o}; });
+      }).catch(function(){ return {fn:fn,o:null}; });
+    });
+    Promise.all(jobs).then(function(res){
+      var ok=res.filter(function(x){ return x.o; });
+      DIFF_STATE.miss=res.length-ok.length;
+      ok.sort(function(a,b){ var ka=dateKey(a.fn,a.o), kb=dateKey(b.fn,b.o); return (ka-kb) || (a.fn<b.fn?-1:1); });
+      ok.forEach(function(x){
+        var r=mergeDiff(x.o), k=dateKey(x.fn,x.o);
+        DIFF_STATE.loaded.push({file:x.fn,date:k,streets:r.n,tomb:r.t,generated:(x.o&&x.o.generated)||null});
+        DIFF_STATE.applied+=r.n; DIFF_STATE.tomb+=r.t;
+        if(k>DIFF_STATE.last) DIFF_STATE.last=k;
+      });
+      saveDiffState();
+      cb();
+    }).catch(function(){ cb(); });
+  });
+}
+function diffSummary(){
+  var s=DIFF_STATE;
+  if(!s.loaded.length) return '<span class="kdiffnone">差分データ: なし（kaido_diff.json 未配置）</span>';
+  var f=s.loaded.map(function(x){ return x.file; }).join(" ＋ ");
+  return '差分: <b>'+s.loaded.length+'</b> 世代適用（+'+s.applied+' 街道'+(s.tomb?(' / 取消 '+s.tomb):'')+'）'
+    +'<span class="kdiffnone"> 最新 '+(s.last||"-")+'　'+f+'</span>';
+}
+function loadKaidoAll(done){
+  fetch(bs("kaido_data.json")).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(d){
+    RAW=d; ALL=fromRaw(d);
+    loadDiffs(function(){ done(null); });
+  }).catch(function(){ done(1); });
+}
+function reloadDiffs(){
+  if(!RAW){ loadKaidoAll(function(e){ if(!e){ LOADED=true; feedManual(); } renderTabs(); renderList(); applySaved(); }); return; }
+  ALL=fromRaw(RAW);
+  loadDiffs(function(){ feedManual(); try{ renderTabs(); renderList(); applySaved(); }catch(e){} });
+}
+loadDiffState();
+
+window.KAIDO_UI={version:"v32",open:openPanel,total:function(){return ALL.length;},
  refresh:function(){ if(LOADED){ renderTabs(); renderList(); } },
+ reloadDiffs:reloadDiffs,
+ diffState:function(){ return DIFF_STATE; },
+ diffSummary:diffSummary,
+ raw:function(){ return RAW; },
+ streets:function(){ return ALL; },
+ load:function(cb){ loadKaidoAll(function(e){ if(!e){ LOADED=true; feedManual(); } if(cb) cb(e); }); },
  applyStreets:function(arr){
    var n=0;
    (arr||[]).forEach(function(x){
@@ -2628,6 +2774,15 @@ window.KAIDO_UI={version:"v31",open:openPanel,total:function(){return ALL.length
  chainsOf:function(n){var s=ALL.filter(function(x){return x.name===n;})[0];return s?s.chains:null;},
  toggle:function(n){var s=ALL.filter(function(x){return x.name===n;})[0];if(s&&s.geo){ON[s.id]=1;drawStreet(s,true);return true;}return false;}};
 })();
+function bootKaido(){
+  loadKaidoAll(function(err){
+    if(err) return;
+    LOADED=true;
+    feedManual(); setTimeout(feedManual,1200); setTimeout(feedManual,3000);
+  });
+}
+function bootReady(){ setTimeout(bootKaido,1000); }
+try{ if(document.readyState==="loading"){ document.addEventListener("DOMContentLoaded",bootReady); } else { bootReady(); } }catch(e){}
 /*== KAIDO_UI_END ==*/
 </script>
 
@@ -2732,7 +2887,7 @@ function loadAll(){
   try{
     var o=JSON.parse(localStorage.getItem(LS_MAN)||"null");
     if(o && o.man && typeof o.man==="object"){ D.man=o.man; D.st=(o.st&&typeof o.st==="object")?o.st:{}; }
-    else if(o && typeof o==="object"){ D.man=o; D.st={}; }   /* v29/v31: statusなし -> 既存は全て「確定」で引き継ぐ */
+    else if(o && typeof o==="object"){ D.man=o; D.st={}; }   /* v29/v32: statusなし -> 既存は全て「確定」で引き継ぐ */
     else { D.man={}; D.st={}; }
   }catch(e){ D.man={}; D.st={}; }
   fixSt();
@@ -2916,7 +3071,7 @@ function toGeoJSON(){
         geometry:{type:"LineString",coordinates:ln.map(function(q){ return [+q[1],+q[0]]; })}});
     });
   }
-  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v31",at:new Date().toISOString()},features:feats};
+  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v32",at:new Date().toISOString()},features:feats};
 }
 function fromGeoJSON(gj){
   if(!gj||!gj.features) return 0;
@@ -3172,8 +3327,8 @@ function mergedData(){
     o.geo=!!segs.length;
     if(!s.geo){ o.src = ex.length ? "手描き" : (s.src||"未収録"); }
     else { o.src=(s.src||"OSM")+(ex.length?"+手描き":""); }
-    if(ex.length) o.manual=true;
-    if(!s.geo && ex.length) o.promoted=true;
+    if(ex.length || s.manual) o.manual=true;
+    if(s.promoted || (!s.geo && ex.length)) o.promoted=true;
     o.segs=segs;
     if(ex.length && segs.length){ o.km=sumKm(segs); o.chains=segs.length; o.maxgap=segs.length>1?maxGapKm(segs):0; }
     else if(s.geo){ o.km=s.km; o.chains=s.chains||segs.length||1; o.maxgap=(s.maxgap!=null?s.maxgap:null); }
@@ -3196,7 +3351,7 @@ function promotedData(){
   full.forEach(function(s){
     if(s.manual && s.geo && s.segs && s.segs.length){ out.push(s); ids.push(s.name); }
   });
-  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v31",
+  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v32",
     "generated":new Date().toISOString(), "base":"kaido_data.json", "mode":"promoted-only",
     "count":out.length, "ids":ids, "streets":out };
 }
@@ -3230,7 +3385,7 @@ function applyDiff(obj){
   notifyKaido();
   return n;
 }
-window.MANUAL_DRAW={version:"v31",open:open,closePanel:closePanel,api:{
+window.MANUAL_DRAW={version:"v32",open:open,closePanel:closePanel,api:{
   setData:function(d){ D.data=d; fillStreets(); syncUI(); },
   streetNames:function(){ return (D.data||[]).map(function(x){ return x.name; }); },
   start:start,add:addPoint,undo:undoPoint,del:delVertex,move:moveVertex,
