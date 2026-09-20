@@ -112,7 +112,7 @@
 <div id="map"></div>
 
 <div id="stats" class="panel">
-  <div class="appname">全国くまなくウォーク <span style="font-weight:normal;color:#999">v32</span></div>
+  <div class="appname">全国くまなくウォーク <span style="font-weight:normal;color:#999">v34</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -2602,9 +2602,28 @@ var ob=el("kaidoBtn");
 if(ob){var nb=ob.cloneNode(true);ob.parentNode.replaceChild(nb,ob);nb.textContent="🥾 街道一覧";
  nb.addEventListener("click",openPanel);}
 
-/*---- kaido_diff auto-merge / generation manager (v32) ----*/
+/*---- kaido_diff auto-merge / generation manager (v34) ----*/
 var RAW=null, LS_DIFF="kumanaku_kaido_diffs_v1";
 var DIFF_STATE={loaded:[],applied:0,tomb:0,miss:0,last:0};
+var LS_TOMB="kumanaku_kaido_tomb_v1", TOMB=[];
+function loadTombs(){ try{ var o=JSON.parse(localStorage.getItem(LS_TOMB)||"null"); TOMB=(o&&o.records)?o.records:[]; }catch(e){ TOMB=[]; } return TOMB; }
+function saveTombs(){ try{ localStorage.setItem(LS_TOMB,JSON.stringify({v:1,records:TOMB})); }catch(e){} }
+function tombPush(rec){
+  for(var i=0;i<TOMB.length;i++){ if(TOMB[i].name===rec.name && TOMB[i].file===rec.file && TOMB[i].date===rec.date) return; }
+  if(rec.date){ rec.deletedAt=ymdOf(rec.date); }
+  rec.deleted=true;
+  if(!rec.deletedBy) rec.deletedBy=(rec.file||"diff");
+  if(!rec.reason) rec.reason="tombstone";
+  TOMB.push(rec); saveTombs();
+}
+function tombMarkRestored(nm,how){
+  var c=0;
+  TOMB.forEach(function(r){ if(r.name===nm && !r.restored){ r.restored=true; r.restoredBy=how||"restore";
+    r.restoredAt=new Date().toISOString(); c++; } });
+  if(c) saveTombs();
+  return c;
+}
+function ymdOf(k){ var x=String(k||""); if(x.length!==8) return x||"-"; return x.slice(0,4)+"-"+x.slice(4,6)+"-"+x.slice(6,8); }
 function pad2(n){ return (n<10?"0":"")+n; }
 function ymd(d){ return ""+d.getFullYear()+pad2(d.getMonth()+1)+pad2(d.getDate()); }
 function bs(f){ return f+(f.indexOf("?")<0?"?":"&")+"_cb="+Date.now(); }
@@ -2647,18 +2666,23 @@ function diffCandidates(cb){
   }).catch(function(){ cfManifestDates={}; cb(fallbackFiles()); });
 }
 var cfManifestDates={};
-function mergeDiff(o){
-  var n=0, t=0, dels=[];
+function mergeDiff(o,ctx){
+  var n=0, t=0, dels=[], rest=[];
+  ctx=ctx||{};
   if(!o) return {n:0,t:0};
   if(Object.prototype.toString.call(o)==="[object Array]") { /* ok */ }
   if(o && o.deletes && o.deletes.length) dels=o.deletes.slice();
+  if(o && o.restores && o.restores.length) rest=o.restores.slice();
   var arr=null;
   if(o && o.streets && o.streets.length) arr=o.streets;
   else if(Object.prototype.toString.call(o)==="[object Array]") arr=o;
   else if(o && o.name && o.segs) arr=[o];
-  function kill(nm){
+  function kill(nm,why){
     var cur=null; ALL.forEach(function(y,i){ if(y.name===nm) cur=y; });
-    if(!cur) return false;
+    if(!cur){ tombPush({name:nm,date:(ctx.date||0),file:(ctx.file||""),generated:(ctx.generated||null),
+      at:new Date().toISOString(),reason:(why||"tombstone"),missing:true}); return false; }
+    tombPush({name:nm,date:(ctx.date||0),file:(ctx.file||""),generated:(ctx.generated||null),
+      at:new Date().toISOString(),reason:(why||"tombstone")});
     cur.geo=false; cur.segs=[]; cur.manual=false; cur.promoted=false;
     cur.src="未収録"; cur.km=null; cur.chains=0; cur.maxgap=null;
     if(ON[cur.id]) ON[cur.id]=0;
@@ -2668,7 +2692,7 @@ function mergeDiff(o){
   }
   (arr||[]).forEach(function(x){
     if(!x||!x.name) return;
-    if(x.deleted || x.remove){ kill(x.name); t++; return; }
+    if(x.deleted || x.remove){ kill(x.name,"deleted"); t++; return; }
     var cur=null; ALL.forEach(function(y){ if(y.name===x.name) cur=y; });
     if(cur){
       if(x.segs && x.segs.length){ cur.geo=true; cur.segs=x.segs; }
@@ -2680,6 +2704,8 @@ function mergeDiff(o){
       if(x.src) cur.src=x.src;
       if(x.manual) cur.manual=true;
       if(x.promoted) cur.promoted=true;
+      if(x.reason) cur.srcReason=x.reason;
+      tombMarkRestored(x.name,"apply");
       delete BB[cur.id]; n++;
     } else if(x.segs && x.segs.length){
       ALL.push({id:x.id||("diff_"+(ALL.length+1)),name:x.name,region:x.region||"手描き",color:x.color||"#e65100",
@@ -2688,11 +2714,13 @@ function mergeDiff(o){
       n++;
     }
   });
-  dels.forEach(function(nm){ if(kill(nm)) t++; });
-  return {n:n,t:t};
+  dels.forEach(function(nm){ if(kill(nm,"deletes")) t++; });
+  rest.forEach(function(nm){ tombMarkRestored(nm,"restores"); });
+  return {n:n,t:t,restored:rest.length};
 }
 function loadDiffs(cb){
   DIFF_STATE={loaded:[],applied:0,tomb:0,miss:0,last:0};
+  loadTombs();
   diffCandidates(function(files){
     var jobs=(files||[]).map(function(fn){
       return fetch(bs(fn)).then(function(r){
@@ -2705,13 +2733,12 @@ function loadDiffs(cb){
       DIFF_STATE.miss=res.length-ok.length;
       ok.sort(function(a,b){ var ka=dateKey(a.fn,a.o), kb=dateKey(b.fn,b.o); return (ka-kb) || (a.fn<b.fn?-1:1); });
       ok.forEach(function(x){
-        var r=mergeDiff(x.o), k=dateKey(x.fn,x.o);
+        var r=mergeDiff(x.o,{file:x.fn,date:(cfManifestDates[x.fn]||dateKey(x.fn,x.o)),generated:(x.o&&x.o.generated)||null}), k=dateKey(x.fn,x.o);
         DIFF_STATE.loaded.push({file:x.fn,date:k,streets:r.n,tomb:r.t,generated:(x.o&&x.o.generated)||null});
         DIFF_STATE.applied+=r.n; DIFF_STATE.tomb+=r.t;
         if(k>DIFF_STATE.last) DIFF_STATE.last=k;
       });
-      saveDiffState();
-      cb();
+      saveDiffState(); saveTombs(); cb();
     }).catch(function(){ cb(); });
   });
 }
@@ -2735,10 +2762,171 @@ function reloadDiffs(){
 }
 loadDiffState();
 
-window.KAIDO_UI={version:"v32",open:openPanel,total:function(){return ALL.length;},
+
+/*---- GitHub direct commit (Contents API) + tombstone history (v34) ----*/
+var LS_GH="kumanaku_gh_settings_v1", GH_STATE={ok:null,msg:"",last:null};
+function ghLoad(){ try{ var o=JSON.parse(localStorage.getItem(LS_GH)||"null"); return o||{}; }catch(e){ return {}; } }
+function ghSave(o){ try{ localStorage.setItem(LS_GH,JSON.stringify(o)); }catch(e){} return true; }
+function ghCfg(){ var o=ghLoad();
+  return {owner:(o.owner||"").trim(), repo:(o.repo||"").trim(), branch:((o.branch||"main").trim()||"main"),
+    path:(o.path||"").trim(), token:(o.token||"").trim()}; }
+function b64utf8(str){
+  var bytes=new TextEncoder().encode(String(str)), bin="";
+  for(var i=0;i<bytes.length;i++){ bin+=String.fromCharCode(bytes[i]); }
+  return btoa(bin);
+}
+function unb64utf8(b){
+  var bin=atob(String(b||"").replace(/\s/g,"")), arr=new Uint8Array(bin.length);
+  for(var i=0;i<bin.length;i++){ arr[i]=bin.charCodeAt(i); }
+  return new TextDecoder("utf-8").decode(arr);
+}
+function ghReq(method,url,token,body){
+  var h={"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"};
+  if(token) h["Authorization"]="Bearer "+token;
+  var o={method:method,headers:h};
+  if(body!==undefined) o.body=JSON.stringify(body);
+  return fetch(url,o);
+}
+function ghRepoUrl(cfg,path){ return "https://api.github.com/repos/"+encodeURIComponent(cfg.owner)+"/"+encodeURIComponent(cfg.repo)+
+  (path?"/contents/"+String(path).split("/").map(function(x){ return encodeURIComponent(x); }).join("/"):""); }
+function ghGetFile(cfg,path){
+  return ghReq("GET",ghRepoUrl(cfg,path)+"?ref="+encodeURIComponent(cfg.branch),cfg.token).then(function(r){
+    if(r.status===200) return r.json().then(function(j){ return {exists:true,sha:j.sha,base64:j.content||""}; });
+    if(r.status===404) return {exists:false,sha:null,base64:""};
+    return r.text().then(function(t){ throw new Error("GET "+path+" -> HTTP "+r.status+" "+String(t).slice(0,160)); });
+  });
+}
+function ghPut(cfg,path,text,msg){
+  var b64=b64utf8(text);
+  function once(n){
+    return ghGetFile(cfg,path).then(function(cur){
+      var body={message:msg,content:b64,branch:cfg.branch};
+      if(cur.exists && cur.sha) body.sha=cur.sha;
+      return ghReq("PUT",ghRepoUrl(cfg,path),cfg.token,body);
+    }).then(function(r){
+      if(r.status===200 || r.status===201) return r.json().then(function(j){ return {ok:true,path:path,created:r.status===201,
+        sha:(j.content&&j.content.sha)||null,commit:(j.commit&&j.commit.html_url)||null}; });
+      if((r.status===409 || r.status===422) && n<2) return once(n+1);
+      return r.text().then(function(t){ throw new Error("PUT "+path+" -> HTTP "+r.status+" "+String(t).slice(0,160)); });
+    });
+  }
+  return once(0);
+}
+function ghTest(cb){
+  var cfg=ghCfg();
+  if(!cfg.owner||!cfg.repo||!cfg.token){ cb(false,"owner / repo / token を入力してください。"); return; }
+  ghReq("GET",ghRepoUrl(cfg),cfg.token).then(function(r){
+    if(r.status===200) return r.json().then(function(j){ cb(true,"接続OK: "+j.full_name+"（既定ブランチ "+(j.default_branch||"?")+"）"); });
+    if(r.status===401) { cb(false,"トークンが無効です（HTTP 401）。値を確認してください。"); return; }
+    if(r.status===403) { cb(false,"権限不足です（HTTP 403）。Contents: Read and write を付与してください。"); return; }
+    if(r.status===404) { cb(false,"リポジトリが見つかりません（HTTP 404）。owner / repo とトークンの対象リポジトリを確認してください。"); return; }
+    cb(false,"予期しない応答: HTTP "+r.status);
+  }).catch(function(e){ cb(false,"接続に失敗: "+((e&&e.message)||e)); });
+}
+function ghPlan(){
+  var cfg=ghCfg();
+  var d=null;
+  try{ d=(window.MANUAL_DRAW&&window.MANUAL_DRAW.api)?window.MANUAL_DRAW.api.promotedData():null; }catch(e){ d=null; }
+  var stamp=ymd(new Date());
+  var path=cfg.path||("kaido_diff_"+stamp+".json");
+  if(/\/$/.test(path)) path=path+"kaido_diff_"+stamp+".json";
+  if(!/\.json$/i.test(path)) path=path+".json";
+  var dir=path.indexOf("/")>=0 ? path.slice(0,path.lastIndexOf("/")+1) : "";
+  var streets=(d&&d.streets)||[];
+  var prom=streets.filter(function(x){ return x.promoted; }).length;
+  var upd=streets.length-prom;
+  var pend=0;
+  try{ pend=TOMB.filter(function(r){ return !r.restored; }).length; }catch(e){}
+  var text=d?JSON.stringify(d):"{}";
+  return { cfg:cfg, path:path, man:dir+"kaido_diff_manifest.json", stamp:stamp,
+    streets:streets, count:(d&&d.count)||0, promoted:prom, updated:upd,
+    pendingCancel:pend, bytes:text.length, text:text,
+    msg:"差分: 昇格 "+prom+" 件 / 追記 "+upd+" 件（確定手描き "+streets.length+" 街道・"+stamp+"）" };
+}
+function ghPreviewText(){
+  var p=ghPlan();
+  if(!p.cfg.owner||!p.cfg.repo||!p.cfg.token) return {ok:false,text:"GitHub設定（owner / repo / token）が未入力です。"};
+  if(!p.count) return {ok:false,text:"差分はありません（未収録街道を「確定」で描く／収録済みに追記すると差分が作られます。下書きは含まれません）。"};
+  var lines=[];
+  lines.push("【ドライラン】コミット内容のプレビュー（まだ何も送信していません）");
+  lines.push("・差分ファイル: "+p.path+"（"+p.bytes+" バイト）");
+  lines.push("・マニフェスト: "+p.man);
+  lines.push("・内訳: 昇格 "+p.promoted+" 件 / 追記 "+p.updated+" 件 / 対象 "+p.count+" 街道");
+  lines.push("・対象街道: "+p.streets.map(function(x){ return x.name; }).join("、"));
+  lines.push("・取消候補（未コミット）: "+p.pendingCancel+" 件（取消はこの差分には含まれません）");
+  lines.push("・コミットメッセージ: "+p.msg);
+  return {ok:true,text:lines.join("<br>"),plan:p};
+}
+function ghCommitDiff(cb){
+  var cfg=ghCfg();
+  if(!cfg.owner||!cfg.repo||!cfg.token){ cb(false,"GitHub設定（owner / repo / token）が未入力です。「🔧 GitHub設定」を開いて入力してください。"); return; }
+  if(!window.MANUAL_DRAW || !window.MANUAL_DRAW.api){ cb(false,"手描きモジュールが未初期化です。街道一覧を開いてから実行してください。"); return; }
+  var d;
+  try{ d=window.MANUAL_DRAW.api.promotedData(); }catch(e){ cb(false,"差分の作成に失敗: "+e.message); return; }
+  if(!d.count){ cb(false,"コミットする差分がありません（未収録街道を「確定」で描く／収録済みに追記すると差分が作られます。下書きは含まれません）。"); return; }
+  var plan=ghPlan();
+  var stamp=plan.stamp;
+  var base=plan.path;
+  var manP=plan.man;
+  var text=plan.text;
+  GH_STATE={ok:null,msg:"コミット中…",last:null};
+  ghPut(cfg,base,text,plan.msg).then(function(r1){
+    return ghGetFile(cfg,manP).then(function(cur){
+      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v34",files:[]};
+      if(cur.exists && cur.base64){ try{ var j=JSON.parse(unb64utf8(cur.base64)); if(j&&j.files) o=j; }catch(e){} }
+      o.files=o.files||[]; o.version="v34";
+      var nm=base.slice(dir.length);
+      if(o.files.indexOf(nm)<0) o.files.push(nm);
+      return ghPut(cfg,manP,JSON.stringify(o,null,2),"差分マニフェスト更新: "+nm);
+    }).then(function(r2){
+      GH_STATE={ok:true,msg:"コミット完了",last:{diff:r1,manifest:r2,count:plan.count,ids:d.ids,stamp:stamp,msg:plan.msg}};
+      cb(true,{diff:r1,manifest:r2,count:plan.count,ids:d.ids,stamp:stamp,promoted:plan.promoted,updated:plan.updated,msg:plan.msg});
+    }).catch(function(e){
+      GH_STATE={ok:false,msg:"マニフェスト更新だけ失敗",last:{diff:r1}};
+      cb(false,"差分ファイルはコミットできましたが、マニフェスト更新に失敗しました: "+((e&&e.message)||e));
+    });
+  }).catch(function(e){
+    GH_STATE={ok:false,msg:String((e&&e.message)||e),last:null};
+    cb(false,"コミットに失敗しました: "+((e&&e.message)||e));
+  });
+}
+function tombRender(){
+  var el2=document.getElementById("dpTombList"); if(!el2) return;
+  var rows=TOMB.slice().sort(function(a,b){ return (b.date-a.date) || (String(b.at)<String(a.at)?-1:1); });
+  if(!rows.length){ el2.innerHTML='<div class="it"><span class="nm">取消の記録はありません。差分に <code>deletes</code> を入れるとここに履歴が残ります。</span></div>'; return; }
+  var h='<div class="dp-hint">取消の履歴（新しい順）　全 '+rows.length+' 件 / 取消中 '+
+    rows.filter(function(r){ return !r.restored; }).length+' 件</div>';
+  rows.forEach(function(r,i){
+    var st=r.restored?'<span class="st ok">復元済</span>':(r.missing?'<span class="st dr">不明</span>':'<span class="st del">取消中</span>');
+    h+='<div class="it'+(r.restored?'':' dr')+'"><span class="nm">'+r.name+
+      '<small> '+ymdOf(r.date)+' 取消'+(r.file?('（'+r.file+'）'):'')+(r.restored?(' → 復元 '+ymdOf((r.restoredAt||"").slice(0,10).replace(/-/g,""))):'')+'</small></span>'
+      +st
+      +'<button data-t="draw" data-n="'+r.name+'">✏ 描き直す</button>'
+      +'<button data-t="restore" data-n="'+r.name+'">↩ 復元扱い</button></div>';
+  });
+  el2.innerHTML=h;
+  Array.prototype.forEach.call(el2.querySelectorAll("button"),function(b){
+    b.onclick=function(){
+      var n=b.getAttribute("data-n"), t=b.getAttribute("data-t");
+      if(t==="restore"){ var c=tombMarkRestored(n,"manual"); tombRender(); txt("dpStatus","「"+n+"」の取消記録を復元扱いにしました（"+c+" 件）。線そのものを戻すには、もう一度描いて「確定」で保存してください。"); }
+      else if(t==="draw"){
+        setVal("dpName",n); setVal("dpStreet",n);
+        var a=window.MANUAL_DRAW&&window.MANUAL_DRAW.api;
+        if(a){ if(a.streetNames){ var s=a.streetNames(); if(s.indexOf(n)<0 && document.getElementById("dpStreet")){ /* keep name */ } } a.start(n); }
+        var p=document.getElementById("dpTombList"); if(p) p.style.display="none";
+        txt("dpStatus","「"+n+"」を描き直します。地図をタップして頂点を追加し、「⏹ 確定して保存」してください。");
+      }
+    };
+  });
+}
+
+window.KAIDO_UI={version:"v34",open:openPanel,total:function(){return ALL.length;},
  refresh:function(){ if(LOADED){ renderTabs(); renderList(); } },
  reloadDiffs:reloadDiffs,
  diffState:function(){ return DIFF_STATE; },
+ ghSettings:{load:ghLoad,save:ghSave,cfg:ghCfg},
+ gh:{test:ghTest,commit:ghCommitDiff,plan:ghPlan,preview:ghPreviewText,put:ghPut,getFile:ghGetFile,b64:b64utf8,unb64:unb64utf8,state:function(){ return GH_STATE; }},
+ tomb:{list:function(){ return TOMB; },push:tombPush,markRestored:tombMarkRestored,save:saveTombs,load:loadTombs,render:tombRender},
  diffSummary:diffSummary,
  raw:function(){ return RAW; },
  streets:function(){ return ALL; },
@@ -2792,6 +2980,14 @@ try{ if(document.readyState==="loading"){ document.addEventListener("DOMContentL
 #dpList .st{font-size:10px;padding:1px 7px;border-radius:8px;background:#e0f2f1;color:#00695c;flex:none}
 #dpList .st.dr{background:#fff3e0;color:#e65100;font-weight:600}
 #dpList .dp-hint{font-size:11px;color:#666;padding:6px 6px 2px}
+#dpTombList .st.ok{background:#e8f5e9;color:#2e7d32}
+#dpTombList .st.del{background:#ffebee;color:#c62828;font-weight:600}
+#dpGh input{display:block;width:100%;box-sizing:border-box;margin:4px 0;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px}
+#dpGh .dp-warn{font-size:11px;color:#8d6e63;background:#fff8e1;border:1px solid #ffe0b2;border-radius:8px;padding:6px 8px;margin:6px 0}
+#ghStatus{font-size:12px;color:#37474f;padding:4px 0;line-height:1.5;word-break:break-all}
+#ghStatus .ok{color:#2e7d32;font-weight:600}
+#ghStatus .ng{color:#c62828;font-weight:600}
+#dpTogGh,#dpTomb{width:100%}
 #drawPanel{position:fixed;left:0;right:0;bottom:0;z-index:10000;display:none;background:#fff;border-top:1px solid #ddd;border-radius:14px 14px 0 0;box-shadow:0 -4px 18px rgba(0,0,0,.2);font-size:13px;max-height:80vh;flex-direction:column;overflow:hidden}
 #drawPanel.on{display:flex}
 .dp-head{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border-bottom:1px solid #eee}
@@ -2849,6 +3045,23 @@ try{ if(document.readyState==="loading"){ document.addEventListener("DOMContentL
    <input type="file" id="dpImp" accept=".geojson,.json,application/json" style="display:none">
    <button id="dpClear" class="danger">🗑 手描きを全て消去</button>
   </div>
+  <div class="dp-row"><button id="dpTomb">📜 取消の履歴（tombstone）</button></div>
+  <div class="dp-list" id="dpTombList" style="display:none"></div>
+  <div class="dp-sec">
+   <button id="dpTogGh">🔧 GitHub設定（差分を直接コミット）</button>
+   <div id="dpGh" style="display:none">
+    <input id="ghOwner" placeholder="owner 例: minamikusatsu0014">
+    <input id="ghRepo" placeholder="repo 例: kumanaku">
+    <input id="ghBranch" placeholder="branch 例: main">
+    <input id="ghPath" placeholder="差分ファイル名（空欄で kaido_diff_YYYYMMDD.json）">
+    <input id="ghToken" type="password" placeholder="fine-grained PAT（Contents: Read and write のみ）">
+    <div class="dp-row"><button id="ghSave">💾 設定を保存</button><button id="ghTest">🔌 接続テスト</button></div>
+    <div class="dp-row"><button id="ghDry">🚧 差分をプレビュー（ドライラン）</button><span style="font-size:11px;color:#666">送信せずに内容だけ確認</span></div>
+    <button id="ghCommit" class="pri">🚀 差分をGitHubへコミット</button>
+    <div class="dp-warn">⚠ トークンはこの端末の localStorage にのみ保存され、送信先は GitHub API だけです。共有端末では使わないでください。権限は対象リポジトリの「Contents: Read and write」のみに絞った fine-grained token を推奨します。トークンをHTMLに埋め込まないでください。</div>
+    <div id="ghStatus"></div>
+   </div>
+  </div>
   <div class="dp-note">地図をタップ = 頂点を追加　／　赤い点をドラッグ = 頂点を移動　／　頂点をタップして「選択頂点を削除」。各区間は「確定／下書き」を切替でき、<b>下書きは書き出し（📦統合・📄差分）に含まれません</b>。作業内容は端末に自動保存（localStorage）。ブラウザのデータ削除で消えるため、時点の「⬇ GeoJSON書き出し」で控えを取ってください。</div>
  </div>
 </div>
@@ -2887,7 +3100,7 @@ function loadAll(){
   try{
     var o=JSON.parse(localStorage.getItem(LS_MAN)||"null");
     if(o && o.man && typeof o.man==="object"){ D.man=o.man; D.st=(o.st&&typeof o.st==="object")?o.st:{}; }
-    else if(o && typeof o==="object"){ D.man=o; D.st={}; }   /* v29/v32: statusなし -> 既存は全て「確定」で引き継ぐ */
+    else if(o && typeof o==="object"){ D.man=o; D.st={}; }   /* v29/v34: statusなし -> 既存は全て「確定」で引き継ぐ */
     else { D.man={}; D.st={}; }
   }catch(e){ D.man={}; D.st={}; }
   fixSt();
@@ -3071,7 +3284,7 @@ function toGeoJSON(){
         geometry:{type:"LineString",coordinates:ln.map(function(q){ return [+q[1],+q[0]]; })}});
     });
   }
-  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v32",at:new Date().toISOString()},features:feats};
+  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v34",at:new Date().toISOString()},features:feats};
 }
 function fromGeoJSON(gj){
   if(!gj||!gj.features) return 0;
@@ -3264,6 +3477,55 @@ function init(){
     };
     r.readAsText(f.files[0]); if(f.value!==undefined) f.value="";
   });
+  on("dpTomb","click",function(){
+    var l=document.getElementById("dpTombList"); if(!l) return;
+    var vis=(l.style.display!=="none"); l.style.display=vis?"none":"block";
+    if(!vis) tombRender();
+  });
+  on("dpTogGh","click",function(){
+    var g=document.getElementById("dpGh"); if(!g) return;
+    var vis=(g.style.display!=="none"); g.style.display=vis?"none":"block";
+    if(!vis){ var o=ghLoad();
+      setVal("ghOwner",o.owner||""); setVal("ghRepo",o.repo||""); setVal("ghBranch",o.branch||"main");
+      setVal("ghPath",o.path||""); setVal("ghToken",o.token||"");
+    }
+  });
+  on("ghSave","click",function(){
+    ghSave({owner:val("ghOwner"),repo:val("ghRepo"),branch:val("ghBranch")||"main",path:val("ghPath"),token:val("ghToken")});
+    txt("ghStatus",'<span class="ok">設定を保存しました（この端末のみ）。</span>');
+  });
+  on("ghTest","click",function(){
+    ghSave({owner:val("ghOwner"),repo:val("ghRepo"),branch:val("ghBranch")||"main",path:val("ghPath"),token:val("ghToken")});
+    txt("ghStatus","接続テスト中…");
+    ghTest(function(ok,msg){ txt("ghStatus",'<span class="'+(ok?"ok":"ng")+'">'+msg+'</span>'); });
+  });
+  on("ghDry","click",function(){
+    ghSave({owner:val("ghOwner"),repo:val("ghRepo"),branch:val("ghBranch")||"main",path:val("ghPath"),token:val("ghToken")});
+    var pv=ghPreviewText();
+    txt("ghStatus",'<span class="'+(pv.ok?"ok":"ng")+'">'+pv.text+'</span>');
+  });
+  on("ghCommit","click",function(){
+    ghSave({owner:val("ghOwner"),repo:val("ghRepo"),branch:val("ghBranch")||"main",path:val("ghPath"),token:val("ghToken")});
+    var pv=ghPreviewText();
+    if(!pv.ok){ txt("ghStatus",'<span class="ng">'+pv.text+'</span>'); return; }
+    var q=pv.plan;
+    if(!window.confirm("次の内容で GitHub へコミットします。\n\n"
+      +"差分ファイル: "+q.path+"\nマニフェスト: "+q.man+"\n"
+      +"昇格 "+q.promoted+" 件 / 追記 "+q.updated+" 件 / 対象 "+q.count+" 街道\n"
+      +"対象: "+q.streets.map(function(x){ return x.name; }).join("、")+"\n\n"
+      +"コミットメッセージ: "+q.msg+"\n\nよろしいですか？")){
+      txt("ghStatus","コミットをキャンセルしました。"); return;
+    }
+    txt("ghStatus","コミット中…（差分ファイル → マニフェストの順に2コミット）");
+    ghCommitDiff(function(ok,res){
+      if(!ok){ txt("ghStatus",'<span class="ng">'+res+'</span>'); return; }
+      txt("ghStatus",'<span class="ok">コミット完了</span><br>'+(res.msg||("差分 "+res.count+" 街道"))+'<br>対象: '+res.ids.join("、")+'<br>'
+        +'① '+res.diff.path+' → '+(res.diff.commit||"(URL不明)")+'<br>'
+        +'② '+res.manifest.path+' → '+(res.manifest.commit||"(URL不明)")+'<br>'
+        +'次回起動時に全端末へ自動反映されます。');
+      if(window.KAIDO_UI&&window.KAIDO_UI.reloadDiffs) setTimeout(function(){ window.KAIDO_UI.reloadDiffs(); },600);
+    });
+  });
   on("dpFit","click",fitStreet);
   on("dpMapGap","click",gotoGap);
   on("dpStreet","change",function(){
@@ -3351,7 +3613,7 @@ function promotedData(){
   full.forEach(function(s){
     if(s.manual && s.geo && s.segs && s.segs.length){ out.push(s); ids.push(s.name); }
   });
-  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v32",
+  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v34",
     "generated":new Date().toISOString(), "base":"kaido_data.json", "mode":"promoted-only",
     "count":out.length, "ids":ids, "streets":out };
 }
@@ -3385,7 +3647,7 @@ function applyDiff(obj){
   notifyKaido();
   return n;
 }
-window.MANUAL_DRAW={version:"v32",open:open,closePanel:closePanel,api:{
+window.MANUAL_DRAW={version:"v34",open:open,closePanel:closePanel,api:{
   setData:function(d){ D.data=d; fillStreets(); syncUI(); },
   streetNames:function(){ return (D.data||[]).map(function(x){ return x.name; }); },
   start:start,add:addPoint,undo:undoPoint,del:delVertex,move:moveVertex,
