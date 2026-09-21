@@ -160,7 +160,7 @@
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><img src="./icon-192.png" alt="" class="app-ico"><span class="app-t">街道ウォーキング</span> <span class="ver">v52</span></div>
+  <div class="appname"><img src="./icon-192.png" alt="" class="app-ico"><span class="app-t">街道ウォーキング</span> <span class="ver">v53</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -328,7 +328,7 @@
 <script>
 if('serviceWorker' in navigator){
   window.addEventListener('load',function(){
-    navigator.serviceWorker.register('./sw.js?v=41').catch(function(){});
+    navigator.serviceWorker.register('./sw.js?v=53').catch(function(){});
   });
 }
 </script>
@@ -1805,8 +1805,20 @@ function kaidoStreetW(){
   if(z >= 13) return 12;
   return 10;
 }
-function drawKaidoLines(){ return trRenderKaido(); }
+function drawKaidoLines(){
+  try{
+    if(typeof window.trRenderKaido === 'function'){ window.__kaidoDrawn = true; return window.trRenderKaido(); }
+    window.__kaidoPending = true;
+  }catch(e){ if(window.console&&console.warn) console.warn('drawKaidoLines:', e); }
+  return null;
+}
 drawKaidoLines();
+/* v53: KAIDO_UI 側の準備完了後に描画（スコープ外参照で無描画になるのを防ぐ） */
+function kaidoRetryDraw(n){
+  if(typeof window.trRenderKaido === 'function'){ try{ window.trRenderKaido(); }catch(e){} return; }
+  if(n > 0) setTimeout(function(){ kaidoRetryDraw(n-1); }, 800);
+}
+kaidoRetryDraw(20);
 redrawKaidoLabels();
 var _kaidoW = kaidoWeight();
 map.on('zoomend', function(){
@@ -2897,8 +2909,8 @@ function promotedNames(){ return ALL.filter(function(s){ return !s.geo && manCou
 function saveOn(){try{localStorage.setItem(LSKEY,JSON.stringify(Object.keys(ON).filter(function(k){return ON[k];})));}catch(e){}}
 function loadOn(){try{JSON.parse(localStorage.getItem(LSKEY)||"[]").forEach(function(k){ON[k]=1;});}catch(e){}}
 function clearOne(id){if(LINES[id]){LINES[id].forEach(function(l){kLayer.removeLayer(l);});delete LINES[id];}}
-/* ===== v52 踏破塗りつぶし: 設定の一元化 + 区間モード切替（宿場間 / 500m） =====
-   v52 の二層描画（未踏破=グレー点線 / 踏破=発光色＋白コア / 透明タップ線）はそのままに、
+/* ===== v53 踏破塗りつぶし: 設定の一元化 + 区間モード切替（宿場間 / 500m） =====
+   v53 の二層描画（未踏破=グレー点線 / 踏破=発光色＋白コア / 透明タップ線）はそのままに、
    見た目・しきい値の数値を TR_CFG に集約し、区間の切り方を「宿場間」と「一定距離」で切替可能にした。
    宿場データを持つ街道（中山道）は、宿場位置をポリラインへ最近傍投影して区間境界を作り、
    「○次まで踏破」を表示する。 */
@@ -2918,6 +2930,36 @@ var TR_CFG = {
   hit:  { w: [16, 18, 22] }
 };
 /* 宿場位置（出典を確認できたもののみ収録。日本橋=起点、三条大橋=終点、板橋=1次…大津=69次） */
+var KAIDO_BUILTIN = [[{"id": "西国街道", "name": "西国街道", "region": "近畿", "color": "#be123c", "km": 7.5, "geo": true, "src": "https://ja.wikipedia.org/wiki/西国街道", "segs": [[[34.694553, 135.194817], [34.699261, 135.208297], [34.704106, 135.217847], [34.703389, 135.218806], [34.70576, 135.224467], [34.711341, 135.247394], [34.716057, 135.249258], [34.713263, 135.249511], [34.71504, 135.256157], [34.71861, 135.260139], [34.719567, 135.262038]]]}]];
+function mergeBuiltin(list){
+  var arr = list || [];
+  KAIDO_BUILTIN.forEach(function(b){
+    var hit = null;
+    arr.forEach(function(x){ if(x && (x.id === b.id || x.name === b.name)) hit = x; });
+    if(!hit){ arr.push(JSON.parse(JSON.stringify(b))); return; }
+    if(!(hit.segs && hit.segs.length) || !hit.geo){
+      hit.segs = b.segs; hit.geo = true;
+      if(hit.km == null) hit.km = b.km;
+      if(!hit.color) hit.color = b.color;
+      if(!hit.src) hit.src = b.src;
+    }
+  });
+  return arr;
+}
+/* v53: 描画・一覧APIを公開（typeof ガードで未定義名でも例外を出さない） */
+(function(){
+  var names = ['trRenderKaido','trRenderStreet','trSegsOf','trSections','trApplyTrackCore','trDecorateList'];
+  var defs = [typeof trRenderKaido, typeof trRenderStreet, typeof trSegsOf, typeof trSections,
+              typeof trApplyTrackCore, typeof trDecorateList];
+  var refs = [];
+  try{ refs = [trRenderKaido, trRenderStreet, trSegsOf, trSections, trApplyTrackCore, trDecorateList]; }catch(e){ refs = []; }
+  for(var i = 0; i < names.length; i++){
+    if(defs[i] === 'function' && refs[i]) window[names[i]] = refs[i];
+  }
+  window.mergeBuiltin = mergeBuiltin;
+  window.KAIDO_BUILTIN = KAIDO_BUILTIN;
+  window.__kaidoApi = names.filter(function(n){ return typeof window[n] === 'function'; });
+})();
 var TR_STATIONS = {
   '西国街道': {
     lb: '街道マップ「西国街道 神戸市中央区～神戸市東灘区 9.7km」記載の名所・駅',
@@ -3403,7 +3445,7 @@ function trDecorateList(){
     rows[i].appendChild(bar);
   }
 }
-/* --- v52(1.5km固定)の踏破を v52(500m) へ距離換算して引き継ぐ --- */
+/* --- v53(1.5km固定)の踏破を v53(500m) へ距離換算して引き継ぐ --- */
 function trMigrate(){
   var moved = 0;
   try{
@@ -3447,7 +3489,7 @@ window.trMigratedCount = trMigrate();
 window.trSetMode = function(m){
   TR_CFG.segmentMode = (m === 'distance') ? 'distance' : 'station';
   trSecCache = {};
-  try{ drawKaidoLines(); }catch(e){}
+  try{ drawKaidoLines(); }catch(e){ if(window.console&&console.warn) console.warn('kaido draw failed:', e); }
   try{ (typeof ON !== 'undefined' ? Object.keys(ON) : []).forEach(function(id){
     if(!ON[id]) return; var s = trFindById(id); if(s) drawStreet(s, true); }); }catch(e){}
   try{ renderList(); }catch(e){}
@@ -3554,7 +3596,7 @@ var ob=el("kaidoBtn");
 if(ob){var nb=ob.cloneNode(true);ob.parentNode.replaceChild(nb,ob);nb.textContent="🥾 街道一覧";
  nb.addEventListener("click",openPanel);}
 
-/*---- kaido_diff auto-merge / generation manager (v52) ----*/
+/*---- kaido_diff auto-merge / generation manager (v53) ----*/
 var RAW=null, LS_DIFF="kumanaku_kaido_diffs_v1";
 var DIFF_STATE={loaded:[],applied:0,tomb:0,miss:0,last:0};
 var LS_TOMB="kumanaku_kaido_tomb_v1", TOMB=[];
@@ -3579,7 +3621,7 @@ function ymdOf(k){ var x=String(k||""); if(x.length!==8) return x||"-"; return x
 function pad2(n){ return (n<10?"0":"")+n; }
 function ymd(d){ return ""+d.getFullYear()+pad2(d.getMonth()+1)+pad2(d.getDate()); }
 function bs(f){ return f+(f.indexOf("?")<0?"?":"&")+"_cb="+Date.now(); }
-function fromRaw(d){ return (d||[]).map(function(s){ return {id:s.id,name:s.name,region:s.region||"その他",color:s.color||"#444",
+function fromRaw(d){ d = (typeof mergeBuiltin === 'function') ? mergeBuiltin(d) : (d||[]); return (d||[]).map(function(s){ return {id:s.id,name:s.name,region:s.region||"その他",color:s.color||"#444",
   km:s.km,geo:!!s.geo,src:s.src,chains:s.chains||1,maxgap:s.maxgap!=null?s.maxgap:null,segs:s.segs||[],
   manual:!!s.manual,promoted:!!s.promoted}; }); }
 function feedManual(){
@@ -3703,7 +3745,7 @@ function diffSummary(){
 }
 function loadKaidoAll(done){
   fetch(bs("kaido_data.json")).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(d){
-    RAW=d; ALL=fromRaw(d);
+    RAW=mergeBuiltin(d); ALL=fromRaw(mergeBuiltin(RAW));
     loadDiffs(function(){ done(null); });
   }).catch(function(){ done(1); });
 }
@@ -3715,7 +3757,7 @@ function reloadDiffs(){
 loadDiffState();
 
 
-/*---- GitHub direct commit (Contents API) + tombstone history (v52) ----*/
+/*---- GitHub direct commit (Contents API) + tombstone history (v53) ----*/
 var LS_GH="kumanaku_gh_settings_v1", GH_STATE={ok:null,msg:"",last:null};
 function ghLoad(){ try{ var o=JSON.parse(localStorage.getItem(LS_GH)||"null"); return o||{}; }catch(e){ return {}; } }
 function ghSave(o){ try{ localStorage.setItem(LS_GH,JSON.stringify(o)); }catch(e){} return true; }
@@ -3879,9 +3921,9 @@ function ghCommitDiff(cb){
   GH_STATE={ok:null,msg:"コミット中…",last:null};
   ghPut(cfg,base,text,plan.msg).then(function(r1){
     return ghGetFile(cfg,manP).then(function(cur){
-      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v52",files:[]};
+      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v53",files:[]};
       if(cur.exists && cur.base64){ try{ var j=JSON.parse(unb64utf8(cur.base64)); if(j&&j.files) o=j; }catch(e){} }
-      o.files=o.files||[]; o.version="v52";
+      o.files=o.files||[]; o.version="v53";
       var _dir=(base.indexOf("/")>=0)? base.slice(0,base.lastIndexOf("/")+1) : "";
       var nm=base.slice(_dir.length);
       if(o.files.indexOf(nm)<0) o.files.push(nm);
@@ -3928,7 +3970,7 @@ function tombRender(){
   });
 }
 
-window.KAIDO_UI={version:"v52",open:openPanel,total:function(){return ALL.length;},
+window.KAIDO_UI={version:"v53",open:openPanel,total:function(){return ALL.length;},
  refresh:function(){ if(LOADED){ renderTabs(); renderList(); } },
  reloadDiffs:reloadDiffs,
  diffState:function(){ return DIFF_STATE; },
@@ -4327,7 +4369,7 @@ function toGeoJSON(){
         geometry:{type:"LineString",coordinates:ln.map(function(q){ return [+q[1],+q[0]]; })}});
     });
   }
-  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v52",at:new Date().toISOString()},features:feats};
+  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v53",at:new Date().toISOString()},features:feats};
 }
 function fromGeoJSON(gj){
   if(!gj||!gj.features) return 0;
@@ -4683,7 +4725,7 @@ function promotedData(){
   full.forEach(function(s){
     if(s.manual && s.geo && s.segs && s.segs.length){ out.push(s); ids.push(s.name); }
   });
-  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v52",
+  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v53",
     "generated":new Date().toISOString(), "base":"kaido_data.json", "mode":"promoted-only",
     "count":out.length, "ids":ids, "streets":out };
 }
@@ -4717,7 +4759,7 @@ function applyDiff(obj){
   notifyKaido();
   return n;
 }
-window.MANUAL_DRAW={version:"v52",open:open,closePanel:closePanel,api:{
+window.MANUAL_DRAW={version:"v53",open:open,closePanel:closePanel,api:{
   setData:function(d){ D.data=d; fillStreets(); syncUI(); },
   streetNames:function(){ return (D.data||[]).map(function(x){ return x.name; }); },
   start:start,add:addPoint,undo:undoPoint,del:delVertex,move:moveVertex,
