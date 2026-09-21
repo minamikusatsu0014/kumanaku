@@ -122,6 +122,24 @@
   #photoView .close{display:block;margin:10px auto 0;padding:9px 20px;border:none;border-radius:8px;background:#fff;color:#333;font-weight:bold;font-size:13px;cursor:pointer;}
   .leaflet-control-attribution{font-size:9px;}
 </style>
+<style>
+.trhead{margin:8px 4px 10px;padding:9px 10px;border:1px solid #e3e3e3;border-radius:10px;background:#fbfbfb}
+.trhd{font-size:12px;color:#3a3a3a;font-weight:700;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.trhd b{font-size:15px;color:#1b6b1b}
+.trkm{font-weight:400;color:#777;font-size:11px}
+.trbar{height:8px;background:#ececec;border-radius:6px;overflow:hidden;margin:6px 0;border:1px solid #e0e0e0}
+.trbar.big{height:11px}
+.trbar i{display:block;height:100%;background:linear-gradient(90deg,#ffd54f,#ff6d00,#d81b60);border-radius:6px}
+.trbtn{margin-top:4px;padding:7px 10px;border:1px solid #ddd;background:#fff;border-radius:8px;font-size:12px;font-weight:600;color:#333;cursor:pointer}
+.trbtn.wide{width:100%;display:block;margin-top:6px}
+.trrow{flex:1;display:flex;align-items:center;gap:6px;min-width:80px}
+.trrow .trbar{flex:1;margin:0;height:6px}
+.trpct{font-size:10px;color:#666;min-width:28px;text-align:right}
+.trw{margin-top:9px;padding-top:8px;border-top:1px dashed #ddd}
+.trbtns{display:flex;gap:6px;flex-wrap:wrap}
+.trhint{font-size:10px;color:#8a8a8a;margin-top:5px}
+.trnote{font-size:11px;color:#8a8a8a;margin-top:8px}
+</style>
 </head>
 <body>
 <div id="map"></div>
@@ -136,7 +154,7 @@
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><img src="./icon-192.png" alt="" class="app-ico"><span class="app-t">街道ウォーキング</span> <span class="ver">v49</span></div>
+  <div class="appname"><img src="./icon-192.png" alt="" class="app-ico"><span class="app-t">街道ウォーキング</span> <span class="ver">v50</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -613,7 +631,7 @@ function kaidoColorOf(nm){
        ALL.forEach(function(x){ if(x.name===nm&&x.color) c=x.color; }); }catch(e){}
   return c;
 }
-function kaidoPopupHTML(nm){
+function kaidoPopupCoreHTML(nm){
   var d=kaidoDescOf(nm);
   var h='<div class="kpop"><div class="kpopt"><span class="kdot" style="background:'+kaidoColorOf(nm)+'"></span>'+nm+'</div>';
   h+='<div class="kpopb">'+d.body+'</div>';
@@ -1780,28 +1798,7 @@ function kaidoStreetW(){
   if(z >= 13) return 12;
   return 10;
 }
-function drawKaidoLines(){
-  kaidoLayer.clearLayers();
-  var w = kaidoWeight();
-  KAIDO_LINES.forEach(function(k){
-    var lineData = k.segs ? k.segs : k.pts;
-    var opt = {lineJoin:'round', lineCap:'round', interactive:false};
-    /* 外側の白ハロー: 地図の色に関係なく輪郭を浮き立たせる */
-    L.polyline(lineData, Object.assign({},opt,{pane:'kaidoHaloPane', color:'#ffffff', weight:w+6, opacity:.95}))
-     .addTo(kaidoLayer);
-    /* 濃い縁取り: 旧街道の輪郭を締める */
-    L.polyline(lineData, Object.assign({},opt,{pane:'kaidoPane', color:'#4a3520', weight:w+4, opacity:1}))
-     .addTo(kaidoLayer);
-    /* 本線: 街道ごとの色を不透明で描く */
-    L.polyline(lineData, Object.assign({},opt,{pane:'kaidoPane', color:k.color, weight:w, opacity:1}))
-     .bindPopup(kaidoPopupHTML(k.name),{maxWidth:300,minWidth:230,autoPan:true})
-     .addTo(kaidoLayer);
-    /* タップ判定用（細線でも押しやすい透明の太線） */
-    L.polyline(lineData, Object.assign({},opt,{pane:'kaidoPane', color:'#000000', weight:24, opacity:0, interactive:true}))
-     .bindPopup(kaidoPopupHTML(k.name),{maxWidth:300,minWidth:230,autoPan:true})
-     .addTo(kaidoLayer);
-  });
-}
+function drawKaidoLines(){ return trRenderKaido(); }
 drawKaidoLines();
 redrawKaidoLabels();
 var _kaidoW = kaidoWeight();
@@ -2893,29 +2890,297 @@ function promotedNames(){ return ALL.filter(function(s){ return !s.geo && manCou
 function saveOn(){try{localStorage.setItem(LSKEY,JSON.stringify(Object.keys(ON).filter(function(k){return ON[k];})));}catch(e){}}
 function loadOn(){try{JSON.parse(localStorage.getItem(LSKEY)||"[]").forEach(function(k){ON[k]=1;});}catch(e){}}
 function clearOne(id){if(LINES[id]){LINES[id].forEach(function(l){kLayer.removeLayer(l);});delete LINES[id];}}
-function drawStreet(s,on){
-  if(!kLayer){kLayer=L.layerGroup();}
-  if(!on){clearOne(s.id); if(typeof redrawKaidoLabels==='function') redrawKaidoLabels(); return;}
-  var mn=MANSEGS(s.name);
-  if(!(s.segs||[]).length && !mn.length)return;
-  clearOne(s.id);
-  if(!map.hasLayer(kLayer))map.addLayer(kLayer);
-  var w=kaidoStreetW(),ls=[];   /* 全街道で同一の太さ（名前に依存しない） */
-  (s.segs||[]).forEach(function(seg){
-    ls.push(L.polyline(seg,{color:"#ffffff",weight:w+6,opacity:.95,lineJoin:"round",lineCap:"round",pane:"kaidoHaloPane",interactive:false}).addTo(kLayer));
-    ls.push(L.polyline(seg,{color:"#4a3520",weight:w+4,opacity:1,lineJoin:"round",lineCap:"round",pane:"kaidoPane",interactive:false}).addTo(kLayer));
-    ls.push(L.polyline(seg,{color:s.color,weight:w,opacity:1,lineJoin:"round",lineCap:"round",pane:"kaidoPane",interactive:false}).addTo(kLayer));
-  });
-  mn.forEach(function(seg){
-    ls.push(L.polyline(seg,{color:"#ffffff",weight:w+6,opacity:.95,lineJoin:"round",lineCap:"round",pane:"kaidoHaloPane",interactive:false}).addTo(kLayer));
-    ls.push(L.polyline(seg,{color:s.color||"#e65100",weight:w+2.5,opacity:1,lineJoin:"round",lineCap:"round",pane:"kaidoPane",interactive:false}).addTo(kLayer));
-    ls.push(L.polyline(seg,{color:"#ffd54f",weight:w,opacity:1,lineJoin:"round",lineCap:"round",pane:"kaidoPane",interactive:false}).addTo(kLayer));
-  });
-  (s.segs||[]).forEach(function(seg){ ls.push(kaidoHitLine(seg,s.name).addTo(kLayer)); });
-  mn.forEach(function(seg){ ls.push(kaidoHitLine(seg,s.name).addTo(kLayer)); });
-  LINES[s.id]=ls;
-  if(typeof redrawKaidoLabels==='function') redrawKaidoLabels();   /* ラベルも同時更新 */
+/* ===== v50 踏破塗りつぶし: 二層描画 + 区間単位の踏破 =====
+   未踏破 = 薄い灰色の点線ベース / 踏破済み = 発光色の太い実線(白コア付き)
+   区間は約1.5kmごとに分割し、部分踏破(途中まで歩いた状態)を記録する
+   タップ判定は透明な太線を別ペイン(kaidoHitPane)に分離し、ズーム連動で太さ可変 */
+var TR_KEY = 'kumanaku_traverse_v1';
+var TR_SEC_M = 1500;
+var TR_HIT_M = 60;
+var TR = { v: 1, st: {} };
+var trSecCache = {};
+function trLoad(){ try{ var o = JSON.parse(localStorage.getItem(TR_KEY) || 'null'); if(o && o.st){ TR = { v: 1, st: o.st }; } }catch(e){} }
+function trSave(){ try{ localStorage.setItem(TR_KEY, JSON.stringify({ v: 1, st: TR.st })); }catch(e){} }
+trLoad();
+function trEnsurePanes(){
+  try{
+    if(!map.getPane('kaidoBasePane')){ var p = map.createPane('kaidoBasePane'); p.style.zIndex = 430; }
+    if(!map.getPane('kaidoHitPane')){ var q = map.createPane('kaidoHitPane'); q.style.zIndex = 434; }
+  }catch(e){}
 }
+function trBaseW(){ var z = map.getZoom(); if(z >= 16) return 7; if(z >= 13) return 6; return 5; }
+function trTravW(){ var z = map.getZoom(); if(z >= 16) return 11; if(z >= 13) return 9; return 8; }
+function trHitW(){ var z = map.getZoom(); if(z >= 16) return 22; if(z >= 13) return 18; return 16; }
+function trHsl(h, s, l){ return 'hsl(' + Math.round(h*360) + ',' + Math.round(s*100) + '%,' + Math.round(l*100) + '%)'; }
+function trBright(hex){
+  var m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+  if(!m) return 'hsl(28,100%,55%)';
+  var n = parseInt(m[1], 16), r = (n>>16)&255, g = (n>>8)&255, b = n&255;
+  var mx = Math.max(r,g,b), mn = Math.min(r,g,b), d = mx - mn;
+  var l = (mx + mn) / 510, h = 0, s = 0;
+  if(d > 0){
+    s = l < .5 ? d/(mx+mn) : d/(510 - (mx+mn));
+    if(mx === r) h = ((g-b)/d + (g < b ? 6 : 0));
+    else if(mx === g) h = ((b-r)/d + 2);
+    else h = ((r-g)/d + 4);
+    h = h / 6;
+  }
+  return trHsl(h, s > .35 ? 1 : .95, .55);
+}
+function trSegsOf(s){
+  var a = [];
+  (s.segs || []).forEach(function(g){ if(g && g.length > 1) a.push(g); });
+  try{ (MANSEGS(s.name) || []).forEach(function(g){ if(g && g.length > 1) a.push(g); }); }catch(e){}
+  return a;
+}
+function trKeyOf(s){ return String(s.id || s.name); }
+function trSections(key, segs){
+  var sig = segs.length + ':' + segs.map(function(g){ return g.length; }).join('-');
+  var c = trSecCache[key];
+  if(c && c.sig === sig) return c;
+  var list = [], mi = 0;
+  segs.forEach(function(g){
+    var cur = [g[0]], acc = 0;
+    for(var i = 1; i < g.length; i++){
+      acc += kkDist(g[i-1], g[i]);
+      cur.push(g[i]);
+      if(acc >= TR_SEC_M){
+        var a = cur[cur.length-2], b = cur[cur.length-1];
+        list.push({ i: mi, pts: cur.slice(), mid: [(a[0]+b[0])/2, (a[1]+b[1])/2], len: acc });
+        mi++; cur = [g[i]]; acc = 0;
+      }
+    }
+    if(cur.length > 1){
+      var a2 = cur[0], b2 = cur[cur.length-1];
+      list.push({ i: mi, pts: cur.slice(), mid: [(a2[0]+b2[0])/2, (a2[1]+b2[1])/2], len: acc });
+      mi++;
+    }
+  });
+  var total = 0; list.forEach(function(x){ total += x.len; });
+  c = { sig: sig, list: list, total: total };
+  trSecCache[key] = c;
+  return c;
+}
+function trStats(key, sec){
+  var w = {}, km = 0, n = 0;
+  (TR.st[key] || []).forEach(function(i){ w[i] = 1; });
+  sec.list.forEach(function(x){ if(w[x.i]){ km += x.len; n++; } });
+  return { pct: sec.total ? Math.round(km/sec.total*100) : 0, km: km/1000, n: n, tot: sec.list.length, totKm: sec.total/1000 };
+}
+function trFind(nm){
+  var f = null;
+  try{ ALL.forEach(function(x){ if(x && x.name === nm) f = x; }); }catch(e){}
+  if(!f){ try{ KAIDO_LINES.forEach(function(x){ if(x && x.name === nm) f = x; }); }catch(e){} }
+  return f;
+}
+function trPopupBlock(nm){
+  var s = trFind(nm);
+  if(!s) return '';
+  var segs = trSegsOf(s);
+  if(!segs.length) return '<div class="trnote">実線データが未収録のため、まだ塗りつぶし対象になっていません（手描きで収録すると歩いた区間を塗れます）。</div>';
+  var key = trKeyOf(s), sec = trSections(key, segs), st = trStats(key, sec);
+  var nmj = String(nm).replace(/\\/g, '').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  return '<div class="trw">'
+    + '<div class="trhd">踏破 <b>' + st.pct + '%</b> <span class="trkm">' + st.km.toFixed(1) + ' / ' + st.totKm.toFixed(1) + ' km ・ 区間 ' + st.n + '/' + st.tot + '</span></div>'
+    + '<div class="trbar"><i style="width:' + st.pct + '%"></i></div>'
+    + '<div class="trbtns">'
+    + '<button class="trbtn" onclick="try{window.trMark(\'' + nmj + '\',1)}catch(e){}">全踏破</button>'
+    + '<button class="trbtn" onclick="try{window.trMark(\'' + nmj + '\',0)}catch(e){}">踏破を解除</button>'
+    + '<button class="trbtn" onclick="try{window.trApplyTrack()}catch(e){}">記録から反映</button>'
+    + '</div>'
+    + '<div class="trhint">区間は約' + (TR_SEC_M/1000) + 'km。GPS記録の線から' + TR_HIT_M + 'm以内を踏破として自動反映します。</div>'
+    + '</div>';
+}
+function trPopupHTML(nm){
+  var base = '';
+  try{ base = kaidoPopupCoreHTML(nm); }catch(e){ base = ''; }
+  var add = '';
+  try{ add = trPopupBlock(nm); }catch(e){}
+  if(!base) return '<div class="kpop"><div class="kpopt">' + nm + '</div>' + add + '</div>';
+  return base.replace(/<\/div>\s*$/, add + '</div>');
+}
+function trRenderStreet(s, on){
+  if(!kLayer){ kLayer = L.layerGroup(); }
+  if(!on){ clearOne(s.id); try{ redrawKaidoLabels(); }catch(e){} return; }
+  var segs = trSegsOf(s);
+  if(!segs.length) return;
+  clearOne(s.id);
+  if(!map.hasLayer(kLayer)) map.addLayer(kLayer);
+  trEnsurePanes();
+  var key = trKeyOf(s), sec = trSections(key, segs), walked = {}, ls = [];
+  (TR.st[key] || []).forEach(function(i){ walked[i] = 1; });
+  var bw = trBaseW(), tw = trTravW(), col = trBright(s.color);
+  sec.list.forEach(function(x){
+    if(walked[x.i]) return;
+    ls.push(L.polyline(x.pts, { pane: 'kaidoBasePane', color: '#8d8d8d', weight: bw, opacity: .85,
+      dashArray: '2 7', lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(kLayer));
+  });
+  sec.list.forEach(function(x){
+    if(!walked[x.i]) return;
+    ls.push(L.polyline(x.pts, { pane: 'kaidoPane', color: col, weight: tw + 8, opacity: .20,
+      lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(kLayer));
+    ls.push(L.polyline(x.pts, { pane: 'kaidoPane', color: col, weight: tw, opacity: 1,
+      lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(kLayer));
+    ls.push(L.polyline(x.pts, { pane: 'kaidoPane', color: '#ffffff', weight: Math.max(2, Math.round(tw*0.3)), opacity: .9,
+      lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(kLayer));
+  });
+  segs.forEach(function(g){
+    ls.push(L.polyline(g, { pane: 'kaidoHitPane', color: '#000000', weight: trHitW(), opacity: 0, interactive: true,
+      lineCap: 'round', lineJoin: 'round' })
+      .bindPopup(trPopupHTML(s.name), { maxWidth: 300, minWidth: 230, autoPan: true }).addTo(kLayer));
+  });
+  LINES[s.id] = ls;
+  try{ redrawKaidoLabels(); }catch(e){}
+}
+function trRenderKaido(){
+  trEnsurePanes();
+  kaidoLayer.clearLayers();
+  KAIDO_LINES.forEach(function(k){
+    var segs = trSegsOf(k);
+    if(!segs.length) return;
+    var key = trKeyOf(k), sec = trSections(key, segs), walked = {};
+    (TR.st[key] || []).forEach(function(i){ walked[i] = 1; });
+    var bw = trBaseW(), tw = trTravW(), col = trBright(k.color);
+    sec.list.forEach(function(x){
+      if(walked[x.i]) return;
+      L.polyline(x.pts, { pane: 'kaidoBasePane', color: '#8d8d8d', weight: bw, opacity: .85, dashArray: '2 7',
+        lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(kaidoLayer);
+    });
+    sec.list.forEach(function(x){
+      if(!walked[x.i]) return;
+      L.polyline(x.pts, { pane: 'kaidoPane', color: col, weight: tw + 8, opacity: .20, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(kaidoLayer);
+      L.polyline(x.pts, { pane: 'kaidoPane', color: col, weight: tw, opacity: 1, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(kaidoLayer);
+      L.polyline(x.pts, { pane: 'kaidoPane', color: '#ffffff', weight: Math.max(2, Math.round(tw*0.3)), opacity: .9, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(kaidoLayer);
+    });
+    segs.forEach(function(g){
+      L.polyline(g, { pane: 'kaidoHitPane', color: '#000000', weight: trHitW(), opacity: 0, interactive: true, lineCap: 'round', lineJoin: 'round' })
+        .bindPopup(trPopupHTML(k.name), { maxWidth: 300, minWidth: 230, autoPan: true }).addTo(kaidoLayer);
+    });
+  });
+}
+function trTrackPoints(){
+  var pts = [];
+  try{
+    var raw = localStorage.getItem(STORE_KEY);
+    if(!raw) return pts;
+    var o = JSON.parse(raw), t = (o && o.track) || [];
+    t.forEach(function(p){ if(p && p.length >= 2){ var la = +p[0], lo = +p[1]; if(isFinite(la) && isFinite(lo)) pts.push([la, lo]); } });
+  }catch(e){}
+  return pts;
+}
+function trApplyTrackCore(streets, showMsg){
+  var tp = trTrackPoints();
+  if(tp.length < 2){
+    if(showMsg) info('保存されたGPS記録がまだありません。「記録開始」で歩いた軌跡が保存されると、その線に沿って踏破が自動反映されます。');
+    return 0;
+  }
+  var CELL = 0.004, g = {};
+  function ck(la, lo){ return Math.round(la/CELL) + '_' + Math.round(lo/CELL); }
+  tp.forEach(function(p){ var k = ck(p[0], p[1]); if(!g[k]) g[k] = []; g[k].push(p); });
+  var marked = 0;
+  (streets || []).forEach(function(s){
+    var segs = trSegsOf(s);
+    if(!segs.length) return;
+    var key = trKeyOf(s), sec = trSections(key, segs), cur = {}, add = [];
+    (TR.st[key] || []).forEach(function(i){ cur[i] = 1; });
+    sec.list.forEach(function(x){
+      if(cur[x.i]) return;
+      /* 区間の形状点（最大12点に間引き）と中点を判定点にする＝長い区間でも取りこぼさない */
+      var chk = [];
+      var step = Math.max(1, Math.floor(x.pts.length / 12));
+      for(var si = 0; si < x.pts.length; si += step){ chk.push(x.pts[si]); }
+      chk.push(x.pts[x.pts.length - 1]);
+      chk.push(x.mid);
+      var hit = false;
+      for(var ci = 0; ci < chk.length && !hit; ci++){
+        var la = chk[ci][0], lo = chk[ci][1];
+        for(var di = -1; di <= 1 && !hit; di++){
+          for(var dj = -1; dj <= 1 && !hit; dj++){
+            var arr = g[ck(la + di*CELL, lo + dj*CELL)];
+            if(!arr) continue;
+            for(var q = 0; q < arr.length; q++){ if(kkDist([la, lo], arr[q]) <= TR_HIT_M){ hit = true; break; } }
+          }
+        }
+      }
+      if(hit) add.push(x.i);
+    });
+    if(add.length){
+      TR.st[key] = (TR.st[key] || []).concat(add);
+      marked += add.length;
+      if(!ON[s.id]){ ON[s.id] = 1; saveOn(); }
+      try{ drawStreet(s, true); }catch(e){}
+    }
+  });
+  if(marked) trSave();
+  if(showMsg) info('保存されたGPS記録（' + tp.length + '点）から <b>' + marked + '</b> 区間を踏破に反映しました。');
+  try{ renderList(); }catch(e){}
+  return marked;
+}
+function trMark(nm, mode){
+  var s = trFind(nm);
+  if(!s){ info('対象の街道が見つかりませんでした。'); return; }
+  var segs = trSegsOf(s);
+  if(!segs.length){ info('「' + nm + '」は実線データが未収録です。手描きで収録すると踏破を記録できます。'); return; }
+  var key = trKeyOf(s), sec = trSections(key, segs);
+  if(mode === 0){ TR.st[key] = []; }
+  else if(mode === 'auto'){ trApplyTrackCore([s], false); return; }
+  else { TR.st[key] = sec.list.map(function(x){ return x.i; }); }
+  trSave();
+  if(!ON[s.id]){ ON[s.id] = 1; saveOn(); }
+  try{ drawStreet(s, true); }catch(e){}
+  try{ renderList(); }catch(e){}
+  try{ map.closePopup(); }catch(e){}
+}
+function trDecorateList(){
+  var L = el('kaidoList'); if(!L) return;
+  var tot = 0, wkm = 0;
+  (ALL || []).forEach(function(s){
+    var segs = trSegsOf(s); if(!segs.length) return;
+    var key = trKeyOf(s), sec = trSections(key, segs), st = trStats(key, sec);
+    tot += st.totKm; wkm += st.km;
+  });
+  var pct = tot ? Math.round(wkm/tot*100) : 0;
+  var h = document.createElement('div'); h.className = 'trhead';
+  h.innerHTML = '<div class="trhd">全体の踏破 <b>' + pct + '%</b> <span class="trkm">' + wkm.toFixed(1) + ' / ' + tot.toFixed(1) + ' km</span></div>'
+    + '<div class="trbar big"><i style="width:' + pct + '%"></i></div>'
+    + '<button class="trbtn wide" onclick="try{window.trApplyTrack()}catch(e){}">保存したGPS記録から踏破を反映</button>';
+  var f = el('kaidoFit');
+  if(f && f.parentNode === L) L.insertBefore(h, f); else L.insertBefore(h, L.firstChild);
+  var rows = L.querySelectorAll('.krow');
+  for(var i = 0; i < rows.length; i++){
+    var cb = rows[i].querySelector('input[data-id]'); if(!cb) continue;
+    var id = cb.getAttribute('data-id'), s = null;
+    (ALL || []).forEach(function(x){ if(s) return; if(String(x.id) === String(id)) s = x; });
+    if(!s) continue;
+    var segs2 = trSegsOf(s); if(!segs2.length) continue;
+    var key2 = trKeyOf(s), sec2 = trSections(key2, segs2), st2 = trStats(key2, sec2);
+    var bar = document.createElement('div'); bar.className = 'trrow';
+    bar.innerHTML = '<div class="trbar"><i style="width:' + st2.pct + '%"></i></div><span class="trpct">' + st2.pct + '%</span>';
+    bar.title = '踏破 ' + st2.km.toFixed(1) + ' / ' + st2.totKm.toFixed(1) + ' km（区間 ' + st2.n + '/' + st2.tot + '）';
+    rows[i].appendChild(bar);
+  }
+}
+
+map.on('zoomend', function(){
+  var w = trBaseW();
+  if(w === _trBW) return;
+  _trBW = w;
+  try{ (typeof ON !== 'undefined' ? Object.keys(ON) : []).forEach(function(id){ if(!ON[id]) return; var s = null;
+    try{ ALL.forEach(function(x){ if(String(x.id) === String(id)) s = x; }); }catch(e){}
+    if(s) drawStreet(s, true); }); }catch(e){}
+});
+var _trBW = trBaseW();
+window.trMark = trMark;
+window.trApplyTrack = function(){ return trApplyTrackCore(ALL, true); };
+window.trStatsOf = function(nm){ var s = trFind(nm); if(!s) return null; var sg = trSegsOf(s); if(!sg.length) return null;
+  var sec = trSections(trKeyOf(s), sg); return trStats(trKeyOf(s), sec); };
+/* == V50_SECTION_END == */
+function kaidoPopupHTML(nm){
+  try{ return trPopupHTML(nm); }catch(e){ return kaidoPopupCoreHTML(nm); }
+}
+
+
+function drawStreet(s,on){ return trRenderStreet(s,on); }
 function bboxOf(s){if(BB[s.id])return BB[s.id];var p=[];(s.segs||[]).forEach(function(g){p=p.concat(g);});MANSEGS(s.name).forEach(function(g){p=p.concat(g);});if(!p.length)return null;BB[s.id]=L.latLngBounds(p);return BB[s.id];}
 function closeKaidoPanel(){try{el("kaidoModal").classList.remove("on");}catch(e){}}
 function fitStreet(s){var b=bboxOf(s);if(!b){info("「"+s.name+"」は実線データ未収録です（推測の線は描画していません）。");return;}
@@ -2923,7 +3188,7 @@ function fitStreet(s){var b=bboxOf(s);if(!b){info("「"+s.name+"」は実線デ�
   try{ map.flyToBounds(b,{padding:[40,40],duration:0.8,maxZoom:16}); }catch(e){ map.fitBounds(b,{padding:[40,40]}); }
   renderList();}
 function renderTabs(){var t=el("kaidoTabs");t.innerHTML="";REGDEF.forEach(function(r){var b=document.createElement("button");b.textContent=r;if(r===CURREG)b.className="on";b.onclick=function(){CURREG=r;renderTabs();renderList();};t.appendChild(b);});}
-function renderList(){
+function renderListCore(){
  var q=(el("kaidoSearch").value||"").trim(),L=el("kaidoList"),fit=el("kaidoFit");
  L.innerHTML="";L.appendChild(fit);
  var dif=document.createElement("div");dif.className="kdiff";
@@ -2956,6 +3221,8 @@ function renderList(){
  info("収録 <b>"+ALL.length+"</b> 街道 / 実線データ <b>"+g+"</b> 本（うち手描きで収録 <b>"+mp+"</b> 本）/ 表示中 "+shown+
    " 本<br>線は端点を連結済み。チェック＝表示、名前タップ＝ズーム。「データ無」は未収録（推測描画なし）。手描きで埋めると「手描き収録 ✓」へ昇格します。確定 "+mp+" 本 / 下書き "+dr+" 本。");
 }
+function renderList(){ var r=renderListCore(); try{ trDecorateList(); }catch(e){} return r; }
+
 function applySaved(){ALL.forEach(function(s){if(ON[s.id]&&s.geo)drawStreet(s,true);});}
 function openPanel(){
  el("kaidoModal").classList.add("on");
@@ -2976,7 +3243,7 @@ var ob=el("kaidoBtn");
 if(ob){var nb=ob.cloneNode(true);ob.parentNode.replaceChild(nb,ob);nb.textContent="🥾 街道一覧";
  nb.addEventListener("click",openPanel);}
 
-/*---- kaido_diff auto-merge / generation manager (v49) ----*/
+/*---- kaido_diff auto-merge / generation manager (v50) ----*/
 var RAW=null, LS_DIFF="kumanaku_kaido_diffs_v1";
 var DIFF_STATE={loaded:[],applied:0,tomb:0,miss:0,last:0};
 var LS_TOMB="kumanaku_kaido_tomb_v1", TOMB=[];
@@ -3137,7 +3404,7 @@ function reloadDiffs(){
 loadDiffState();
 
 
-/*---- GitHub direct commit (Contents API) + tombstone history (v49) ----*/
+/*---- GitHub direct commit (Contents API) + tombstone history (v50) ----*/
 var LS_GH="kumanaku_gh_settings_v1", GH_STATE={ok:null,msg:"",last:null};
 function ghLoad(){ try{ var o=JSON.parse(localStorage.getItem(LS_GH)||"null"); return o||{}; }catch(e){ return {}; } }
 function ghSave(o){ try{ localStorage.setItem(LS_GH,JSON.stringify(o)); }catch(e){} return true; }
@@ -3301,9 +3568,9 @@ function ghCommitDiff(cb){
   GH_STATE={ok:null,msg:"コミット中…",last:null};
   ghPut(cfg,base,text,plan.msg).then(function(r1){
     return ghGetFile(cfg,manP).then(function(cur){
-      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v49",files:[]};
+      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v50",files:[]};
       if(cur.exists && cur.base64){ try{ var j=JSON.parse(unb64utf8(cur.base64)); if(j&&j.files) o=j; }catch(e){} }
-      o.files=o.files||[]; o.version="v49";
+      o.files=o.files||[]; o.version="v50";
       var _dir=(base.indexOf("/")>=0)? base.slice(0,base.lastIndexOf("/")+1) : "";
       var nm=base.slice(_dir.length);
       if(o.files.indexOf(nm)<0) o.files.push(nm);
@@ -3350,7 +3617,7 @@ function tombRender(){
   });
 }
 
-window.KAIDO_UI={version:"v49",open:openPanel,total:function(){return ALL.length;},
+window.KAIDO_UI={version:"v50",open:openPanel,total:function(){return ALL.length;},
  refresh:function(){ if(LOADED){ renderTabs(); renderList(); } },
  reloadDiffs:reloadDiffs,
  diffState:function(){ return DIFF_STATE; },
@@ -3749,7 +4016,7 @@ function toGeoJSON(){
         geometry:{type:"LineString",coordinates:ln.map(function(q){ return [+q[1],+q[0]]; })}});
     });
   }
-  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v49",at:new Date().toISOString()},features:feats};
+  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v50",at:new Date().toISOString()},features:feats};
 }
 function fromGeoJSON(gj){
   if(!gj||!gj.features) return 0;
@@ -4105,7 +4372,7 @@ function promotedData(){
   full.forEach(function(s){
     if(s.manual && s.geo && s.segs && s.segs.length){ out.push(s); ids.push(s.name); }
   });
-  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v49",
+  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v50",
     "generated":new Date().toISOString(), "base":"kaido_data.json", "mode":"promoted-only",
     "count":out.length, "ids":ids, "streets":out };
 }
@@ -4139,7 +4406,7 @@ function applyDiff(obj){
   notifyKaido();
   return n;
 }
-window.MANUAL_DRAW={version:"v49",open:open,closePanel:closePanel,api:{
+window.MANUAL_DRAW={version:"v50",open:open,closePanel:closePanel,api:{
   setData:function(d){ D.data=d; fillStreets(); syncUI(); },
   streetNames:function(){ return (D.data||[]).map(function(x){ return x.name; }); },
   start:start,add:addPoint,undo:undoPoint,del:delVertex,move:moveVertex,
@@ -4169,6 +4436,8 @@ try{ window.txt=txt; }catch(e){}
 init();
 function hideSplash(){ var s=document.getElementById("splash"); if(s&&!s._done){ s._done=1; s.classList.add("off"); setTimeout(function(){ s.style.display="none"; },700); } }
 try{ window.addEventListener("load", function(){ setTimeout(hideSplash, 1000); }); }catch(e){}
+
+
 setTimeout(hideSplash, 3500);
 })();
 /*== V31_API_END ==*/
