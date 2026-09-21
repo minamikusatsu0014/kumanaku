@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <script>
-/* v63: 旧街道データは「すべて灰色の点線」で描く（唯一の共通スタイル） */
+/* v64: 旧街道データは「すべて灰色の点線」で描く（唯一の共通スタイル） */
 window.KM_KAIDO_STYLE = function(w){
   return { color:'#8d8d8d', opacity:0.85, dashArray:'2 7',
            weight:(w||6), lineCap:'round', lineJoin:'round', interactive:false };
@@ -1032,7 +1032,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   /* ---- 診断情報 ---- */
   window.__kmDiag = function(){
     return {
-      version: 'v63',
+      version: 'v64',
       url: (location.href||'').slice(0,90),
       protocol: location.protocol, file: isFile,
       storage: window.__kmStorageMode,
@@ -1126,7 +1126,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v63</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v64</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -1294,7 +1294,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 <script>
 if('serviceWorker' in navigator){
   window.addEventListener('load',function(){
-    /* v63: Service Worker を廃止（古い sw.js のキャッシュで更新が反映されない事故を防ぐ） */
+    /* v64: Service Worker を廃止（古い sw.js のキャッシュで更新が反映されない事故を防ぐ） */
   try{ navigator.serviceWorker.getRegistrations().then(function(rs){ rs.forEach(function(r){ try{ r.unregister(); }catch(e){} }); }).catch(function(){}); }catch(e){}
   try{ if(window.caches && caches.keys){ caches.keys().then(function(ks){ ks.forEach(function(k){ try{ if(/kumanaku|sw|v5|walk/i.test(k)) caches.delete(k); }catch(e){} }); }).catch(function(){}); } }catch(e){}
   });
@@ -1382,6 +1382,7 @@ const KOJIKU_DS = {"keihansin": {"url": "https://ktgis.net/kjmapw/kjtilemap/keih
 
 const map = L.map('map',{center:[36.5,136.0], zoom:5, zoomControl:false});
 L.control.zoom({position:'bottomright'}).addTo(map);
+try{window.map=map;}catch(e){}
 /* ---------- 背景地図(ベースマップ)の切替 ---------- */
 const ATTR_KI = ' | <a href="https://ktgis.net/kjmapw/">今昔マップ</a>';
 const BASE_DEFS = [
@@ -2792,7 +2793,7 @@ function drawKaidoLines(){
   return null;
 }
 drawKaidoLines();
-/* v63: KAIDO_UI 側の準備完了後に描画（スコープ外参照で無描画になるのを防ぐ） */
+/* v64: KAIDO_UI 側の準備完了後に描画（スコープ外参照で無描画になるのを防ぐ） */
 function kaidoRetryDraw(n){
   if(typeof window.trRenderKaido === 'function'){ try{ window.trRenderKaido(); }catch(e){} return; }
   if(n > 0) setTimeout(function(){ kaidoRetryDraw(n-1); }, 800);
@@ -2825,7 +2826,7 @@ function cpPopup(idx){
     + (me?' <span class="memo-has">🗒 メモあり</span>':'')
     + memoBox(key, me?me.t:'');
 }
-/* v63: 縮尺別の名所アイコン間引き。z11-13は0.5度区画ごとの代表点のみ、z14以上で全点表示 */
+/* v64: 縮尺別の名所アイコン間引き。z11-13は0.5度区画ごとの代表点のみ、z14以上で全点表示 */
 window.KM_CP_Z2 = 14;
 function kmBuildThinSet(list){
   var rank = { '城':1, '社':2, '寺':3, '道':4, '史':5 };
@@ -2846,7 +2847,7 @@ CHECKPOINTS.forEach(function(c, idx){
   m.bindPopup(function(){ return cpPopup(idx); }, {maxWidth:300, minWidth:240});
   cpMarkers.push(m);
 });
-/* v63: 縮尺別の間引き。z11-13は代表点のみ、z14以上で全点（レイヤー登録で制御） */
+/* v64: 縮尺別の間引き。z11-13は代表点のみ、z14以上で全点（レイヤー登録で制御） */
 function kmApplyCpThin(){
   try{
     var full = (map.getZoom() >= (window.KM_CP_Z2||14));
@@ -3921,8 +3922,8 @@ function promotedNames(){ return ALL.filter(function(s){ return !s.geo && manCou
 function saveOn(){try{localStorage.setItem(LSKEY,JSON.stringify(Object.keys(ON).filter(function(k){return ON[k];})));}catch(e){}}
 function loadOn(){try{JSON.parse(localStorage.getItem(LSKEY)||"[]").forEach(function(k){ON[k]=1;});}catch(e){}}
 function clearOne(id){if(LINES[id]){LINES[id].forEach(function(l){kLayer.removeLayer(l);});delete LINES[id];}}
-/* ===== v63 踏破塗りつぶし: 設定の一元化 + 区間モード切替（宿場間 / 500m） =====
-   v63 の二層描画（未踏破=グレー点線 / 踏破=発光色＋白コア / 透明タップ線）はそのままに、
+/* ===== v64 踏破塗りつぶし: 設定の一元化 + 区間モード切替（宿場間 / 500m） =====
+   v64 の二層描画（未踏破=グレー点線 / 踏破=発光色＋白コア / 透明タップ線）はそのままに、
    見た目・しきい値の数値を TR_CFG に集約し、区間の切り方を「宿場間」と「一定距離」で切替可能にした。
    宿場データを持つ街道（中山道）は、宿場位置をポリラインへ最近傍投影して区間境界を作り、
    「○次まで踏破」を表示する。 */
@@ -3958,7 +3959,7 @@ function mergeBuiltin(list){
   });
   return arr;
 }
-/* v63: 描画・一覧APIを公開（typeof ガードで未定義名でも例外を出さない） */
+/* v64: 描画・一覧APIを公開（typeof ガードで未定義名でも例外を出さない） */
 (function(){
   var names = ['trRenderKaido','trRenderStreet','trSegsOf','trSections','trApplyTrackCore','trDecorateList'];
   var defs = [typeof trRenderKaido, typeof trRenderStreet, typeof trSegsOf, typeof trSections,
@@ -4395,7 +4396,7 @@ function trDecorateList(){
     rows[i].appendChild(bar);
   }
 }
-/* --- v63(1.5km固定)の踏破を v63(500m) へ距離換算して引き継ぐ --- */
+/* --- v64(1.5km固定)の踏破を v64(500m) へ距離換算して引き継ぐ --- */
 function trMigrate(){
   var moved = 0;
   try{
@@ -4546,7 +4547,7 @@ var ob=el("kaidoBtn");
 if(ob){var nb=ob.cloneNode(true);ob.parentNode.replaceChild(nb,ob);nb.textContent="🥾 街道一覧";
  nb.addEventListener("click",openPanel);}
 
-/*---- kaido_diff auto-merge / generation manager (v63) ----*/
+/*---- kaido_diff auto-merge / generation manager (v64) ----*/
 var RAW=null, LS_DIFF="kumanaku_kaido_diffs_v1";
 var DIFF_STATE={loaded:[],applied:0,tomb:0,miss:0,last:0};
 var LS_TOMB="kumanaku_kaido_tomb_v1", TOMB=[];
@@ -4708,7 +4709,7 @@ function reloadDiffs(){
 loadDiffState();
 
 
-/*---- GitHub direct commit (Contents API) + tombstone history (v63) ----*/
+/*---- GitHub direct commit (Contents API) + tombstone history (v64) ----*/
 var LS_GH="kumanaku_gh_settings_v1", GH_STATE={ok:null,msg:"",last:null};
 function ghLoad(){ try{ var o=JSON.parse(localStorage.getItem(LS_GH)||"null"); return o||{}; }catch(e){ return {}; } }
 function ghSave(o){ try{ localStorage.setItem(LS_GH,JSON.stringify(o)); }catch(e){} return true; }
@@ -4872,9 +4873,9 @@ function ghCommitDiff(cb){
   GH_STATE={ok:null,msg:"コミット中…",last:null};
   ghPut(cfg,base,text,plan.msg).then(function(r1){
     return ghGetFile(cfg,manP).then(function(cur){
-      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v63",files:[]};
+      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v64",files:[]};
       if(cur.exists && cur.base64){ try{ var j=JSON.parse(unb64utf8(cur.base64)); if(j&&j.files) o=j; }catch(e){} }
-      o.files=o.files||[]; o.version="v63";
+      o.files=o.files||[]; o.version="v64";
       var _dir=(base.indexOf("/")>=0)? base.slice(0,base.lastIndexOf("/")+1) : "";
       var nm=base.slice(_dir.length);
       if(o.files.indexOf(nm)<0) o.files.push(nm);
@@ -4921,7 +4922,7 @@ function tombRender(){
   });
 }
 
-window.KAIDO_UI={version:"v63",open:openPanel,total:function(){return ALL.length;},
+window.KAIDO_UI={version:"v64",open:openPanel,total:function(){return ALL.length;},
  refresh:function(){ if(LOADED){ renderTabs(); renderList(); } },
  reloadDiffs:reloadDiffs,
  diffState:function(){ return DIFF_STATE; },
@@ -5320,7 +5321,7 @@ function toGeoJSON(){
         geometry:{type:"LineString",coordinates:ln.map(function(q){ return [+q[1],+q[0]]; })}});
     });
   }
-  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v63",at:new Date().toISOString()},features:feats};
+  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v64",at:new Date().toISOString()},features:feats};
 }
 function fromGeoJSON(gj){
   if(!gj||!gj.features) return 0;
@@ -5676,7 +5677,7 @@ function promotedData(){
   full.forEach(function(s){
     if(s.manual && s.geo && s.segs && s.segs.length){ out.push(s); ids.push(s.name); }
   });
-  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v63",
+  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v64",
     "generated":new Date().toISOString(), "base":"kaido_data.json", "mode":"promoted-only",
     "count":out.length, "ids":ids, "streets":out };
 }
@@ -5710,7 +5711,7 @@ function applyDiff(obj){
   notifyKaido();
   return n;
 }
-window.MANUAL_DRAW={version:"v63",open:open,closePanel:closePanel,api:{
+window.MANUAL_DRAW={version:"v64",open:open,closePanel:closePanel,api:{
   setData:function(d){ D.data=d; fillStreets(); syncUI(); },
   streetNames:function(){ return (D.data||[]).map(function(x){ return x.name; }); },
   start:start,add:addPoint,undo:undoPoint,del:delVertex,move:moveVertex,
@@ -5898,7 +5899,7 @@ setTimeout(hideSplash, 3500);
   function doExport(){
     var D = appData();
     var payload = {
-      app: 'kumanaku_walk', version: 'v63',
+      app: 'kumanaku_walk', version: 'v64',
       exported: new Date().toISOString(),
       data: (D != null) ? D : null,
       localStorage: lsDump(),
@@ -6018,5 +6019,66 @@ setTimeout(hideSplash, 3500);
   }, 2500);
 })();
 </script>
+
+<!-- ===== v64: 旧地図オーバーレイ & 旧道トレース ===== -->
+<script>
+/* ===== v64 旧地図オーバーレイ（アプリ内の今昔マップ定義を再利用） ===== */
+(function(){
+  var KJDATA = [["今昔マップ_京阪神圏_1892-1910", 35.0, 135.7, "https://ktgis.net/kjmapw/kjtilemap/keihansin/2man/{z}/{x}/{y}.png"], ["今昔マップ_仙台_1928-1933", 38.26, 140.88, "https://ktgis.net/kjmapw/kjtilemap/sendai/00/{z}/{x}/{y}.png"], ["今昔マップ_伊賀_1892", 34.77, 136.13, "https://ktgis.net/kjmapw/kjtilemap/iga/00/{z}/{x}/{y}.png"], ["今昔マップ_伊那_1911", 35.83, 137.95, "https://ktgis.net/kjmapw/kjtilemap/ina/00/{z}/{x}/{y}.png"], ["今昔マップ_佐世保_1900-1901", 33.16, 129.72, "https://ktgis.net/kjmapw/kjtilemap/sasebo/2man/{z}/{x}/{y}.png"], ["今昔マップ_佐賀・久留米_1900-1911", 33.26, 130.3, "https://ktgis.net/kjmapw/kjtilemap/saga/2man/{z}/{x}/{y}.png"], ["今昔マップ_八代_1913", 32.51, 130.6, "https://ktgis.net/kjmapw/kjtilemap/yatsushiro/00/{z}/{x}/{y}.png"], ["今昔マップ_函館_1915", 41.77, 140.73, "https://ktgis.net/kjmapw/kjtilemap/hakodate/00/{z}/{x}/{y}.png"], ["今昔マップ_周南_1899", 34.05, 131.8, "https://ktgis.net/kjmapw/kjtilemap/shunan/00/{z}/{x}/{y}.png"], ["今昔マップ_和歌山_1908-1912", 34.23, 135.17, "https://ktgis.net/kjmapw/kjtilemap/wakayama/2man/{z}/{x}/{y}.png"], ["今昔マップ_大分_1914", 33.23, 131.61, "https://ktgis.net/kjmapw/kjtilemap/oita/00/{z}/{x}/{y}.png"], ["今昔マップ_大牟田・島原_1910", 33.03, 130.45, "https://ktgis.net/kjmapw/kjtilemap/omuta/00/{z}/{x}/{y}.png"], ["今昔マップ_姫路_1903-1910", 34.84, 134.69, "https://ktgis.net/kjmapw/kjtilemap/himeji/2man/{z}/{x}/{y}.png"], ["今昔マップ_室蘭_1896", 42.32, 140.97, "https://ktgis.net/kjmapw/kjtilemap/muroran/00/{z}/{x}/{y}.png"], ["今昔マップ_宮崎_1902", 31.91, 131.42, "https://ktgis.net/kjmapw/kjtilemap/miyazaki/00/{z}/{x}/{y}.png"], ["今昔マップ_山口_1897-1909", 34.18, 131.47, "https://ktgis.net/kjmapw/kjtilemap/yamaguchi/2man/{z}/{x}/{y}.png"], ["今昔マップ_山形_1901-1903", 38.25, 140.34, "https://ktgis.net/kjmapw/kjtilemap/yamagata/2man/{z}/{x}/{y}.png"], ["今昔マップ_岡山・福山_1895-1898", 34.66, 133.93, "https://ktgis.net/kjmapw/kjtilemap/okayama/2man/{z}/{x}/{y}.png"], ["今昔マップ_岩手県南_1913", 39.0, 141.1, "https://ktgis.net/kjmapw/kjtilemap/iwatekennan/00/{z}/{x}/{y}.png"], ["今昔マップ_帯広_1896", 42.92, 143.2, "https://ktgis.net/kjmapw/kjtilemap/obihiro/00/{z}/{x}/{y}.png"], ["今昔マップ_広島_1894-1899", 34.39, 132.45, "https://ktgis.net/kjmapw/kjtilemap/hiroshima/2man/{z}/{x}/{y}.png"], ["今昔マップ_庄内_1913", 38.9, 139.9, "https://ktgis.net/kjmapw/kjtilemap/syonai/00/{z}/{x}/{y}.png"], ["今昔マップ_延岡_1901", 32.58, 131.66, "https://ktgis.net/kjmapw/kjtilemap/nobeoka/00/{z}/{x}/{y}.png"], ["今昔マップ_弘前_1912", 40.61, 140.47, "https://ktgis.net/kjmapw/kjtilemap/hirosaki/00/{z}/{x}/{y}.png"], ["今昔マップ_徳島_1896-1909", 34.07, 134.55, "https://ktgis.net/kjmapw/kjtilemap/tokushima/2man/{z}/{x}/{y}.png"], ["今昔マップ_新潟_1911", 37.91, 139.04, "https://ktgis.net/kjmapw/kjtilemap/niigata/00/{z}/{x}/{y}.png"], ["今昔マップ_札幌_1916", 43.06, 141.35, "https://ktgis.net/kjmapw/kjtilemap/sapporo/00/{z}/{x}/{y}.png"], ["今昔マップ_東予_1898-1906", 33.96, 133.29, "https://ktgis.net/kjmapw/kjtilemap/toyo/00/{z}/{x}/{y}.png"], ["今昔マップ_東北地方太平洋岸_1901-1913", 38.5, 141.3, "https://ktgis.net/kjmapw/kjtilemap/tohoku_pacific_coast/00/{z}/{x}/{y}.png"], ["今昔マップ_松山_1903", 33.84, 132.77, "https://ktgis.net/kjmapw/kjtilemap/matsuyama/2man/{z}/{x}/{y}.png"], ["今昔マップ_松本_1910", 36.24, 137.97, "https://ktgis.net/kjmapw/kjtilemap/matsumoto/00/{z}/{x}/{y}.png"], ["今昔マップ_松江・米子_1915", 35.47, 133.05, "https://ktgis.net/kjmapw/kjtilemap/matsue/00/{z}/{x}/{y}.png"], ["今昔マップ_沖縄本島南部_1919", 26.21, 127.68, "https://ktgis.net/kjmapw/kjtilemap/okinawas/00/{z}/{x}/{y}.png"], ["今昔マップ_津_1892-1898", 34.73, 136.51, "https://ktgis.net/kjmapw/kjtilemap/tsu/2man/{z}/{x}/{y}.png"], ["今昔マップ_浜松・豊橋_1889-1890", 34.71, 137.73, "https://ktgis.net/kjmapw/kjtilemap/hamamatsu/2man/{z}/{x}/{y}.png"], ["今昔マップ_熊本_1900-1901", 32.8, 130.71, "https://ktgis.net/kjmapw/kjtilemap/kumamoto/2man/{z}/{x}/{y}.png"], ["今昔マップ_盛岡_1811-1912", 39.7, 141.15, "https://ktgis.net/kjmapw/kjtilemap/morioka/00/{z}/{x}/{y}.png"], ["今昔マップ_福岡・北九州_1922-1926", 33.59, 130.4, "https://ktgis.net/kjmapw/kjtilemap/fukuoka/00/{z}/{x}/{y}.png"], ["今昔マップ_福島_1908", 37.76, 140.47, "https://ktgis.net/kjmapw/kjtilemap/fukushima/00/{z}/{x}/{y}.png"], ["今昔マップ_米沢_1908-1910", 37.91, 140.12, "https://ktgis.net/kjmapw/kjtilemap/yonezawa/00/{z}/{x}/{y}.png"], ["今昔マップ_苫小牧_1896", 42.63, 141.6, "https://ktgis.net/kjmapw/kjtilemap/tomakomai/00/{z}/{x}/{y}.png"], ["今昔マップ_近江_1891-1909", 35.15, 135.95, "https://ktgis.net/kjmapw/kjtilemap/omi/2man/{z}/{x}/{y}.png"], ["今昔マップ_都城_1902", 31.72, 131.06, "https://ktgis.net/kjmapw/kjtilemap/miyakonojyou/00/{z}/{x}/{y}.png"], ["今昔マップ_金沢・富山_1909-1910", 36.56, 136.66, "https://ktgis.net/kjmapw/kjtilemap/kanazawa/2man/{z}/{x}/{y}.png"], ["今昔マップ_釧路_1897", 42.98, 144.38, "https://ktgis.net/kjmapw/kjtilemap/kushiro/00/{z}/{x}/{y}.png"], ["今昔マップ_長崎_1900-1901", 32.75, 129.87, "https://ktgis.net/kjmapw/kjtilemap/nagasaki/2man/{z}/{x}/{y}.png"], ["今昔マップ_長野_1912", 36.66, 138.19, "https://ktgis.net/kjmapw/kjtilemap/nagano/00/{z}/{x}/{y}.png"], ["今昔マップ_関東_1894-1915", 36.0, 139.8, "https://ktgis.net/kjmapw/kjtilemap/kanto/00/{z}/{x}/{y}.png"], ["今昔マップ_首都圏_1896-1909", 35.68, 139.77, "https://ktgis.net/kjmapw/kjtilemap/tokyo50/2man/{z}/{x}/{y}.png"], ["今昔マップ_高松_1896-1910", 34.34, 134.05, "https://ktgis.net/kjmapw/kjtilemap/takamatsu/2man/{z}/{x}/{y}.png"]];
+  var oldLayer=null, oldOn=false;
+  function sparkle(){
+    if(oldOn){ if(oldLayer){ try{window.map.removeLayer(oldLayer);}catch(e){} oldLayer=null; } oldOn=false; return '旧地図: OFF'; }
+    var c=window.map.getCenter(), best=null, bd=1e9;
+    for(var i=0;i<KJDATA.length;i++){ var k=KJDATA[i]; var d=Math.hypot(k[1]-c.lat,k[2]-c.lng); if(d<bd){bd=d;best=k;} }
+    if(best){ oldLayer=L.tileLayer(best[3],{maxZoom:18,opacity:0.9,attribution:'今昔マップ'}); oldLayer.addTo(window.map); oldOn=true;
+      return '旧地図: '+best[0]; }
+    return '旧地図: データ無し';
+  }
+  window.__kmOldToggle=sparkle;
+})();
+/* ===== v64 旧道トレースモード ===== */
+(function(){
+  function go(){
+    var M=window.map;
+    if(!M){ return; }
+    var tracing=false, line=null, pts=[], marks=[];
+    var panel=document.createElement('div');
+    panel.style.cssText='position:absolute;z-index:1200;right:10px;bottom:170px;background:rgba(255,255,255,.96);border:2px solid #be123c;border-radius:10px;padding:8px 10px;font:13px/1.6 system-ui,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.3);max-width:210px';
+    panel.innerHTML='<div style="font-weight:700;color:#be123c">旧道トレース (v64)</div>'+
+      '<div id="kmTN" style="margin:2px 0 6px">点数: 0</div>'+
+      '<button id="kmTStart">開始</button> <button id="kmTStop">終了</button><br>'+
+      '<button id="kmTOld" style="margin-top:4px">旧地図を重ねる</button><br>'+
+      '<button id="kmTExp" style="margin-top:4px">座標を書き出し</button> <button id="kmTClr">消去</button>'+
+      '<div style="font-size:11px;color:#666;margin-top:4px">地図をタップして旧道をなぞる<br>※現在の線はCODH実データ</div>';
+    document.body.appendChild(panel);
+    var credit=document.createElement('div');
+    credit.style.cssText='position:absolute;z-index:1100;left:6px;bottom:6px;background:rgba(255,255,255,.88);font:11px system-ui,sans-serif;padding:2px 7px;border-radius:6px;color:#333';
+    credit.textContent='出典：『江戸主要街道データセット』『江戸宿場データセット』（ROIS-DS人文学オープンデータ共同利用センター作成）CC BY 4.0／地図：国土地理院(地理院タイル)';
+    document.body.appendChild(credit);
+    function upd(){ document.getElementById('kmTN').textContent='点数: '+pts.length; }
+    function addLL(ll){
+      pts.push([+ll.lat.toFixed(6),+ll.lng.toFixed(6)]);
+      if(!line){ line=L.polyline(pts,{color:'#ff6d00',weight:5,opacity:.95,interactive:false}).addTo(M); }
+      else { line.setLatLngs(pts); }
+      marks.push(L.circleMarker(ll,{radius:3,color:'#be123c',fillColor:'#fff',fillOpacity:1,weight:2,interactive:false}).addTo(M));
+      upd();
+    }
+    function onC(e){ if(tracing) addLL(e.latlng); }
+    document.getElementById('kmTStart').onclick=function(){ tracing=true; M.getContainer().style.cursor='crosshair'; M.on('click',onC); };
+    document.getElementById('kmTStop').onclick=function(){ tracing=false; M.getContainer().style.cursor=''; M.off('click',onC); };
+    document.getElementById('kmTOld').onclick=function(){ try{ window.__kmOldToggle(); }catch(e){} };
+    document.getElementById('kmTClr').onclick=function(){ if(line){M.removeLayer(line);line=null;} for(var i=0;i<marks.length;i++){M.removeLayer(marks[i]);} marks=[]; pts=[]; upd(); };
+    document.getElementById('kmTExp').onclick=function(){
+      var out={id:'西国街道',trace:'v64',datum:'WGS84',pts:pts.length,segs:[pts]};
+      var a=document.createElement('a');
+      a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(out));
+      a.download='saigoku_trace_v64.json'; document.body.appendChild(a); a.click(); a.remove();
+    };
+    upd();
+  }
+  if(document.readyState!=='loading') go(); else document.addEventListener('DOMContentLoaded',go);
+})();
+</script>
+
 </body>
 </html>
