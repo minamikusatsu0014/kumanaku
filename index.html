@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>全国くまなくウォーク</title>
+<title>街道ウォーキング</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#2e7d32">
 <meta name="description" content="日本全国を歩いた場所を100mメッシュで塗りつぶし、市町村・名所の踏破を記録する地図アプリ">
@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="くまなくウォーク">
+<meta name="apple-mobile-web-app-title" content="街道ウォーキング">
 <link rel="apple-touch-icon" href="./icon-180.png">
 <link rel="manifest" href="./manifest.json">
 <link rel="icon" type="image/png" href="./icon-192.png">
@@ -23,6 +23,21 @@
     box-shadow:0 2px 10px rgba(0,0,0,.3);padding:10px 12px;}
   #stats{top:calc(10px + env(safe-area-inset-top));left:8px;right:110px;transform:none;text-align:center;max-width:330px;box-sizing:border-box;}
   #stats .appname{font-size:12px;font-weight:bold;color:#4a3b2a;letter-spacing:0;line-height:1.3;}
+  #stats .app-ico{width:20px;height:20px;border-radius:6px;vertical-align:-5px;margin-right:6px;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+  #stats .app-t{font-size:13px;font-weight:900;letter-spacing:.06em;background:linear-gradient(135deg,#1b2a4a,#2e7d32);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+  #stats .ver{font-weight:normal;color:#999}
+  #splash{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;text-align:center;
+    background:radial-gradient(120% 100% at 50% 0%,#20365e 0%,#101a2e 55%,#070c16 100%);transition:opacity .6s ease}
+  #splash.off{opacity:0;pointer-events:none}
+  #splash .sp-in{display:flex;flex-direction:column;align-items:center}
+  #splash .sp-ico{width:132px;height:132px;border-radius:30px;box-shadow:0 12px 40px rgba(0,0,0,.55),0 0 0 6px rgba(255,255,255,.06);animation:spPop .9s cubic-bezier(.2,.9,.2,1) both}
+  @keyframes spPop{0%{opacity:0;transform:scale(.82) translateY(10px)}100%{opacity:1;transform:none}}
+  #splash .sp-t{color:#fff;font-size:26px;font-weight:900;letter-spacing:.12em;margin-top:18px;text-shadow:0 2px 12px rgba(0,0,0,.6)}
+  #splash .sp-s{color:#9fb3d1;font-size:12px;letter-spacing:.14em;margin-top:8px}
+  #splash .sp-load{width:150px;height:3px;border-radius:3px;background:rgba(255,255,255,.14);margin-top:22px;overflow:hidden}
+  #splash .sp-load i{display:block;height:100%;width:40%;border-radius:3px;background:linear-gradient(90deg,#ffd54f,#7ad0a1);animation:spBar 1.2s ease-in-out infinite}
+  @keyframes spBar{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}
+  #kaidoList .kname::after{content:"\3000タップで地図へ";font-size:10px;color:#0277bd;margin-left:4px}
   #stats .big{font-size:26px;font-weight:bold;color:#2e7d32;line-height:1.1;}
   #stats .sub{font-size:11px;color:#555;}
   #stats .sub2{font-size:10px;color:#777;margin-top:2px;}
@@ -111,8 +126,17 @@
 <body>
 <div id="map"></div>
 
+<div id="splash">
+  <div class="sp-in">
+    <img src="./icon-512.png" alt="" class="sp-ico">
+    <div class="sp-t">街道ウォーキング</div>
+    <div class="sp-s">旧街道をたどって、地図を塗りつぶす</div>
+    <div class="sp-load"><i></i></div>
+  </div>
+</div>
+
 <div id="stats" class="panel">
-  <div class="appname">全国くまなくウォーク <span style="font-weight:normal;color:#999">v44</span></div>
+  <div class="appname"><img src="./icon-192.png" alt="" class="app-ico"><span class="app-t">街道ウォーキング</span> <span class="ver">v45</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -292,7 +316,7 @@ if(typeof L==='undefined'){
 }
 
 /* =========================================================
-   全国くまなくウォーク
+   街道ウォーキング
    - GPSで歩行軌跡を記録・100mメッシュ塗りつぶし(全国対応)
    - 市町村/都道府県の踏破記録(国土地理院 逆ジオコーダ)
    - 名所チェックポイント(京都+全国)
@@ -445,7 +469,7 @@ const kaidoLabelPane = map.createPane('kaidoLabelPane'); kaidoLabelPane.style.zI
 const kaidoLabelLayer = L.layerGroup().addTo(map);
 
 function kaidoLabelMinZoom(){ return 10; }          /* これ未満のズームでは非表示 */
-function kaidoLabelPx(){ return 300; }              /* 画面上の間隔(px)。見た目の間隔を常に揃える */
+function kaidoLabelPx(){ return 700; }              /* 画面上の間隔(px)。見た目の間隔を常に揃える */
 function kkMetersPerPixel(){
   var z = map.getZoom(), lat = (map.getCenter().lat || 0) * Math.PI/180;
   return 156543.03392 * Math.cos(lat) / Math.pow(2, z);
@@ -467,7 +491,7 @@ function kaidoGeomOf(nm){                     /* 全描画経路の幾何を合�
 }
 /* 線全体を1本の弧長としてたどり、等間隔の点（＝必ず線の上）と方位を返す */
 function kaidoLabelSpots(nm){
-  var spots=[], geom=kaidoGeomOf(nm), CAP=8;
+  var spots=[], geom=kaidoGeomOf(nm), CAP=5;
   if(!geom.length) return spots;
   var total=0;
   geom.forEach(function(seg){ for(var i=1; seg&&i<seg.length; i++) total+=kkDist(seg[i-1],seg[i]); });
@@ -2691,7 +2715,11 @@ function drawStreet(s,on){
   if(typeof redrawKaidoLabels==='function') redrawKaidoLabels();   /* ラベルも同時更新 */
 }
 function bboxOf(s){if(BB[s.id])return BB[s.id];var p=[];(s.segs||[]).forEach(function(g){p=p.concat(g);});MANSEGS(s.name).forEach(function(g){p=p.concat(g);});if(!p.length)return null;BB[s.id]=L.latLngBounds(p);return BB[s.id];}
-function fitStreet(s){var b=bboxOf(s);if(!b){info("「"+s.name+"」は実線データ未収録です（推測の線は描画していません）。");return;}map.fitBounds(b,{padding:[30,30]});ON[s.id]=1;drawStreet(s,true);saveOn();renderList();}
+function closeKaidoPanel(){try{el("kaidoModal").classList.remove("on");}catch(e){}}
+function fitStreet(s){var b=bboxOf(s);if(!b){info("「"+s.name+"」は実線データ未収録です（推測の線は描画していません）。");return;}
+  ON[s.id]=1;drawStreet(s,true);saveOn();closeKaidoPanel();
+  try{ map.flyToBounds(b,{padding:[40,40],duration:0.8,maxZoom:16}); }catch(e){ map.fitBounds(b,{padding:[40,40]}); }
+  renderList();}
 function renderTabs(){var t=el("kaidoTabs");t.innerHTML="";REGDEF.forEach(function(r){var b=document.createElement("button");b.textContent=r;if(r===CURREG)b.className="on";b.onclick=function(){CURREG=r;renderTabs();renderList();};t.appendChild(b);});}
 function renderList(){
  var q=(el("kaidoSearch").value||"").trim(),L=el("kaidoList"),fit=el("kaidoFit");
@@ -2709,7 +2737,7 @@ function renderList(){
   var cb=document.createElement("input");cb.type="checkbox";cb.setAttribute("data-id",s.id);
   var mn=manCountOf(s.name);cb.checked=!!ON[s.id];cb.disabled=!(s.geo||mn);
   cb.onchange=function(){ON[s.id]=cb.checked?1:0;drawStreet(s,cb.checked);saveOn();
-    if(cb.checked){var b=bboxOf(s);if(b)map.fitBounds(b,{padding:[30,30]});}};
+    if(cb.checked){var b=bboxOf(s);if(b){try{map.flyToBounds(b,{padding:[40,40],duration:0.8,maxZoom:16});}catch(e){map.fitBounds(b,{padding:[40,40]});}}}};
   var nm=document.createElement("span");nm.className="kname";
   nm.innerHTML='<span class="kdot" style="background:'+s.color+'"></span>'+s.name+
     (s.km!=null?'<span class="kmeta">'+s.km+' km'+(s.chains>3?"・"+s.chains+"区間":"")+(s.maxgap?"・最大間隔"+s.maxgap+"km":"")+'</span>':'');
@@ -2746,7 +2774,7 @@ var ob=el("kaidoBtn");
 if(ob){var nb=ob.cloneNode(true);ob.parentNode.replaceChild(nb,ob);nb.textContent="🥾 街道一覧";
  nb.addEventListener("click",openPanel);}
 
-/*---- kaido_diff auto-merge / generation manager (v44) ----*/
+/*---- kaido_diff auto-merge / generation manager (v45) ----*/
 var RAW=null, LS_DIFF="kumanaku_kaido_diffs_v1";
 var DIFF_STATE={loaded:[],applied:0,tomb:0,miss:0,last:0};
 var LS_TOMB="kumanaku_kaido_tomb_v1", TOMB=[];
@@ -2907,7 +2935,7 @@ function reloadDiffs(){
 loadDiffState();
 
 
-/*---- GitHub direct commit (Contents API) + tombstone history (v44) ----*/
+/*---- GitHub direct commit (Contents API) + tombstone history (v45) ----*/
 var LS_GH="kumanaku_gh_settings_v1", GH_STATE={ok:null,msg:"",last:null};
 function ghLoad(){ try{ var o=JSON.parse(localStorage.getItem(LS_GH)||"null"); return o||{}; }catch(e){ return {}; } }
 function ghSave(o){ try{ localStorage.setItem(LS_GH,JSON.stringify(o)); }catch(e){} return true; }
@@ -3071,9 +3099,9 @@ function ghCommitDiff(cb){
   GH_STATE={ok:null,msg:"コミット中…",last:null};
   ghPut(cfg,base,text,plan.msg).then(function(r1){
     return ghGetFile(cfg,manP).then(function(cur){
-      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v44",files:[]};
+      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v45",files:[]};
       if(cur.exists && cur.base64){ try{ var j=JSON.parse(unb64utf8(cur.base64)); if(j&&j.files) o=j; }catch(e){} }
-      o.files=o.files||[]; o.version="v44";
+      o.files=o.files||[]; o.version="v45";
       var _dir=(base.indexOf("/")>=0)? base.slice(0,base.lastIndexOf("/")+1) : "";
       var nm=base.slice(_dir.length);
       if(o.files.indexOf(nm)<0) o.files.push(nm);
@@ -3120,7 +3148,7 @@ function tombRender(){
   });
 }
 
-window.KAIDO_UI={version:"v44",open:openPanel,total:function(){return ALL.length;},
+window.KAIDO_UI={version:"v45",open:openPanel,total:function(){return ALL.length;},
  refresh:function(){ if(LOADED){ renderTabs(); renderList(); } },
  reloadDiffs:reloadDiffs,
  diffState:function(){ return DIFF_STATE; },
@@ -3519,7 +3547,7 @@ function toGeoJSON(){
         geometry:{type:"LineString",coordinates:ln.map(function(q){ return [+q[1],+q[0]]; })}});
     });
   }
-  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v44",at:new Date().toISOString()},features:feats};
+  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v45",at:new Date().toISOString()},features:feats};
 }
 function fromGeoJSON(gj){
   if(!gj||!gj.features) return 0;
@@ -3875,7 +3903,7 @@ function promotedData(){
   full.forEach(function(s){
     if(s.manual && s.geo && s.segs && s.segs.length){ out.push(s); ids.push(s.name); }
   });
-  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v44",
+  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v45",
     "generated":new Date().toISOString(), "base":"kaido_data.json", "mode":"promoted-only",
     "count":out.length, "ids":ids, "streets":out };
 }
@@ -3909,7 +3937,7 @@ function applyDiff(obj){
   notifyKaido();
   return n;
 }
-window.MANUAL_DRAW={version:"v44",open:open,closePanel:closePanel,api:{
+window.MANUAL_DRAW={version:"v45",open:open,closePanel:closePanel,api:{
   setData:function(d){ D.data=d; fillStreets(); syncUI(); },
   streetNames:function(){ return (D.data||[]).map(function(x){ return x.name; }); },
   start:start,add:addPoint,undo:undoPoint,del:delVertex,move:moveVertex,
@@ -3937,6 +3965,9 @@ try{ window.start=start; }catch(e){}
 try{ window.txt=txt; }catch(e){}
 
 init();
+function hideSplash(){ var s=document.getElementById("splash"); if(s&&!s._done){ s._done=1; s.classList.add("off"); setTimeout(function(){ s.style.display="none"; },700); } }
+try{ window.addEventListener("load", function(){ setTimeout(hideSplash, 1000); }); }catch(e){}
+setTimeout(hideSplash, 3500);
 })();
 /*== V31_API_END ==*/
 /*== MANUAL_DRAW_END ==*/
