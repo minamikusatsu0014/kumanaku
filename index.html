@@ -136,7 +136,7 @@
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><img src="./icon-192.png" alt="" class="app-ico"><span class="app-t">街道ウォーキング</span> <span class="ver">v48</span></div>
+  <div class="appname"><img src="./icon-192.png" alt="" class="app-ico"><span class="app-t">街道ウォーキング</span> <span class="ver">v49</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -469,15 +469,128 @@ const kaidoLabelPane = map.createPane('kaidoLabelPane'); kaidoLabelPane.style.zI
 const kaidoLabelLayer = L.layerGroup().addTo(map);
 /* ===== 街道の解説（タップで表示）／出典の確認できたものだけ概説を記載 ===== */
 const KAIDO_DESC = {
+ /* 五街道・主要街道（出典を確認できたものはリンク付き） */
  '東海道': {t:'江戸・日本橋と京・三条大橋を結ぶ五街道の一つ。1601年（慶長6年）に宿駅制度が整えられ、53の宿場が置かれた（東海道五十三次）。海沿いの大動脈として参勤交代や物資輸送の中心となった街道。', src:'https://ja.wikipedia.org/wiki/東海道五十三次', lb:'Wikipedia「東海道五十三次」'},
  '中山道': {t:'江戸・日本橋と京・三条大橋を結ぶ五街道のうち内陸（山地側）の街道。69の宿場が置かれた（中山道六十九次）。東海道より距離は長いが川留めが少なく、参勤交代など要人の往来にも多く使われた。', src:'https://ja.wikipedia.org/wiki/中山道六十九次', lb:'Wikipedia「中山道六十九次」'},
  '甲州街道': {t:'江戸・日本橋から甲府を経て信濃の下諏訪宿で中山道に合流する五街道の一つ。宿場は44次（45宿）で総距離は約205km。江戸〜甲府を表街道、甲府〜下諏訪を裏街道と呼ぶ。', src:'https://ja.wikipedia.org/wiki/甲州街道', lb:'Wikipedia「甲州街道」'},
  '日光街道': {t:'江戸・日本橋から下野の日光坊中（日光東照宮）に至る五街道の一つ。道中に21の宿場が置かれ、距離は約140km。奥州街道との分岐点である宇都宮宿が最も栄えた。', src:'https://ja.wikipedia.org/wiki/日光街道', lb:'Wikipedia「日光街道」'},
  '奥州街道': {t:'江戸・日本橋（または江戸城大手門）から千住を経て白河に至る五街道の一つ。白河以北は東北諸藩が管理する街道として続き、青森・三厩まで及んだ。', src:'https://ja.wikipedia.org/wiki/奥州街道', lb:'Wikipedia「奥州街道」'},
- '羽州街道': {t:'奥州街道から陸奥国の桑折宿（福島県伊達郡桑折町）で分かれ、小坂峠や奥羽山脈の金山峠を越えて出羽国（羽州、山形県・秋田県）に入る。ここから出羽国を縦断し、矢立峠を越えて再び陸奥国に入り、油川宿（青森県青森市）で奥州街道に合流する。現在の国道113号・国道13号・国道7号などに相当する。途中、六郷宿から綴子宿にかけて、久保田を経由する下街道と角館・阿仁を経由する上街道（阿仁街道・大覚野街道）に分岐しており、下街道がより重要とされていた。起点は桑折追分（北緯37度51分16.46秒／東経140度31分7.21秒）で、左が羽州街道、手前と右が奥州街道。現地に追分標柱が立つ。', src:null, lb:'', note:'ご提供資料より（Wikipedia系の記載にもとづく文面）'},
  '北国街道': {t:'中山道の追分宿から分かれ、善光寺を経て直江津で北陸道に合流する脇街道（北国脇往還・善光寺街道）。善光寺参詣の道としても栄えた。', src:'https://ja.wikipedia.org/wiki/北国街道_(信越)', lb:'Wikipedia「北国街道 (信越)」'},
- '熊野古道 中辺路': {t:'熊野三山への参詣道の一つで、田辺から山中を経て熊野本宮へ至る路線。※本アプリでは形状データのみ収録し、解説は概要のみです（出典未確認）。', src:null},
- '西国街道': {t:'京・大阪と西国（山陽道方面）を結んだ街道。※本アプリでは形状データのみ収録し、解説は概要のみです（出典未確認）。', src:null}
+ '羽州街道': {t:'奥州街道から陸奥国の桑折宿（福島県伊達郡桑折町）で分かれ、小坂峠や奥羽山脈の金山峠を越えて出羽国（羽州、山形県・秋田県）に入る。ここから出羽国を縦断し、矢立峠を越えて再び陸奥国に入り、油川宿（青森県青森市）で奥州街道に合流する。現在の国道113号・国道13号・国道7号などに相当する。途中、六郷宿から綴子宿にかけて、久保田を経由する下街道と角館・阿仁を経由する上街道（阿仁街道・大覚野街道）に分岐しており、下街道がより重要とされていた。起点は桑折追分（北緯37度51分16.46秒／東経140度31分7.21秒）で、左が羽州街道、手前と右が奥州街道。現地に追分標柱が立つ。', src:null, lb:'', note:'ご提供資料より（Wikipedia系の記載にもとづく文面）'},
+
+ /* 関東・東北の脇往還 */
+ '水戸街道': {t:'江戸側の千住宿を基点に、松戸・取手・土浦などを経て水戸に至る約116kmの街道。水戸徳川家と江戸を直結する幹線道路で、五街道に次ぐ重要な存在だった。', src:'https://ja.wikipedia.org/wiki/水戸街道', lb:'Wikipedia「水戸街道」'},
+ '成田街道': {t:'水戸街道の新宿（東京都葛飾区）から分岐し、市川・船橋・八千代・佐倉・酒々井を経て成田山新勝寺に至る全長約52.5kmの街道（水戸佐倉道とも）。庶民の成田山参詣道として栄えた。', src:'https://ja.wikipedia.org/wiki/成田街道', lb:'Wikipedia「成田街道」'},
+ '佐倉街道': {t:'水戸街道の新宿（東京都葛飾区）付近から分岐し、船橋・八千代を経て佐倉藩の城下に至る道。通常は成田街道の一部として扱われることが多い。', src:'https://ja.wikipedia.org/wiki/成田街道', lb:'Wikipedia「成田街道」'},
+ '川越街道': {t:'中山道の板橋宿平尾追分から分かれ、江戸北西の要衝である川越（川越城下）に至る街道。戦国時代に太田道灌が川越城を築いた際の江戸との連絡路に起源を持つとされる。', src:'https://ja.wikipedia.org/wiki/川越街道', lb:'Wikipedia「川越街道」'},
+ '青梅街道': {t:'江戸（新宿）を起点に中野・田無・小平を経て青梅へ至る街道。青梅から先は奥多摩・大菩薩峠を越えて甲州方面へ通じた。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '日光例幣使街道': {t:'江戸時代に朝廷から派遣された例幣使（天皇の使者）が日光東照宮の例大祭へ参向するために整備された街道。中山道の倉賀野宿から分かれて東へ向かい、楡木宿を経て日光に至る。', src:'https://www.tochigi-kankou.or.jp/spot/reiheishikaidou', lb:'栃木県観光物産協会'},
+ '三国街道': {t:'中山道から分かれ、上野国から三国峠を越えて越後国へ至る脇街道。中山道と北陸方面を結ぶ道として利用された。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '鎌倉街道': {t:'鎌倉時代に関東各地と鎌倉を結ぶために整備された古道で、上道・中道・下道の3本の主要ルートがある。中道は川口・池袋・渋谷・溝口を経て鎌倉へ至る約73km、上道は鎌倉から武蔵を経て上野・信濃方面へ通じた。', src:'https://ja.wikipedia.org/wiki/鎌倉街道', lb:'Wikipedia「鎌倉街道」'},
+ '大山街道': {t:'江戸の赤坂御門を起点に、青山・渋谷・三軒茶屋・瀬田を経て多摩川を二子で渡り、溝口・厚木・伊勢原を通って大山へ至る（矢倉沢往還）。現在の国道246号に概ね相当する。', src:'https://www.ktr.mlit.go.jp/kawakoku/kawakoku_index017.html', lb:'国土交通省 川崎国道事務所'},
+ '中原街道': {t:'江戸から中原を経て相模国へ至る街道で、東海道の脇往還の一つ。江戸と相模を結ぶ道として歩かれた。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '八王子街道': {t:'多摩地域で甲州街道から分かれ、集落を結ぶ道として使われた街道。甲州街道の宿場間を補う役割を持った。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '房総街道': {t:'房総半島へ通じる街道の総称。江戸から船橋・千葉方面へ至る道筋が中心。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '水戸道中': {t:'水戸と江戸を結ぶ道中の呼称。水戸街道と同じ道筋を指すことが多い。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+
+ /* 甲信越・北陸 */
+ '下仁田街道': {t:'中山道の脇往還として、上野国（群馬県）の下仁田方面から信州へ通じた街道。蚕種や生糸の輸送路としても利用された。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '薩摩肥後街道': {t:'薩摩国と肥後国を結ぶ街道。両国を往来する幹線路として、人や物資の輸送に使われた。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '西国街道(山陽道)': {t:'京・大阪から西国（山陽路）へ通じた街道。本データは西国街道（山陽道）として収録した形状を示す。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '三州街道': {t:'信濃と三州（三河）を結ぶ街道で、伊那街道とも呼ばれる。中山道の塩尻宿を起点に、天竜川沿いに伊那谷を南下し、下伊那の駒場・根羽を経て三州へ至る。', src:'https://www.city.shiojiri.lg.jp/soshiki/35/3943.html', lb:'塩尻市「街道を学ぶ 三州街道」'},
+ '千国街道': {t:'越後国（新潟県）と信州（長野県）を結び、糸魚川から松本・塩尻に至る約120kmの道。塩や海産物などを運んだため「塩の道」とも呼ばれ、糸魚川街道・松本街道とも称された。', src:'https://www.shionomichi.jp/', lb:'千国街道 塩の道'},
+ '善光寺街道': {t:'中山道の洗馬宿から分かれ、郷原宿を経て猿ヶ馬場峠を越え、稲荷山宿で北国街道に合流して善光寺へ至る道（約67km＋善光寺まで3里）。善光寺参詣の道として栄えた。', src:'https://www.city.shiojiri.lg.jp/soshiki/35/3945.html', lb:'塩尻市「街道を学ぶ 善光寺街道」'},
+ '飯山街道': {t:'北国街道の神代宿（徳間）から千曲川の東側を北上して飯山に至り、富倉峠を越えて北国街道の新井宿へ通じる街道。日本海の塩を運ぶ道でもあった。', src:'https://www.dynax.co.jp/sinsen/shinano/k_ta_ii_os.html', lb:'長野県 歴史の道'},
+ '佐渡街道': {t:'越後から佐渡へ通じる道筋。佐渡の金銀や物資の輸送に関わる道として使われた。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '清水越街道': {t:'信越地方の山越えの道で、清水峠を越えて越後へ至る。三国街道などと並ぶ越後の山越え路。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '松之山街道': {t:'越後の松之山方面へ通じる道筋。山間部の集落を結ぶ生活道路として使われた。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '松本街道': {t:'松本を中心に周辺へ通じる道の呼称。千国街道（糸魚川街道）の別名としても用いられた。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '糸魚川街道': {t:'糸魚川を起点に信州へ至る道。千国街道の別称で、塩の運搬路として知られる。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '身延街道': {t:'日蓮宗の総本山・身延山久遠寺への参詣道として使われた道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '北国西街道': {t:'北国街道に並行して設けられた脇街道。中山道と北陸方面を結ぶ道の一つ。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+
+ /* 東北・北海道 */
+ '陸前浜街道': {t:'明治時代初期に現在の国道6号に相当する街道のうち、東京都荒川区から宮城県岩沼市までの区間に付けられた名称。水戸街道を北上して勿来関を越え、岩沼で奥州街道に合流する。', src:'https://ja.wikipedia.org/wiki/陸前浜街道', lb:'Wikipedia「陸前浜街道」'},
+ '会津西街道': {t:'江戸時代に会津藩主・保科正之によって整備された、会津の若松城下から下野の今市に至る街道（関東側からの呼称で、逆方向では下野街道）。会津と江戸を結ぶ最短ルートとして参勤交代に利用された。', src:'https://ja.wikipedia.org/wiki/会津西街道', lb:'Wikipedia「会津西街道」'},
+ '出羽仙台街道': {t:'奥州街道の吉岡宿（宮城県黒川郡大和町）から分かれ、中新田・岩出山・鳴子を経て出羽国へ至る峠越の道。中山越は国指定史跡。', src:'https://www.pref.miyagi.jp/soshiki/bunkazai/kuni-siseki28.html', lb:'宮城県「指定文化財 出羽仙台街道中山越」'},
+ '鹿角街道': {t:'盛岡城下から荒屋・田山を経て鹿角（秋田県鹿角市）に至り、さらに青森県の田子・三戸方面へ至る道。別名「流霞道（りゅうかどう）」と呼ばれ、金や銅を運ぶ道として栄えた。', src:'https://ja.wikipedia.org/wiki/鹿角街道', lb:'Wikipedia「鹿角街道」'},
+ '松前街道': {t:'津軽半島の油川から陸奥湾沿いに蟹田・三厩を経て津軽海峡を渡り、蝦夷地（北海道）の松前へ至る街道。松前から海岸線を通って箱館（函館）に達し、松前〜箱館は約27里（約105.5km）の道で「殿様街道」とも呼ばれた。', src:'https://kodo.jac1.or.jp/kodo120selections/number_4/', lb:'日本の山岳古道120選「殿様街道」'},
+ '福山街道': {t:'松前（福山城下）と箱館を結ぶ松前藩主の参勤交代路で、松前街道の別称。開削の形跡がなく古くからある道とされる。', src:'https://kodo.jac1.or.jp/kodo120selections/number_4/', lb:'日本の山岳古道120選「殿様街道」'},
+ '陸奥上街道': {t:'奥州街道から分かれ、陸奥国北部へ通じる街道。大崎地方を通る道筋が国指定史跡として保存されている。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '会津街道': {t:'奥州街道などから会津へ通じる街道の総称。会津城下と周辺を結ぶ道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '会津中街道': {t:'会津と下野・陸奥を結ぶ街道の一つ。会津西街道・会津東街道に対する中ほどの道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '米沢福島街道': {t:'米沢と福島を結ぶ街道。置賜地方と福島盆地を結ぶ道筋として使われた。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '越後米沢街道': {t:'越後と米沢を結ぶ街道。山形・新潟県境の峠を越える道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '久慈野田街道': {t:'陸奥国北部の久慈・野田方面へ通じる街道。浜通りと内陸を結ぶ道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '仙北街道': {t:'奥州（陸奥国）の仙北地方へ通じる街道。秋田・岩手方面を結ぶ道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '白河会津街道': {t:'白河と会津を結ぶ街道。奥州街道の白河と会津を結ぶ道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+
+ /* 東海・近畿 */
+ '美濃路': {t:'東海道の宮宿（名古屋市熱田区）と中山道の垂井宿を結ぶ脇往還。全長は約57〜58kmで、清須宿・大垣宿など6宿が置かれた。徳川家康が関ヶ原の戦いの後に凱旋した「吉例の道」として格式を誇った。', src:'https://ja.wikipedia.org/wiki/美濃路', lb:'Wikipedia「美濃路」'},
+ '伊勢街道': {t:'伊勢神宮への参宮道の総称。桑名から美濃方面へ通じる道や、東海道から分かれる道など複数のルートがあった。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '伊勢別街道': {t:'東海道から分かれ伊勢方面へ通じる街道。参宮道の一部として利用された。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '佐屋街道': {t:'東海道の宮宿から佐屋を経て桑名へ至る脇街道。七里の渡しを避ける道として使われた。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '下田街道': {t:'伊豆の下田へ通じる街道。東海道や駿河方面から伊豆半島南部を結ぶ道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '中道往還': {t:'甲斐国から駿河国へ通じる街道の一つ（右左口路）。甲州街道の脇往還として利用された。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '姫街道': {t:'東海道の脇街道で、浜松宿から気賀を経て御油宿へ至る（本坂通）。東海道の難所を避ける道として使われた。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '秋葉街道': {t:'秋葉山への参詣道の総称。浜松・掛川・飯田（三州街道との追分）などを起点とする複数のルートがあり、古くは塩の道としても使われた。', src:'https://lega-shizu.com/archives/enjoy/148', lb:'静岡県「しずおか文化財ナビ」'},
+ '京街道': {t:'京（京都）へ通じる街道の総称。東海道の終点から京へ入る道筋などを指す。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '奈良街道': {t:'京や大坂方面から奈良へ通じる街道の総称。複数のルートが存在した。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '大和街道': {t:'大和（奈良）へ通じる街道の総称。東西の幹線道を結ぶ道筋として使われた。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '伊賀街道': {t:'伊勢と伊賀（上野）を結ぶ街道。伊賀盆地と伊勢方面を結ぶ道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '初瀬街道': {t:'長谷寺（初瀬）への参詣道を兼ねた街道。伊勢から大和へ通じる道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '暗越奈良街道': {t:'大坂から暗峠（くらがり峠）を越えて奈良へ至る街道。東への最短ルートとして歩かれた。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '長尾街道': {t:'河内と大和を結ぶ古道。竹内街道などと並ぶ古代からの道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '竜田越奈良街道': {t:'大坂から竜田越を経て奈良へ至る街道。生駒山地を越える道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '柳生街道': {t:'奈良から柳生を経て月ヶ瀬方面へ至る街道。柳生藩の剣術で知られる地域を通る。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '熊野街道': {t:'京・大坂から熊野三山へ至る参詣道の総称。熊野信仰の広がりとともに多くの人々が歩いた。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '大和郡山街道': {t:'奈良と大和郡山を結ぶ街道。郡山城下へ通じる道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '朝鮮人街道': {t:'中山道の彦根から分かれ、安土・八幡を経て近江国を横断する街道。朝鮮通信使が通行したことからこの名で呼ばれた。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '八風街道': {t:'鈴鹿山脈を越えて近江と伊勢を結ぶ街道。八風越を経由した。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '大津街道': {t:'京都と大津を結ぶ街道。東海道の京都側の区間にもあたる。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '紀州街道': {t:'京・大坂と紀州（和歌山）を結ぶ街道。大坂側は京橋付近が起点で、堺を南北に貫く大道筋が旧紀州街道にあたる。', src:'https://www.city.sakai.lg.jp/kanko/sakai/alacarte/kyukaido.html', lb:'堺市「旧街道・道」'},
+ '高野街道': {t:'高野山への参詣道。東高野街道（石清水八幡宮から）・中高野街道（平野から）・西高野街道（堺から）などのルートがある。', src:'https://kotobank.jp/word/高野街道-63266', lb:'コトバンク「高野街道」'},
+ '東高野街道': {t:'石清水八幡宮から生駒山麓の西麓を経て大和川を渡り、富田林・河内長野を経て高野山へ至る街道。大阪府内で最も長い縦貫街道とされる。', src:'https://www.rekishikaido.gr.jp/kaido/other/', lb:'歴史街道推進協議会「その他街道」'},
+ '中高野街道': {t:'平野を起点に高野山へ至る高野街道の一つ。四天王寺を起点とする下高野街道などと並ぶルート。', src:'https://hyakkaido.travel.coocan.jp/hyakkaidouippononisikouyakaidou.html', lb:'百街道一歩「西高野街道」'},
+ '西高野街道': {t:'堺を起点に高野山女人堂へ至る高野街道の一つ。現在の堺市役所近くの大小路橋付近が起点。', src:'https://hyakkaido.travel.coocan.jp/hyakkaidouippononisikouyakaidou.html', lb:'百街道一歩「西高野街道」'},
+ '竹内街道': {t:'堺市の大小路から二上山の南麓・竹内峠を越えて奈良県葛城市の長尾神社付近に至る全長約30kmの街道。推古天皇21年（613年）に整備された日本最古の官道「大道」に起源を持つ。', src:'https://ja.wikipedia.org/wiki/竹内街道', lb:'Wikipedia「竹内街道」'},
+
+ /* 中国・四国・九州 */
+ '山陽道': {t:'五畿七道の一つで、本州の瀬戸内海側を通る律令時代の幹線道路（駅路）。都と西国諸国を結ぶ大動脈として整備された。', src:'https://www.mlit.go.jp/road/michi-re/1-1.htm', lb:'国土交通省「道の歴史 古代の道」'},
+ '山陰道': {t:'五畿七道の一つで、本州の日本海側を通る律令時代の幹線道路（駅路）。都と山陰地方の諸国を結んだ。', src:'https://www.mlit.go.jp/road/michi-re/1-1.htm', lb:'国土交通省「道の歴史 古代の道」'},
+ '萩往還': {t:'城下萩から明木・佐々並・山口を経て三田尻（防府市）に至る全行程約53kmの街道。毛利氏が萩城築城後に参勤交代の「御成道」として開き、山陰と山陽を結ぶ陰陽連絡道として重要だった。', src:'https://ja.wikipedia.org/wiki/萩往還', lb:'Wikipedia「萩往還」'},
+ '石見銀山街道': {t:'石見銀山と各地を結んだ街道。銀の輸送や鉱山の運営に使われた道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '出雲街道': {t:'美作・伯耆を経て出雲へ至る街道。中国山地を横断する道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '伯耆街道': {t:'伯耆国（鳥取県西部）へ通じる街道。山陰と山陽を結ぶ道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '因幡街道': {t:'因幡国（鳥取県東部）へ通じる街道。播磨・但馬方面と因幡を結ぶ道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '鳥取街道': {t:'鳥取城下へ通じる街道。山陰と山陽を結ぶ道筋の一つ。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '津山街道': {t:'津山（美作国）へ通じる街道。山陽と山陰を結ぶ道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '赤穂街道': {t:'赤穂（播磨国）へ通じる街道。山陽道から分かれる道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '岩国往来': {t:'岩国（周防国）へ通じる道。山陽道から分かれる道筋として使われた。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '四国遍路道': {t:'四国八十八箇所霊場を巡る巡礼道。弘法大師ゆかりの札所を結ぶ道として整備された。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '土佐街道': {t:'土佐国（高知県）へ通じる街道。山越えで土佐へ入る道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '伊予街道': {t:'伊予国（愛媛県）へ通じる街道。四国の諸国を結ぶ道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '金毘羅街道': {t:'こんぴらさん（金毘羅宮）への参詣道の総称。各地から琴平へ通じる道が整備された。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '土佐浜街道': {t:'土佐の海岸沿いを通る道筋。浜伝いの生活道路として使われた。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '阿波街道': {t:'阿波国（徳島県）へ通じる街道。四国山地を越える道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '讃岐街道': {t:'讃岐国（香川県）へ通じる街道。瀬戸内側の諸国を結ぶ道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '長崎街道': {t:'豊前国小倉（北九州市）の常盤橋を起点に、肥前国長崎に至る脇街道。砂糖が運ばれたことから「シュガーロード」とも呼ばれる。', src:'https://ja.wikipedia.org/wiki/長崎街道', lb:'Wikipedia「長崎街道」'},
+ '薩摩街道': {t:'肥後国熊本城下の札の辻と薩摩国鹿児島城下（鶴丸城下）を結ぶ街道。南九州の陸上交通の大動脈として整備され、島津氏の参勤交代にも利用された。', src:'https://www.bunka.go.jp/seisaku/bunkazai/shokai/kinenbutsu/rekishinomichi/pdf/93685601_39.pdf', lb:'文化庁「歴史の道調査報告書 薩摩・肥後街道」'},
+ '肥後街道': {t:'肥後国（熊本）と豊後国（大分）方面を結ぶ街道（豊後街道）。熊本から鶴崎に至る道筋などが知られる。', src:'https://ja.wikipedia.org/wiki/豊後街道', lb:'Wikipedia「豊後街道」'},
+ '日田街道': {t:'日田（豊後国）へ通じる街道。九州の内陸部と豊後を結ぶ道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '日田中津街道': {t:'日田と中津を結ぶ街道。豊後と豊前を結ぶ道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '日田竹田街道': {t:'日田と竹田を結ぶ街道。豊後国内を結ぶ道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '豊前街道': {t:'豊前国（福岡県東部・大分県北部）へ通じる街道。小倉などを経由する道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '秋月街道': {t:'秋月（筑前国）へ通じる街道。秋月藩の城下へ至る道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '唐津街道': {t:'唐津（肥前国）へ通じる街道。福岡と唐津を結ぶ道筋として使われた。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '島原街道': {t:'島原（肥前国）へ通じる街道。諫早などを経由する道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '飫肥街道': {t:'飫肥（日向国）へ通じる街道。飫肥藩の城下へ至る道筋。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '大口筋': {t:'大口（薩摩国）方面へ通じる道筋。九州南部の街道の一つ。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '東目筋': {t:'薩摩国・日向国方面へ通じる道筋の呼称。九州南部の街道の一つ。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+
+ /* 古道ライン（別収録） */
+ '熊野古道 中辺路': {t:'熊野三山への参詣道の一つで、田辺から山中を経て熊野本宮へ至る路線。※本アプリでは形状データのみ収録し、解説は概要のみです（出典未確認）。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'},
+ '西国街道': {t:'京・大阪と西国（山陽道方面）を結んだ街道。※本アプリでは形状データのみ収録し、解説は概要のみです（出典未確認）。', src:null, lb:'', note:'一般的な概説（個別の出典は未確認）'}
 };
 function kaidoDescOf(nm){
   var base=String(nm).replace(/^旧/,'');
@@ -2863,7 +2976,7 @@ var ob=el("kaidoBtn");
 if(ob){var nb=ob.cloneNode(true);ob.parentNode.replaceChild(nb,ob);nb.textContent="🥾 街道一覧";
  nb.addEventListener("click",openPanel);}
 
-/*---- kaido_diff auto-merge / generation manager (v48) ----*/
+/*---- kaido_diff auto-merge / generation manager (v49) ----*/
 var RAW=null, LS_DIFF="kumanaku_kaido_diffs_v1";
 var DIFF_STATE={loaded:[],applied:0,tomb:0,miss:0,last:0};
 var LS_TOMB="kumanaku_kaido_tomb_v1", TOMB=[];
@@ -3024,7 +3137,7 @@ function reloadDiffs(){
 loadDiffState();
 
 
-/*---- GitHub direct commit (Contents API) + tombstone history (v48) ----*/
+/*---- GitHub direct commit (Contents API) + tombstone history (v49) ----*/
 var LS_GH="kumanaku_gh_settings_v1", GH_STATE={ok:null,msg:"",last:null};
 function ghLoad(){ try{ var o=JSON.parse(localStorage.getItem(LS_GH)||"null"); return o||{}; }catch(e){ return {}; } }
 function ghSave(o){ try{ localStorage.setItem(LS_GH,JSON.stringify(o)); }catch(e){} return true; }
@@ -3188,9 +3301,9 @@ function ghCommitDiff(cb){
   GH_STATE={ok:null,msg:"コミット中…",last:null};
   ghPut(cfg,base,text,plan.msg).then(function(r1){
     return ghGetFile(cfg,manP).then(function(cur){
-      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v48",files:[]};
+      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v49",files:[]};
       if(cur.exists && cur.base64){ try{ var j=JSON.parse(unb64utf8(cur.base64)); if(j&&j.files) o=j; }catch(e){} }
-      o.files=o.files||[]; o.version="v48";
+      o.files=o.files||[]; o.version="v49";
       var _dir=(base.indexOf("/")>=0)? base.slice(0,base.lastIndexOf("/")+1) : "";
       var nm=base.slice(_dir.length);
       if(o.files.indexOf(nm)<0) o.files.push(nm);
@@ -3237,7 +3350,7 @@ function tombRender(){
   });
 }
 
-window.KAIDO_UI={version:"v48",open:openPanel,total:function(){return ALL.length;},
+window.KAIDO_UI={version:"v49",open:openPanel,total:function(){return ALL.length;},
  refresh:function(){ if(LOADED){ renderTabs(); renderList(); } },
  reloadDiffs:reloadDiffs,
  diffState:function(){ return DIFF_STATE; },
@@ -3636,7 +3749,7 @@ function toGeoJSON(){
         geometry:{type:"LineString",coordinates:ln.map(function(q){ return [+q[1],+q[0]]; })}});
     });
   }
-  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v48",at:new Date().toISOString()},features:feats};
+  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v49",at:new Date().toISOString()},features:feats};
 }
 function fromGeoJSON(gj){
   if(!gj||!gj.features) return 0;
@@ -3992,7 +4105,7 @@ function promotedData(){
   full.forEach(function(s){
     if(s.manual && s.geo && s.segs && s.segs.length){ out.push(s); ids.push(s.name); }
   });
-  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v48",
+  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v49",
     "generated":new Date().toISOString(), "base":"kaido_data.json", "mode":"promoted-only",
     "count":out.length, "ids":ids, "streets":out };
 }
@@ -4026,7 +4139,7 @@ function applyDiff(obj){
   notifyKaido();
   return n;
 }
-window.MANUAL_DRAW={version:"v48",open:open,closePanel:closePanel,api:{
+window.MANUAL_DRAW={version:"v49",open:open,closePanel:closePanel,api:{
   setData:function(d){ D.data=d; fillStreets(); syncUI(); },
   streetNames:function(){ return (D.data||[]).map(function(x){ return x.name; }); },
   start:start,add:addPoint,undo:undoPoint,del:delVertex,move:moveVertex,
