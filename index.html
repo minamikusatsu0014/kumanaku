@@ -33,14 +33,15 @@
     try{
       var m = (e && e.message) ? e.message : 'エラー';
       var l = (e && e.lineno) ? (' (行 ' + e.lineno + ')') : '';
-      banner('【エラー】' + m + l);
+      (window.__kmBanner||banner)('【エラー】' + m + l);
     }catch(x){}
   });
   window.addEventListener('unhandledrejection', function(e){
     try{
       var r = e && e.reason;
+      if(r && r.__kmQuiet){ if(window.__kmInfo) window.__kmInfo('【情報】' + String((r&&r.message)||r).slice(0,200)); return; }
       var m = (r && (r.message || r)) || 'Promise error';
-      banner('【読み込み失敗】' + String(m).slice(0, 300));
+      (window.__kmBanner||banner)('【読み込み失敗】' + String(m).slice(0, 300));
     }catch(x){}
   });
 
@@ -940,6 +941,167 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .trmode button{padding:4px 9px;border:1px solid #ccc;background:#fff;border-radius:14px;font-size:11px;cursor:pointer;color:#444}
 .trmode button.on{background:#2e7d32;border-color:#2e7d32;color:#fff;font-weight:700}
 </style>
+<script>/* KM_PATCH_C_V55 */
+(function(){
+  var isFile = (location.protocol === 'file:');
+  var blocked = [], seen = [];
+  function gid(id){ try{ return document.getElementById(id); }catch(e){ return null; } }
+
+  /* ---- 情報（グレー）帯：赤エラーとは分ける ---- */
+  window.__kmInfo = function(msg){
+    try{
+      var d = gid('kmInfo');
+      if(!d){
+        d = document.createElement('div'); d.id = 'kmInfo';
+        d.style.cssText = 'position:fixed;z-index:99997;left:8px;right:8px;bottom:8px;background:#37474f;color:#fff;font:12px/1.6 -apple-system,"Hiragino Kaku Gothic ProN",sans-serif;padding:9px 12px;border-radius:10px;max-height:26vh;overflow:auto;box-shadow:0 4px 14px rgba(0,0,0,.4);';
+        (document.body || document.documentElement).appendChild(d);
+      }
+      d.textContent = String(msg);
+      d.style.display = 'block';
+      clearTimeout(d.__t); d.__t = setTimeout(function(){ try{ d.style.display = 'none'; }catch(e){} }, 4500);
+    }catch(e){}
+  };
+
+  /* ---- 保存領域を「絶対に例外を投げない」ようにする（opaque origin 対策） ---- */
+  function makeShim(real){
+    var m = {};
+    try{ if(real){ for(var i=0;i<real.length;i++){ var k=real.key(i); m[k]=real.getItem(k); } } }catch(e){}
+    function wr(k,v){ m[String(k)] = String(v); try{ if(real) real.setItem(String(k), String(v)); }catch(e){} }
+    var api = {
+      __kmShim: true,
+      key: function(i){ var ks=Object.keys(m); i=+i; return (i>=0 && i<ks.length) ? ks[i] : null; },
+      getItem: function(k){ k=String(k); return Object.prototype.hasOwnProperty.call(m,k) ? m[k] : null; },
+      setItem: wr,
+      removeItem: function(k){ delete m[String(k)]; try{ if(real) real.removeItem(String(k)); }catch(e){} },
+      clear: function(){ m={}; try{ if(real) real.clear(); }catch(e){} }
+    };
+    try{ Object.defineProperty(api,'length',{get:function(){ return Object.keys(m).length; },configurable:true}); }catch(e){}
+    try{ wr('__km_probe','1'); api.removeItem('__km_probe'); }catch(e){}
+    return api;
+  }
+  function realStore(name){
+    try{ var st=window[name]; if(!st) return null; st.setItem('__km_probe','1'); st.removeItem('__km_probe'); return st; }catch(e){ return null; }
+  }
+  function installStore(name){
+    var real = realStore(name);
+    var shim = makeShim(real);
+    try{ Object.defineProperty(window, name, {value: shim, configurable: true, writable: true}); return real ? 'shim+persist' : 'shim(memory)'; }
+    catch(e){ return real ? 'real' : 'none'; }
+  }
+  window.__kmInstallStorage = function(){
+    var r = {};
+    try{ r.localStorage = installStore('localStorage'); }catch(e){ r.localStorage='error'; }
+    try{ r.sessionStorage = installStore('sessionStorage'); }catch(e){ r.sessionStorage='error'; }
+    return r;
+  };
+  try{ window.__kmStorageMode = window.__kmInstallStorage(); }catch(e){ window.__kmStorageMode = {localStorage:'error'}; }
+  if(window.__kmStorageMode && window.__kmStorageMode.localStorage === 'shim(memory)'){
+    window.__kmInfo('保存領域が使えない環境のため、この起動中のみメモリ保存で動作します（ブラウザの制限）');
+  }
+
+  /* ---- file:// では外部通信を遮断し、赤エラーにしない ---- */
+  var inner = window.fetch;
+  window.fetch = function(u, o){
+    var s = String(u);
+    try{
+      if(window.__KM_JSON){
+        var n = s.split('#')[0].split('?')[0].split('/').pop();
+        if(Object.prototype.hasOwnProperty.call(window.__KM_JSON, n)){
+          var val = window.__KM_JSON[n], txt = JSON.stringify(val);
+          return Promise.resolve({ok:true,status:200,json:function(){ return Promise.resolve(val); },text:function(){ return Promise.resolve(txt); }});
+        }
+      }
+      if(isFile && /^https?:/i.test(s)){
+        blocked.push(s);
+        var e = new Error('file:// のため外部通信をスキップしました: ' + s);
+        e.__kmQuiet = true; return Promise.reject(e);
+      }
+    }catch(x){}
+    return inner.apply(this, arguments);
+  };
+
+  /* ---- 診断情報 ---- */
+  window.__kmDiag = function(){
+    return {
+      version: 'v55',
+      url: (location.href||'').slice(0,90),
+      protocol: location.protocol, file: isFile,
+      storage: window.__kmStorageMode,
+      leaflet: (typeof L), map: !!(window.__kmGetMap && window.__kmGetMap()),
+      inline: (window.__KM_INLINE||[]).length,
+      blocked: blocked.slice(0,12),
+      errors: seen.slice(0,12),
+      ua: (navigator.userAgent||'').slice(0,130)
+    };
+  };
+  function diagText(){
+    var d = window.__kmDiag(), o = [];
+    o.push('版: ' + d.version + ' / ' + d.protocol + (d.file ? '（ローカルファイル）' : ''));
+    o.push('保存領域: ' + JSON.stringify(d.storage));
+    o.push('地図: Leaflet=' + d.leaflet + ' / 地図作成=' + d.map);
+    o.push('内蔵データ: ' + d.inline + '件');
+    o.push('遮断した外部通信: ' + (d.blocked.length ? d.blocked.join(', ') : 'なし'));
+    o.push('エラー: ' + (d.errors.length ? d.errors.join(' | ') : 'なし'));
+    o.push('UA: ' + d.ua);
+    return o.join('\n');
+  }
+  function ensureDiagBtn(){
+    try{
+      var box = gid('kmErr');
+      if(!box || gid('kmDiagBtn')) return;
+      var b = document.createElement('button');
+      b.id = 'kmDiagBtn'; b.textContent = '🩺 診断情報';
+      b.style.cssText = 'margin-top:8px;margin-right:8px;padding:7px 12px;border:none;border-radius:6px;background:#fff;color:#b71c1c;font-weight:bold;';
+      b.onclick = function(){
+        try{
+          var t = diagText();
+          if(window.__kmModal){
+            window.__kmModal('🩺 診断情報', function(body){
+              var pre = document.createElement('pre');
+              pre.style.cssText = 'white-space:pre-wrap;font-size:11px;background:#f5f5f5;padding:8px;border-radius:8px;max-height:40vh;overflow:auto;';
+              pre.textContent = t; body.appendChild(pre);
+              var c = document.createElement('button');
+              c.textContent = '📋 コピー';
+              c.style.cssText = 'width:100%;margin-top:8px;padding:10px;border:none;border-radius:8px;background:#455a64;color:#fff;font-weight:bold;';
+              c.onclick = function(){ try{ if(navigator.clipboard) navigator.clipboard.writeText(t); }catch(e){} c.textContent = 'コピーしました ✔'; };
+              body.appendChild(c);
+            });
+          }
+        }catch(e){}
+      };
+      box.insertBefore(b, box.firstChild);
+    }catch(e){}
+  }
+
+  /* ---- 赤バナーの重複をまとめる（×2 表示） ---- */
+  var red = window.__kmBanner;
+  if(red){
+    window.__kmBanner = function(msg){
+      msg = String(msg).trim();
+      var hit = null, i;
+      for(i=0;i<seen.length;i++){ if(seen[i].m === msg){ hit = seen[i]; break; } }
+      if(hit) hit.n++; else seen.push({m: msg, n: 1});
+      if(seen.length > 6) seen = seen.slice(-6);
+      var text = seen.map(function(x){ return x.m + (x.n > 1 ? ('（×' + x.n + '）') : ''); }).join('\n');
+      try{
+        red(msg);
+        var ib = gid('kmInfo'); if(ib) ib.style.display = 'none';
+        var mbox = gid('kmErrMsg');
+        if(mbox){
+          var sm = window.__kmStorageMode || {};
+          mbox.textContent = text + '\n── 診断: 保存領域=' + (sm.localStorage||'?') + ' / 地図=' + (typeof L) +
+            ' / 内蔵データ=' + ((window.__KM_INLINE||[]).length) + '件' +
+            (blocked.length ? (' / 遮断した外部通信=' + blocked.length + '件') : '') +
+            (/^Script error\.?$/.test(msg) ? '\n※ ブラウザが詳細を隠しています（ローカルファイルやアプリ内ブラウザで開くとこの表示になります）。' : '');
+        }
+        ensureDiagBtn();
+      }catch(e){}
+    };
+  } else {
+    window.__kmBanner = function(msg){ window.__kmInfo(msg); };
+  }
+})();
+</script>
 </head>
 <body>
 <div id="map"></div>
@@ -954,7 +1116,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><img src="./icon-192.png" alt="" class="app-ico"><span class="app-t">街道ウォーキング</span> <span class="ver">v54</span></div>
+  <div class="appname"><img src="./icon-192.png" alt="" class="app-ico"><span class="app-t">街道ウォーキング</span> <span class="ver">v55</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -1122,7 +1284,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
 <script>
 if('serviceWorker' in navigator){
   window.addEventListener('load',function(){
-    navigator.serviceWorker.register('./sw.js?v=53').catch(function(){});
+    /* v55: Service Worker を廃止（古い sw.js のキャッシュで更新が反映されない事故を防ぐ） */
+  try{ navigator.serviceWorker.getRegistrations().then(function(rs){ rs.forEach(function(r){ try{ r.unregister(); }catch(e){} }); }).catch(function(){}); }catch(e){}
+  try{ if(window.caches && caches.keys){ caches.keys().then(function(ks){ ks.forEach(function(k){ try{ if(/kumanaku|sw|v5|walk/i.test(k)) caches.delete(k); }catch(e){} }); }).catch(function(){}); } }catch(e){}
   });
 }
 </script>
@@ -2607,7 +2771,7 @@ function drawKaidoLines(){
   return null;
 }
 drawKaidoLines();
-/* v54: KAIDO_UI 側の準備完了後に描画（スコープ外参照で無描画になるのを防ぐ） */
+/* v55: KAIDO_UI 側の準備完了後に描画（スコープ外参照で無描画になるのを防ぐ） */
 function kaidoRetryDraw(n){
   if(typeof window.trRenderKaido === 'function'){ try{ window.trRenderKaido(); }catch(e){} return; }
   if(n > 0) setTimeout(function(){ kaidoRetryDraw(n-1); }, 800);
@@ -3703,8 +3867,8 @@ function promotedNames(){ return ALL.filter(function(s){ return !s.geo && manCou
 function saveOn(){try{localStorage.setItem(LSKEY,JSON.stringify(Object.keys(ON).filter(function(k){return ON[k];})));}catch(e){}}
 function loadOn(){try{JSON.parse(localStorage.getItem(LSKEY)||"[]").forEach(function(k){ON[k]=1;});}catch(e){}}
 function clearOne(id){if(LINES[id]){LINES[id].forEach(function(l){kLayer.removeLayer(l);});delete LINES[id];}}
-/* ===== v54 踏破塗りつぶし: 設定の一元化 + 区間モード切替（宿場間 / 500m） =====
-   v54 の二層描画（未踏破=グレー点線 / 踏破=発光色＋白コア / 透明タップ線）はそのままに、
+/* ===== v55 踏破塗りつぶし: 設定の一元化 + 区間モード切替（宿場間 / 500m） =====
+   v55 の二層描画（未踏破=グレー点線 / 踏破=発光色＋白コア / 透明タップ線）はそのままに、
    見た目・しきい値の数値を TR_CFG に集約し、区間の切り方を「宿場間」と「一定距離」で切替可能にした。
    宿場データを持つ街道（中山道）は、宿場位置をポリラインへ最近傍投影して区間境界を作り、
    「○次まで踏破」を表示する。 */
@@ -3740,7 +3904,7 @@ function mergeBuiltin(list){
   });
   return arr;
 }
-/* v54: 描画・一覧APIを公開（typeof ガードで未定義名でも例外を出さない） */
+/* v55: 描画・一覧APIを公開（typeof ガードで未定義名でも例外を出さない） */
 (function(){
   var names = ['trRenderKaido','trRenderStreet','trSegsOf','trSections','trApplyTrackCore','trDecorateList'];
   var defs = [typeof trRenderKaido, typeof trRenderStreet, typeof trSegsOf, typeof trSections,
@@ -4239,7 +4403,7 @@ function trDecorateList(){
     rows[i].appendChild(bar);
   }
 }
-/* --- v54(1.5km固定)の踏破を v54(500m) へ距離換算して引き継ぐ --- */
+/* --- v55(1.5km固定)の踏破を v55(500m) へ距離換算して引き継ぐ --- */
 function trMigrate(){
   var moved = 0;
   try{
@@ -4390,7 +4554,7 @@ var ob=el("kaidoBtn");
 if(ob){var nb=ob.cloneNode(true);ob.parentNode.replaceChild(nb,ob);nb.textContent="🥾 街道一覧";
  nb.addEventListener("click",openPanel);}
 
-/*---- kaido_diff auto-merge / generation manager (v54) ----*/
+/*---- kaido_diff auto-merge / generation manager (v55) ----*/
 var RAW=null, LS_DIFF="kumanaku_kaido_diffs_v1";
 var DIFF_STATE={loaded:[],applied:0,tomb:0,miss:0,last:0};
 var LS_TOMB="kumanaku_kaido_tomb_v1", TOMB=[];
@@ -4552,7 +4716,7 @@ function reloadDiffs(){
 loadDiffState();
 
 
-/*---- GitHub direct commit (Contents API) + tombstone history (v54) ----*/
+/*---- GitHub direct commit (Contents API) + tombstone history (v55) ----*/
 var LS_GH="kumanaku_gh_settings_v1", GH_STATE={ok:null,msg:"",last:null};
 function ghLoad(){ try{ var o=JSON.parse(localStorage.getItem(LS_GH)||"null"); return o||{}; }catch(e){ return {}; } }
 function ghSave(o){ try{ localStorage.setItem(LS_GH,JSON.stringify(o)); }catch(e){} return true; }
@@ -4716,9 +4880,9 @@ function ghCommitDiff(cb){
   GH_STATE={ok:null,msg:"コミット中…",last:null};
   ghPut(cfg,base,text,plan.msg).then(function(r1){
     return ghGetFile(cfg,manP).then(function(cur){
-      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v54",files:[]};
+      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v55",files:[]};
       if(cur.exists && cur.base64){ try{ var j=JSON.parse(unb64utf8(cur.base64)); if(j&&j.files) o=j; }catch(e){} }
-      o.files=o.files||[]; o.version="v54";
+      o.files=o.files||[]; o.version="v55";
       var _dir=(base.indexOf("/")>=0)? base.slice(0,base.lastIndexOf("/")+1) : "";
       var nm=base.slice(_dir.length);
       if(o.files.indexOf(nm)<0) o.files.push(nm);
@@ -4765,7 +4929,7 @@ function tombRender(){
   });
 }
 
-window.KAIDO_UI={version:"v54",open:openPanel,total:function(){return ALL.length;},
+window.KAIDO_UI={version:"v55",open:openPanel,total:function(){return ALL.length;},
  refresh:function(){ if(LOADED){ renderTabs(); renderList(); } },
  reloadDiffs:reloadDiffs,
  diffState:function(){ return DIFF_STATE; },
@@ -5164,7 +5328,7 @@ function toGeoJSON(){
         geometry:{type:"LineString",coordinates:ln.map(function(q){ return [+q[1],+q[0]]; })}});
     });
   }
-  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v54",at:new Date().toISOString()},features:feats};
+  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v55",at:new Date().toISOString()},features:feats};
 }
 function fromGeoJSON(gj){
   if(!gj||!gj.features) return 0;
@@ -5520,7 +5684,7 @@ function promotedData(){
   full.forEach(function(s){
     if(s.manual && s.geo && s.segs && s.segs.length){ out.push(s); ids.push(s.name); }
   });
-  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v54",
+  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v55",
     "generated":new Date().toISOString(), "base":"kaido_data.json", "mode":"promoted-only",
     "count":out.length, "ids":ids, "streets":out };
 }
@@ -5554,7 +5718,7 @@ function applyDiff(obj){
   notifyKaido();
   return n;
 }
-window.MANUAL_DRAW={version:"v54",open:open,closePanel:closePanel,api:{
+window.MANUAL_DRAW={version:"v55",open:open,closePanel:closePanel,api:{
   setData:function(d){ D.data=d; fillStreets(); syncUI(); },
   streetNames:function(){ return (D.data||[]).map(function(x){ return x.name; }); },
   start:start,add:addPoint,undo:undoPoint,del:delVertex,move:moveVertex,
@@ -5742,7 +5906,7 @@ setTimeout(hideSplash, 3500);
   function doExport(){
     var D = appData();
     var payload = {
-      app: 'kumanaku_walk', version: 'v54',
+      app: 'kumanaku_walk', version: 'v55',
       exported: new Date().toISOString(),
       data: (D != null) ? D : null,
       localStorage: lsDump(),
