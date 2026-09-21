@@ -136,7 +136,7 @@
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><img src="./icon-192.png" alt="" class="app-ico"><span class="app-t">街道ウォーキング</span> <span class="ver">v47</span></div>
+  <div class="appname"><img src="./icon-192.png" alt="" class="app-ico"><span class="app-t">街道ウォーキング</span> <span class="ver">v48</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -474,6 +474,7 @@ const KAIDO_DESC = {
  '甲州街道': {t:'江戸・日本橋から甲府を経て信濃の下諏訪宿で中山道に合流する五街道の一つ。宿場は44次（45宿）で総距離は約205km。江戸〜甲府を表街道、甲府〜下諏訪を裏街道と呼ぶ。', src:'https://ja.wikipedia.org/wiki/甲州街道', lb:'Wikipedia「甲州街道」'},
  '日光街道': {t:'江戸・日本橋から下野の日光坊中（日光東照宮）に至る五街道の一つ。道中に21の宿場が置かれ、距離は約140km。奥州街道との分岐点である宇都宮宿が最も栄えた。', src:'https://ja.wikipedia.org/wiki/日光街道', lb:'Wikipedia「日光街道」'},
  '奥州街道': {t:'江戸・日本橋（または江戸城大手門）から千住を経て白河に至る五街道の一つ。白河以北は東北諸藩が管理する街道として続き、青森・三厩まで及んだ。', src:'https://ja.wikipedia.org/wiki/奥州街道', lb:'Wikipedia「奥州街道」'},
+ '羽州街道': {t:'奥州街道から陸奥国の桑折宿（福島県伊達郡桑折町）で分かれ、小坂峠や奥羽山脈の金山峠を越えて出羽国（羽州、山形県・秋田県）に入る。ここから出羽国を縦断し、矢立峠を越えて再び陸奥国に入り、油川宿（青森県青森市）で奥州街道に合流する。現在の国道113号・国道13号・国道7号などに相当する。途中、六郷宿から綴子宿にかけて、久保田を経由する下街道と角館・阿仁を経由する上街道（阿仁街道・大覚野街道）に分岐しており、下街道がより重要とされていた。起点は桑折追分（北緯37度51分16.46秒／東経140度31分7.21秒）で、左が羽州街道、手前と右が奥州街道。現地に追分標柱が立つ。', src:null, lb:'', note:'ご提供資料より（Wikipedia系の記載にもとづく文面）'},
  '北国街道': {t:'中山道の追分宿から分かれ、善光寺を経て直江津で北陸道に合流する脇街道（北国脇往還・善光寺街道）。善光寺参詣の道としても栄えた。', src:'https://ja.wikipedia.org/wiki/北国街道_(信越)', lb:'Wikipedia「北国街道 (信越)」'},
  '熊野古道 中辺路': {t:'熊野三山への参詣道の一つで、田辺から山中を経て熊野本宮へ至る路線。※本アプリでは形状データのみ収録し、解説は概要のみです（出典未確認）。', src:null},
  '西国街道': {t:'京・大阪と西国（山陽道方面）を結んだ街道。※本アプリでは形状データのみ収録し、解説は概要のみです（出典未確認）。', src:null}
@@ -491,7 +492,7 @@ function kaidoDescOf(nm){
   }
   return {title:nm,
     body: d? d.t : 'この街道の解説は準備中です。地図上には収録済みの形状データを表示しています。',
-    src: d? d.src : null, lb: d? d.lb : '', meta:meta};
+    src: d? d.src : null, lb: d? d.lb : '', note: d&&d.note? d.note : '', meta:meta};
 }
 function kaidoColorOf(nm){
   var c='#c62828';
@@ -505,6 +506,7 @@ function kaidoPopupHTML(nm){
   h+='<div class="kpopb">'+d.body+'</div>';
   if(d.meta&&d.meta.length) h+='<div class="kpopm">'+d.meta.join(' ・ ')+'</div>';
   if(d.src) h+='<div class="kpops"><a href="'+d.src+'" target="_blank" rel="noopener">出典: '+(d.lb||'Wikipedia')+'</a></div>';
+  else if(d.note) h+='<div class="kpops" style="color:#7a6a52">※ '+d.note+'</div>';
   return h+'</div>';
 }
 /* 細い線でもタップしやすいよう、透明な太い当たり判定ラインを重ねる */
@@ -2861,7 +2863,7 @@ var ob=el("kaidoBtn");
 if(ob){var nb=ob.cloneNode(true);ob.parentNode.replaceChild(nb,ob);nb.textContent="🥾 街道一覧";
  nb.addEventListener("click",openPanel);}
 
-/*---- kaido_diff auto-merge / generation manager (v47) ----*/
+/*---- kaido_diff auto-merge / generation manager (v48) ----*/
 var RAW=null, LS_DIFF="kumanaku_kaido_diffs_v1";
 var DIFF_STATE={loaded:[],applied:0,tomb:0,miss:0,last:0};
 var LS_TOMB="kumanaku_kaido_tomb_v1", TOMB=[];
@@ -3022,7 +3024,7 @@ function reloadDiffs(){
 loadDiffState();
 
 
-/*---- GitHub direct commit (Contents API) + tombstone history (v47) ----*/
+/*---- GitHub direct commit (Contents API) + tombstone history (v48) ----*/
 var LS_GH="kumanaku_gh_settings_v1", GH_STATE={ok:null,msg:"",last:null};
 function ghLoad(){ try{ var o=JSON.parse(localStorage.getItem(LS_GH)||"null"); return o||{}; }catch(e){ return {}; } }
 function ghSave(o){ try{ localStorage.setItem(LS_GH,JSON.stringify(o)); }catch(e){} return true; }
@@ -3186,9 +3188,9 @@ function ghCommitDiff(cb){
   GH_STATE={ok:null,msg:"コミット中…",last:null};
   ghPut(cfg,base,text,plan.msg).then(function(r1){
     return ghGetFile(cfg,manP).then(function(cur){
-      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v47",files:[]};
+      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v48",files:[]};
       if(cur.exists && cur.base64){ try{ var j=JSON.parse(unb64utf8(cur.base64)); if(j&&j.files) o=j; }catch(e){} }
-      o.files=o.files||[]; o.version="v47";
+      o.files=o.files||[]; o.version="v48";
       var _dir=(base.indexOf("/")>=0)? base.slice(0,base.lastIndexOf("/")+1) : "";
       var nm=base.slice(_dir.length);
       if(o.files.indexOf(nm)<0) o.files.push(nm);
@@ -3235,7 +3237,7 @@ function tombRender(){
   });
 }
 
-window.KAIDO_UI={version:"v47",open:openPanel,total:function(){return ALL.length;},
+window.KAIDO_UI={version:"v48",open:openPanel,total:function(){return ALL.length;},
  refresh:function(){ if(LOADED){ renderTabs(); renderList(); } },
  reloadDiffs:reloadDiffs,
  diffState:function(){ return DIFF_STATE; },
@@ -3634,7 +3636,7 @@ function toGeoJSON(){
         geometry:{type:"LineString",coordinates:ln.map(function(q){ return [+q[1],+q[0]]; })}});
     });
   }
-  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v47",at:new Date().toISOString()},features:feats};
+  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v48",at:new Date().toISOString()},features:feats};
 }
 function fromGeoJSON(gj){
   if(!gj||!gj.features) return 0;
@@ -3990,7 +3992,7 @@ function promotedData(){
   full.forEach(function(s){
     if(s.manual && s.geo && s.segs && s.segs.length){ out.push(s); ids.push(s.name); }
   });
-  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v47",
+  return { "type":"kumanaku-kaido-diff", "app":"全国くまなくウォーク", "version":"v48",
     "generated":new Date().toISOString(), "base":"kaido_data.json", "mode":"promoted-only",
     "count":out.length, "ids":ids, "streets":out };
 }
@@ -4024,7 +4026,7 @@ function applyDiff(obj){
   notifyKaido();
   return n;
 }
-window.MANUAL_DRAW={version:"v47",open:open,closePanel:closePanel,api:{
+window.MANUAL_DRAW={version:"v48",open:open,closePanel:closePanel,api:{
   setData:function(d){ D.data=d; fillStreets(); syncUI(); },
   streetNames:function(){ return (D.data||[]).map(function(x){ return x.name; }); },
   start:start,add:addPoint,undo:undoPoint,del:delVertex,move:moveVertex,
