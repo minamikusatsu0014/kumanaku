@@ -1218,7 +1218,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v100</span><span style="font-size:11px;color:#999;margin-left:4px">09/23 01:30</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v101</span><span style="font-size:11px;color:#999;margin-left:4px">09/23 01:30</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -6105,7 +6105,7 @@ setTimeout(hideSplash, 3500);
   var st={mode:'pen',color:COLORS[0],width:3,lines:[],redo:[],delBase:{}};
   var hist=[], map=null, Lg=null, layer=null, live=null, stroke=null, armed=false, erasing=false, raf=false, lastErase=null;
   window.KM_DRAW_STATE=st;
-  window.KM_DRAW_VER='v100';
+  window.KM_DRAW_VER='v101';
 
   function hv(a,b){var R=6371008.8,la1=(a&&a.lat!==undefined?a.lat:a[0])*Math.PI/180,lo1=(a&&a.lng!==undefined?a.lng:a[1])*Math.PI/180,la2=(b&&b.lat!==undefined?b.lat:b[0])*Math.PI/180,lo2=(b&&b.lng!==undefined?b.lng:b[1])*Math.PI/180,
     h=Math.sin((la2-la1)/2)*Math.sin((la2-la1)/2)+Math.cos(la1)*Math.cos(la2)*Math.sin((lo2-lo1)/2)*Math.sin((lo2-lo1)/2);
@@ -7027,8 +7027,8 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v100 09/23 01:30';
-  var BTAG='v100';
+  var BUILD='v101 09/24 02:00';
+  var BTAG='v101';
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
     var VK='km_app_ver', prevV=null;
@@ -7865,5 +7865,96 @@ setTimeout(hideSplash, 3500);
   try{ setInterval(scanNow,1500); }catch(e){}
   try{ setTimeout(scanNow,1200); setTimeout(scanNow,3000); }catch(e){}
 })();
+</script>
+<script>
+/* KM_PRUNE_V101_START : 消した旧街道を「元データ配列(KAIDO_LINES/KAIDO_BUILTIN)」から実際に取り除き、再起動・再描画でも復活させない */
+(function(){
+  var OVKEY='km_kaido_override_v1';
+  var NMKEY='km_kaido_removed_names_v1';
+  var LEG=/^km_(draw|panel|icon)_v[0-9]+$/;
+  var sigs={}, names={}, TH=0.7;
+  function r5(v){ return (Math.round(Number(v)*100000)/100000).toFixed(5); }
+  function keyOf(la,lo){ return r5(la)+','+r5(lo); }
+  function flat(pts,acc){
+    acc=acc||[]; if(!pts) return acc;
+    for(var i=0;i<pts.length;i++){ var q=pts[i]; if(!q) continue;
+      if(q.lat!==undefined&&q.lng!==undefined){ acc.push([+q.lat,+q.lng]); continue; }
+      if(Object.prototype.toString.call(q)==='[object Array]'){
+        if(q.length>=2&&typeof q[0]!=='object'&&typeof q[1]!=='object') acc.push([+q[0],+q[1]]);
+        else flat(q,acc);
+      }
+    }
+    return acc;
+  }
+  function save(){ try{
+    localStorage.setItem(OVKEY,JSON.stringify({v:2,sigs:sigs}));
+    localStorage.setItem(NMKEY,JSON.stringify(names));
+  }catch(e){} }
+  function load(){
+    try{ var j=JSON.parse(localStorage.getItem(OVKEY)||'null');
+      if(j&&j.sigs){ for(var k in j.sigs) sigs[k]=1; } }catch(e){}
+    try{ var n=JSON.parse(localStorage.getItem(NMKEY)||'null');
+      if(n&&typeof n==='object'){ for(var q in n) names[q]=1; } }catch(e){}
+    /* 旧版キー(km_draw_v99 等)の delBase(名前) を引き継いだうえで廃棄 */
+    try{
+      if(localStorage.getItem('km_draw_main')){
+        var del=[];
+        for(var i=0;i<localStorage.length;i++){ var kk=localStorage.key(i); if(!kk) continue;
+          if(LEG.test(kk)){ del.push(kk);
+            try{ var d=JSON.parse(localStorage.getItem(kk)||'null');
+              if(d&&d.delBase){ for(var nm in d.delBase) names[nm]=1; } }catch(e){}
+          }
+        }
+        for(var t=0;t<del.length;t++){ try{ localStorage.removeItem(del[t]); }catch(e){} }
+      }
+    }catch(e){}
+    save();
+  }
+  function segsOf(k){ var a=[]; try{ var gs=(k&&k.segs)||[]; for(var i=0;i<gs.length;i++) flat(gs[i],a); }catch(e){} return a; }
+  function hitRate(k){
+    var a=segsOf(k); if(a.length<2) return -1;
+    var hit=0; for(var i=0;i<a.length;i++){ if(sigs[keyOf(a[i][0],a[i][1])]) hit++; }
+    return hit/a.length;
+  }
+  function shouldRemove(k){
+    if(!k||!k.name) return false;
+    if(names[k.name]) return true;
+    return hitRate(k)>=TH;
+  }
+  function pruneArr(arr){ if(!arr||!arr.length||!arr.splice) return 0;
+    var n=0; for(var i=arr.length-1;i>=0;i--){ if(shouldRemove(arr[i])){ arr.splice(i,1); n++; } } return n; }
+  function pruneLayers(){
+    var kl=window.kaidoLayer, map=window.map, kill=[];
+    try{ if(kl&&kl.eachLayer){ kl.eachLayer(function(l){ try{
+      if(!l||!l.getLatLngs) return; var a=flat(l.getLatLngs(),[]); if(a.length<2) return;
+      var hit=0; for(var i=0;i<a.length;i++){ if(sigs[keyOf(a[i][0],a[i][1])]) hit++; }
+      if(hit/a.length>=TH) kill.push(l); }catch(e){} }); } }catch(e){}
+    for(var j=0;j<kill.length;j++){ try{ kl.removeLayer(kill[j]);
+      if(map&&map.hasLayer&&map.hasLayer(kill[j])) map.removeLayer(kill[j]); }catch(e){} }
+    return kill.length;
+  }
+  function prune(){ return pruneArr(window.KAIDO_LINES)+pruneArr(window.KAIDO_BUILTIN)+pruneLayers(); }
+  window.kmPruneNow=prune;
+  window.kmPruneState=function(){ return {sigs:sigs,names:names}; };
+  /* 消去APIを包んで、消した瞬間に配列からも消す */
+  try{ var oldAdd=window.kmOvAddDelSig;
+    window.kmOvAddDelSig=function(pts){
+      var a=flat(pts,[]), n=0;
+      for(var i=0;i<a.length;i++){ var k=keyOf(a[i][0],a[i][1]); if(!sigs[k]){ sigs[k]=1; n++; } }
+      if(n) save(); prune(); if(oldAdd){ try{ oldAdd(pts); }catch(e){} } return n; };
+  }catch(e){}
+  try{ var oldH=window.kmHideBase;
+    window.kmHideBase=function(){ prune(); return oldH?oldH.apply(this,arguments):true; }; }catch(e){}
+  try{ var oldC=window.kmCopyBaseNow;
+    window.kmCopyBaseNow=function(){ prune(); return oldC?oldC.apply(this,arguments):false; }; }catch(e){}
+  load(); prune();
+  try{ document.addEventListener('DOMContentLoaded',function(){ load(); prune(); }); }catch(e){}
+  try{ window.addEventListener('load',function(){ setTimeout(function(){ load(); prune(); },0);
+    setTimeout(prune,400); setTimeout(prune,1200); }); }catch(e){}
+  try{ [60,300,800,1600,3000].forEach(function(ms){ setTimeout(function(){ load(); prune(); },ms); }); }catch(e){}
+  try{ setInterval(prune,2000); }catch(e){}
+  try{ if(window.map&&window.map.on){ window.map.on('zoomend',function(){ setTimeout(prune,60); setTimeout(prune,600); }); } }catch(e){}
+})();
+/* KM_PRUNE_V101_END */
 </script>
 </html>
