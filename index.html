@@ -1032,7 +1032,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   /* ---- 診断情報 ---- */
   window.__kmDiag = function(){
     return {
-      version: 'v81',
+      version: 'v82',
       url: (location.href||'').slice(0,90),
       protocol: location.protocol, file: isFile,
       storage: window.__kmStorageMode,
@@ -1145,7 +1145,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v81</span><span style="font-size:11px;color:#999;margin-left:4px">09/22 08:30</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v82</span><span style="font-size:11px;color:#999;margin-left:4px">09/22 14:30</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -4896,7 +4896,7 @@ function ghCommitDiff(cb){
   GH_STATE={ok:null,msg:"コミット中…",last:null};
   ghPut(cfg,base,text,plan.msg).then(function(r1){
     return ghGetFile(cfg,manP).then(function(cur){
-      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v81",files:[]};
+      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v82",files:[]};
       if(cur.exists && cur.base64){ try{ var j=JSON.parse(unb64utf8(cur.base64)); if(j&&j.files) o=j; }catch(e){} }
       o.files=o.files||[]; o.version="v80";
       var _dir=(base.indexOf("/")>=0)? base.slice(0,base.lastIndexOf("/")+1) : "";
@@ -4945,7 +4945,7 @@ function tombRender(){
   });
 }
 
-window.KAIDO_UI={version:"v81",open:openPanel,total:function(){return ALL.length;},
+window.KAIDO_UI={version:"v82",open:openPanel,total:function(){return ALL.length;},
  refresh:function(){ if(LOADED){ renderTabs(); renderList(); } },
  reloadDiffs:reloadDiffs,
  diffState:function(){ return DIFF_STATE; },
@@ -5344,7 +5344,7 @@ function toGeoJSON(){
         geometry:{type:"LineString",coordinates:ln.map(function(q){ return [+q[1],+q[0]]; })}});
     });
   }
-  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v81",at:new Date().toISOString()},features:feats};
+  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v82",at:new Date().toISOString()},features:feats};
 }
 function fromGeoJSON(gj){
   if(!gj||!gj.features) return 0;
@@ -5734,7 +5734,7 @@ function applyDiff(obj){
   notifyKaido();
   return n;
 }
-window.MANUAL_DRAW={version:"v81",open:open,closePanel:closePanel,api:{
+window.MANUAL_DRAW={version:"v82",open:open,closePanel:closePanel,api:{
   setData:function(d){ D.data=d; fillStreets(); syncUI(); },
   streetNames:function(){ return (D.data||[]).map(function(x){ return x.name; }); },
   start:start,add:addPoint,undo:undoPoint,del:delVertex,move:moveVertex,
@@ -5829,7 +5829,7 @@ setTimeout(hideSplash, 3500);
     }
     var p=document.getElementById('kmTracePanel');
     p.innerHTML =
-      '<div style="font-weight:700;color:#be123c;font-size:11px">旧道トレース v81</div>'+
+      '<div style="font-weight:700;color:#be123c;font-size:11px">旧道トレース v82</div>'+
       '<div id="kmTN" style="margin:2px 0 6px">点数: 0 / 状態: 停止</div>'+
       '<button id="kmTStart" style="padding:4px 7px;margin:2px 0;font-size:12px">開始</button> '+
       '<button id="kmTStop" style="padding:4px 7px;margin:2px 0;font-size:12px">終了</button><br>'+
@@ -5882,7 +5882,7 @@ setTimeout(hideSplash, 3500);
     };
     document.getElementById('kmTExp').onclick=function(ev){
       ev.preventDefault(); ev.stopPropagation();
-      var out={id:'西国街道',trace:'v81',datum:'WGS84',pts:pts.length,segs:[pts]};
+      var out={id:'西国街道',trace:'v82',datum:'WGS84',pts:pts.length,segs:[pts]};
       var a=document.createElement('a');
       a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(out));
       a.download='saigoku_trace_v70.json'; document.body.appendChild(a); a.click(); a.remove();
@@ -6030,7 +6030,7 @@ setTimeout(hideSplash, 3500);
   var st={mode:'pen',color:COLORS[0],width:3,lines:[],redo:[]};
   var hist=[], map=null, Lg=null, layer=null, live=null, stroke=null, armed=false, erasing=false, raf=false, lastErase=null;
   window.KM_DRAW_STATE=st;
-  window.KM_DRAW_VER='v81';
+  window.KM_DRAW_VER='v82';
 
   function hv(a,b){var R=6371008.8,la1=(a&&a.lat!==undefined?a.lat:a[0])*Math.PI/180,lo1=(a&&a.lng!==undefined?a.lng:a[1])*Math.PI/180,la2=(b&&b.lat!==undefined?b.lat:b[0])*Math.PI/180,lo2=(b&&b.lng!==undefined?b.lng:b[1])*Math.PI/180,
     h=Math.sin((la2-la1)/2)*Math.sin((la2-la1)/2)+Math.cos(la1)*Math.cos(la2)*Math.sin((lo2-lo1)/2)*Math.sin((lo2-lo1)/2);
@@ -6161,10 +6161,11 @@ setTimeout(hideSplash, 3500);
     }
     if(ch && !raf){ raf=true; setTimeout(function(){ raf=false; redraw(); },100); }
   }
-  document.addEventListener('pointerdown',onDown,{capture:true,passive:false});
-  document.addEventListener('pointermove',onMove,{capture:true,passive:false});
-  document.addEventListener('pointerup',onUp,{capture:true});
-  document.addEventListener('pointercancel',onUp,{capture:true});
+  function __kmSkipDraw(e){try{if(window.__kmIconMode)return true;var t=e.target;if(t&&t.closest&&t.closest('#kmDrawPanel,#kmTracePanel,.leaflet-control,button,[role="button"],input,select,textarea,a'))return true;}catch(x){}return false;} window.__kmSkipDraw=__kmSkipDraw;
+  document.addEventListener('pointerdown',function(e){ if(__kmSkipDraw(e)) return; onDown(e); },{capture:true,passive:false});
+  document.addEventListener('pointermove',function(e){ if(__kmSkipDraw(e)) return; onMove(e); },{capture:true,passive:false});
+  document.addEventListener('pointerup',function(e){ if(__kmSkipDraw(e)) return; onUp(e); },{capture:true});
+  document.addEventListener('pointercancel',function(e){ if(__kmSkipDraw(e)) return; onUp(e); },{capture:true});
 
   /* ---- UI ---- */
   function build(){
@@ -6191,7 +6192,7 @@ setTimeout(hideSplash, 3500);
     var d=document.createElement('div'); d.id='kmDrawPanel';
     var sw='';
     for(var i=0;i<COLORS.length;i++) sw+='<span class="sw" data-c="'+COLORS[i]+'" style="background:'+COLORS[i]+'"></span>';
-    d.innerHTML='<div class="hd"><span style="font-weight:800;color:#be123c">✏️ 手描きトレース <span style="font-size:10px;color:#666">v81</span></span>'
+    d.innerHTML='<div class="hd"><span style="font-weight:800;color:#be123c">✏️ 手描きトレース <span style="font-size:10px;color:#666">v82</span></span>'
       +'<span id="kmDvStat">線 0本 / 0点</span><button id="kmDvMin" class="mz" title="最小化">▾</button></div>'
       +'<div class="row"><button id="kmDvPen" class="big on">✏️ ペン</button>'
       +'<button id="kmDvEra" class="big">🧽 消しゴム</button>'
@@ -6233,7 +6234,7 @@ setTimeout(hideSplash, 3500);
     function markC(){ d.querySelectorAll('.sw').forEach(function(el){ el.className='sw'+(el.getAttribute('data-c')===st.color?' on':''); }); }
     markC();
     pick('kmDvExp',function(){
-      var out={id:'tebiki_trace',ver:'v81',datum:'WGS84',lines:st.lines};
+      var out={id:'tebiki_trace',ver:'v82',datum:'WGS84',lines:st.lines};
       var a=document.createElement('a');
       a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(out));
       a.download='km_draw_v80.json'; document.body.appendChild(a); a.click(); a.remove();
@@ -6359,7 +6360,7 @@ setTimeout(hideSplash, 3500);
   }
   function paint2(){
     var e=document.getElementById('kmDvSel');
-    if(e){ var s=S(); e.textContent = (s&&sel>=0&&s.lines[sel]) ? ('選択中: '+(s.lines[sel].name||('線'+(sel+1)))+' '+s.lines[sel].pts.length+'点') : '選択中: なし'; }
+    if(e){ var s=S(); e.textContent = (s&&sel>=0&&s.lines[sel]) ? ('選択中: '+(s.lines[sel].name||('線'+(sel+1)))+' '+s.lines[sel].pts.length+'点') : '選択中: なし（先に 🎯 既存の線 で線をタップ）'; }
   }
   window.kmPickAt=function(e){
     var s=S(); if(!s) return;
@@ -6416,7 +6417,7 @@ setTimeout(hideSplash, 3500);
       try{ window.kmSnap&&window.kmSnap(); }catch(e){}
       s.lines.splice(sel,1); sel=-1; RD(); paint(); paint2(); });
     B('kmV79App',function(){ var s=S(); if(!s) return; if(sel<0){ paint2(); return; }
-      appendIdx=sel; s.mode='pen'; try{ window.map.dragging.disable(); window.map.getContainer().style.cursor='crosshair'; }catch(e){}
+      appendIdx=sel; try{window.__kmAppendIdx=sel;}catch(e){} s.mode='pen'; try{ window.map.dragging.disable(); window.map.getContainer().style.cursor='crosshair'; }catch(e){}
       ['kmDvPen','kmDvEra','kmDvPan'].forEach(function(i){ var b=document.getElementById(i); if(b) b.className='big'; });
       var b=document.getElementById('kmDvPen'); if(b) b.className='big on';
       var h=document.getElementById('kmDvHint'); if(h) h.innerHTML='選択した線の端から<b>なぞって書き足し</b>（終わると自動でつながります）'; });
@@ -6450,7 +6451,7 @@ setTimeout(hideSplash, 3500);
 <script>/* KM_UI_V81 : 手描きトレース(ペン/消しゴム/選択)中は情報ポップアップを一元抑止 + 元ライン再描画ストップ */
 (function(){
   function busy(){
-    try{ var s=window.KM_DRAW_STATE; return !!(s && (s.mode==='pen'||s.mode==='eraser'||s.mode==='select')); }
+    try{ var s=window.KM_DRAW_STATE; return !!(s && (s.mode==='pen'||s.mode==='eraser'||s.mode==='select'||s.mode==='icon')); }
     catch(e){ return false; }
   }
   window.__kmPopupBusy=busy;
@@ -6506,6 +6507,156 @@ setTimeout(hideSplash, 3500);
       });
     }).catch(function(){});
   }catch(e){}
+})();
+</script>
+
+<script>/* KM_ICONMOVE_V82 : 名所アイコン・トレース端点を指で自由に移動（位置は端末に保存） */
+(function(){
+  var LS='km_icon_off_v82';
+  var off={}; try{ off=JSON.parse(localStorage.getItem(LS)||'{}')||{}; }catch(e){ off={}; }
+  window.KM_ICON_OFF=off;
+  var drag=null;
+  function save(){ try{ localStorage.setItem(LS,JSON.stringify(off)); }catch(e){} }
+  function origOf(m){
+    if(m.__kmOrig) return m.__kmOrig;
+    var p=m.getLatLng(); if(!p) return null;
+    m.__kmOrig=[+p.lat.toFixed(4),+p.lng.toFixed(4)];
+    return m.__kmOrig;
+  }
+  function keyOf(m){ var o=origOf(m); return o?(o[0].toFixed(4)+','+o[1].toFixed(4)):null; }
+  function applyAll(){
+    try{
+      var lay=window.cpLayer; if(!lay||!lay.eachLayer) return;
+      lay.eachLayer(function(m){
+        if(!m||!m.setLatLng||!m.getLatLng) return;
+        try{ var k=keyOf(m); if(k&&off[k]) m.setLatLng(off[k]); }catch(e){}
+      });
+    }catch(e){}
+  }
+  window.kmIconApply=applyAll;
+  setInterval(applyAll,1400);
+  function ctr(e){ var r=window.map.getContainer().getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top}; }
+  function dist(p,q){ var dx=p.x-q.x,dy=p.y-q.y; return Math.sqrt(dx*dx+dy*dy); }
+  function nearestIcon(e){
+    var t=ctr(e), best=null, bd=22;
+    try{
+      window.cpLayer.eachLayer(function(m){
+        if(!m||!m.getLatLng) return;
+        var p=window.map.latLngToContainerPoint(m.getLatLng()), d=dist(p,t);
+        if(d<bd){ bd=d; best={type:'cp',m:m}; }
+      });
+    }catch(x){}
+    return best;
+  }
+  function nearestEnd(e){
+    var s=window.KM_DRAW_STATE; if(!s||!s.lines) return null;
+    var t=ctr(e), best=null, bd=22;
+    for(var i=0;i<s.lines.length;i++){
+      var p=s.lines[i].pts; if(!p||p.length<2) continue;
+      var pa=window.map.latLngToContainerPoint(p[0]), pb=window.map.latLngToContainerPoint(p[p.length-1]);
+      var da=dist(pa,t), db=dist(pb,t);
+      if(da<bd){ bd=da; best={type:'end',idx:i,which:0}; }
+      if(db<bd){ bd=db; best={type:'end',idx:i,which:p.length-1}; }
+    }
+    return best;
+  }
+  function uiHit(e){ try{ var t=e.target; if(t&&t.closest&&t.closest('#kmDrawPanel,#kmTracePanel,.leaflet-control,button,[role="button"],input,select,textarea,a')) return true; }catch(x){} return false; }
+  function onDown(e){
+    if(uiHit(e)) return;
+    var s=window.KM_DRAW_STATE; if(!s) return;
+    if(s.mode==='icon'){
+      var hit=nearestIcon(e)||nearestEnd(e);
+      if(hit) drag=hit;
+      try{ e.preventDefault(); e.stopPropagation(); }catch(x){}
+      return;
+    }
+    if(s.mode==='select'){
+      try{ if(window.kmPickAt) window.kmPickAt(e); }catch(x){}
+      try{ e.preventDefault(); e.stopPropagation(); }catch(x){}
+    }
+  }
+  function onMove(e){
+    if(!drag) return;
+    try{ e.preventDefault(); e.stopPropagation(); }catch(x){}
+    var cpp=window.map.mouseEventToContainerPoint(e);
+    var ll=window.map.containerPointToLatLng(cpp);
+    if(!ll) return;
+    try{
+      if(drag.type==='cp'){ drag.m.setLatLng(ll); }
+      else{
+        var s=window.KM_DRAW_STATE, ln=s&&s.lines[drag.idx]; if(!ln) return;
+        ln.pts[drag.which]=[+ll.lat.toFixed(6),+ll.lng.toFixed(6)];
+        if(window.kmRedraw) window.kmRedraw();
+      }
+      window.__kmLastDrag={type:drag.type,x:cpp.x,y:cpp.y};
+    }catch(x){}
+  }
+  function onUp(e){
+    if(!drag) return;
+    var d=drag; drag=null;
+    try{ e.preventDefault(); e.stopPropagation(); }catch(x){}
+    try{
+      if(d.type==='cp'){
+        var k=keyOf(d.m), p=d.m.getLatLng();
+        off[k]=[+p.lat.toFixed(6),+p.lng.toFixed(6)]; save();
+        window.__kmLastIconKey=k;
+        toast('名所アイコンの位置を保存しました');
+      } else {
+        if(window.kmSnap) window.kmSnap();
+        if(window.kmRedraw) window.kmRedraw();
+        toast('トレースの端点を移動しました');
+      }
+    }catch(x){}
+  }
+  window.addEventListener('pointerdown',onDown,{capture:true,passive:false});
+  window.addEventListener('pointermove',onMove,{capture:true,passive:false});
+  window.addEventListener('pointerup',onUp,{capture:true});
+  window.addEventListener('pointercancel',onUp,{capture:true});
+  function toast(m){
+    try{
+      var e=document.getElementById('kmIconMsg');
+      if(!e){ var p=document.getElementById('kmDrawPanel'); if(!p) return;
+        e=document.createElement('div'); e.id='kmIconMsg';
+        e.style.cssText='font-size:10.5px;color:#0a7;margin-top:3px'; p.appendChild(e); }
+      e.textContent=m;
+    }catch(x){}
+  }
+  function syncBtn(){
+    var b=document.getElementById('kmIconBtn'), s=window.KM_DRAW_STATE;
+    if(b) b.className=(s&&s.mode==='icon')?'big on':'big';
+  }
+  function setMode(){
+    var s=window.KM_DRAW_STATE; if(!s) return;
+    s.mode = (s.mode==='icon') ? 'pan' : 'icon';
+    try{
+      var c=window.map.getContainer();
+      if(s.mode==='icon'){ window.map.dragging.disable(); c.style.cursor='move'; c.style.touchAction='none'; }
+      else { window.map.dragging.enable(); c.style.cursor='grab'; c.style.touchAction='pan-x pan-y'; }
+    }catch(e){}
+    ['kmDvPen','kmDvEra','kmDvPan'].forEach(function(i){ var b=document.getElementById(i); if(b) b.className='big'; });
+    window.__kmIconMode=(s.mode==='icon');
+    syncBtn();
+    toast(window.__kmIconMode ? 'アイコン移動: 名所アイコンやトレース端点を指でドラッグして動かせます'
+                              : 'アイコン移動: OFF（地図移動に戻しました）');
+  }
+  function ensureUI(){
+    try{
+      var p=document.getElementById('kmDrawPanel'); if(!p) return;
+      if(!document.getElementById('kmIconRow')){
+        var row=document.createElement('div'); row.className='row'; row.id='kmIconRow';
+        row.innerHTML='<button id="kmIconBtn" class="big" style="flex:1">📍 アイコン移動</button>'
+                     +'<button id="kmIconReset" class="sm" style="flex:1">↺ 位置を戻す</button>';
+        var hd=p.querySelector('.hint'); if(hd) p.insertBefore(row,hd); else p.appendChild(row);
+        document.getElementById('kmIconBtn').onclick=function(ev){ ev.preventDefault(); ev.stopPropagation(); setMode(); };
+        document.getElementById('kmIconReset').onclick=function(ev){ ev.preventDefault(); ev.stopPropagation();
+          off={}; window.KM_ICON_OFF=off; save(); applyAll(); toast('アイコンの移動をすべて解除しました'); };
+      }
+      syncBtn();
+    }catch(e){}
+  }
+  setInterval(function(){ window.__kmIconMode=!!(window.KM_DRAW_STATE&&window.KM_DRAW_STATE.mode==='icon'); ensureUI(); },700);
+  window.addEventListener('load',function(){ setTimeout(function(){
+    window.__kmIconMode=!!(window.KM_DRAW_STATE&&window.KM_DRAW_STATE.mode==='icon'); ensureUI(); applyAll(); },700); });
 })();
 </script>
 </body>
