@@ -5828,7 +5828,7 @@ setTimeout(hideSplash, 3500);
     }
     var p=document.getElementById('kmTracePanel');
     p.innerHTML =
-      '<div style="font-weight:700;color:#be123c;font-size:11px">旧道トレース v80</div>'+
+      '<div style="font-weight:700;color:#be123c;font-size:11px">旧道トレース v81</div>'+
       '<div id="kmTN" style="margin:2px 0 6px">点数: 0 / 状態: 停止</div>'+
       '<button id="kmTStart" style="padding:4px 7px;margin:2px 0;font-size:12px">開始</button> '+
       '<button id="kmTStop" style="padding:4px 7px;margin:2px 0;font-size:12px">終了</button><br>'+
@@ -5938,7 +5938,7 @@ setTimeout(hideSplash, 3500);
   function boot(){
     try{
       var KL=window.kaidoLayer, LL=window.kaidoLabelLayer;
-      if(KL && window.map && !window.map.hasLayer(KL)) window.map.addLayer(KL);
+      if(window.KM_KAIDO_HIDDEN) return; if(KL && window.map && !window.map.hasLayer(KL)) window.map.addLayer(KL);
       if(LL && window.map && !window.map.hasLayer(LL)) window.map.addLayer(LL);
       if(typeof window.drawKaidoLines==='function'){ try{ window.drawKaidoLines(); }catch(e){} }
       if(typeof window.trRenderKaido==='function'){ try{ window.trRenderKaido(); }catch(e){} }
@@ -6027,9 +6027,9 @@ setTimeout(hideSplash, 3500);
   var LS='km_draw_v80';
   var COLORS=['#e53935','#fb8c00','#1e88e5','#43a047','#111111'];
   var st={mode:'pen',color:COLORS[0],width:3,lines:[],redo:[]};
-  var hist=[], map=null, Lg=null, layer=null, live=null, stroke=null, armed=false, erasing=false, raf=false;
+  var hist=[], map=null, Lg=null, layer=null, live=null, stroke=null, armed=false, erasing=false, raf=false, lastErase=null;
   window.KM_DRAW_STATE=st;
-  window.KM_DRAW_VER='v80';
+  window.KM_DRAW_VER='v81';
 
   function hv(a,b){var R=6371008.8,la1=(a&&a.lat!==undefined?a.lat:a[0])*Math.PI/180,lo1=(a&&a.lng!==undefined?a.lng:a[1])*Math.PI/180,la2=(b&&b.lat!==undefined?b.lat:b[0])*Math.PI/180,lo2=(b&&b.lng!==undefined?b.lng:b[1])*Math.PI/180,
     h=Math.sin((la2-la1)/2)*Math.sin((la2-la1)/2)+Math.cos(la1)*Math.cos(la2)*Math.sin((lo2-lo1)/2)*Math.sin((lo2-lo1)/2);
@@ -6038,8 +6038,8 @@ setTimeout(hideSplash, 3500);
   function eraseM(){ var R=40;
     try{ var z=map.getZoom(); var L=map.getCenter().lat;
       var mpp=40075016.686*Math.cos(L*Math.PI/180)/(256*Math.pow(2,z));
-      R=8*mpp; }catch(e){ R=40; }
-    if(!isFinite(R)||R<=0) R=40; if(R<6) R=6; if(R>120) R=120; return R; }
+      R=(window.__kmEraseMul||12)*mpp; }catch(e){ R=40; }
+    if(!isFinite(R)||R<=0) R=40; if(R<20) R=20; if(R>300) R=300; return R; }
 
   function save(){ try{ localStorage.setItem(LS,JSON.stringify({lines:st.lines,color:st.color,width:st.width})); }catch(e){} }
   function load(){ try{ var j=JSON.parse(localStorage.getItem(LS)||'null');
@@ -6094,7 +6094,7 @@ setTimeout(hideSplash, 3500);
     e.preventDefault(); e.stopPropagation();
     var ll=map.mouseEventToLatLng(e);
     snap();
-    if(st.mode==='eraser'){ erasing=true; eraseAt(ll); try{c.setPointerCapture(e.pointerId);}catch(x){} return; }
+    if(st.mode==='eraser'){ erasing=true; lastErase=[ll.lat,ll.lng]; eraseAt(ll); try{c.setPointerCapture(e.pointerId);}catch(x){} return; }
     stroke={pts:[[+ll.lat.toFixed(6),+ll.lng.toFixed(6)]]};
     try{ live=Lg.polyline(stroke.pts,{color:st.color,weight:st.width+1,opacity:.9,interactive:false}).addTo(map); }catch(x){}
     try{ c.setPointerCapture(e.pointerId); }catch(x){}
@@ -6106,7 +6106,16 @@ setTimeout(hideSplash, 3500);
     var c=map.getContainer(); if(!c.contains(e.target)) return;
     e.preventDefault(); e.stopPropagation();
     var ll=map.mouseEventToLatLng(e);
-    if(erasing){ eraseAt(ll); return; }
+    if(erasing){
+      var _rr=eraseM()*0.6; if(!(_rr>1)) _rr=1;
+      if(lastErase){
+        var _d=hv(lastErase,ll), _n=Math.min(80,Math.max(1,Math.ceil(_d/_rr)));
+        for(var _t=1;_t<=_n;_t++){
+          eraseAt(Lg.latLng(lastErase[0]+(ll.lat-lastErase[0])*_t/_n, lastErase[1]+(ll.lng-lastErase[1])*_t/_n));
+        }
+      } else eraseAt(ll);
+      lastErase=[ll.lat,ll.lng];
+      return; }
     var last=stroke.pts[stroke.pts.length-1];
     var p1=ptDistPx(last[0],last[1]), p2=ptDistPx(ll.lat,ll.lng);
     if(p1&&p2){ var dx=p1.x-p2.x, dy=p1.y-p2.y; if(Math.sqrt(dx*dx+dy*dy)<6) return; }
@@ -6118,7 +6127,7 @@ setTimeout(hideSplash, 3500);
   function onUp(e){
     if(stroke){ if(stroke.pts.length>1){ if(!(window.kmAppendStroke&&window.kmAppendStroke(stroke.pts))){ st.lines.push({color:st.color,width:st.width,pts:stroke.pts}); } } stroke=null; }
     if(live){ try{ map.removeLayer(live); }catch(x){} live=null; }
-    if(erasing){ erasing=false; }
+    if(erasing){ erasing=false; lastErase=null; }
     if(e){ try{ e.preventDefault(); e.stopPropagation(); }catch(x){} }
     redraw();
   }
@@ -6181,7 +6190,7 @@ setTimeout(hideSplash, 3500);
     var d=document.createElement('div'); d.id='kmDrawPanel';
     var sw='';
     for(var i=0;i<COLORS.length;i++) sw+='<span class="sw" data-c="'+COLORS[i]+'" style="background:'+COLORS[i]+'"></span>';
-    d.innerHTML='<div class="hd"><span style="font-weight:800;color:#be123c">✏️ 手描きトレース</span>'
+    d.innerHTML='<div class="hd"><span style="font-weight:800;color:#be123c">✏️ 手描きトレース <span style="font-size:10px;color:#666">v81</span></span>'
       +'<span id="kmDvStat">線 0本 / 0点</span><button id="kmDvMin" class="mz" title="最小化">▾</button></div>'
       +'<div class="row"><button id="kmDvPen" class="big on">✏️ ペン</button>'
       +'<button id="kmDvEra" class="big">🧽 消しゴム</button>'
@@ -6434,6 +6443,55 @@ setTimeout(hideSplash, 3500);
   var t=setInterval(tick,350);
   window.addEventListener('load',function(){ setTimeout(function(){ ui(); var s=S(); if(s&&!s.kaitoCopied&&window.kaidoLayer) copyBase(); },600); });
   if(document.readyState==='complete') setTimeout(t,80);
+})();
+</script>
+
+<script>/* KM_UI_V81 : 手描きトレース(ペン/消しゴム/選択)中は情報ポップアップを一元抑止 + 元ライン再描画ストップ */
+(function(){
+  function busy(){
+    try{ var s=window.KM_DRAW_STATE; return !!(s && (s.mode==='pen'||s.mode==='eraser'||s.mode==='select')); }
+    catch(e){ return false; }
+  }
+  window.__kmPopupBusy=busy;
+  function install(){
+    var L=window.L, map=window.map;
+    if(!L||!map||!L.Layer||!L.Layer.prototype) return false;
+    var LP=L.Layer.prototype;
+    /* レイヤのポップアップ開封を一元抑止（unbindはしない＝地図移動モードでは従来どおり開く） */
+    if(LP.openPopup && !LP.__kmGated){
+      var op=LP.openPopup;
+      LP.openPopup=function(){ if(busy()) return this; return op.apply(this,arguments); };
+      LP.__kmGated=1;
+    }
+    if(LP.togglePopup && !LP.__kmGatedT){
+      var ot=LP.togglePopup;
+      LP.togglePopup=function(){ if(busy()) return this; return ot.apply(this,arguments); };
+      LP.__kmGatedT=1;
+    }
+    /* 保険：開いてしまったポップアップは即閉じる */
+    if(!map.__kmPopupClose){
+      map.__kmPopupClose=1;
+      map.on('popupopen',function(){ try{ if(busy() && map.closePopup) map.closePopup(); }catch(e){} });
+      map.on('click',function(){ try{ if(busy() && map.closePopup) map.closePopup(); }catch(e){} });
+      map.getContainer().addEventListener('click',function(){ try{ if(busy() && map.closePopup) map.closePopup(); }catch(e){} },true);
+    }
+    return true;
+  }
+  var t=setInterval(function(){ if(install()) clearInterval(t); },300);
+  if(document.readyState==='complete') setTimeout(install,60);
+  /* 消しゴム半径の可視化 */
+  setInterval(function(){
+    try{
+      var h=document.getElementById('kmDvHint');
+      if(h && window.KM_DRAW_STATE && window.KM_DRAW_STATE.mode==='eraser'){
+        var r=window.kmEraseM?Math.round(window.kmEraseM()):0;
+        if(r && h.getAttribute('data-r')!==String(r)){
+          h.setAttribute('data-r',String(r));
+          h.innerHTML='消しゴム:なぞった範囲だけ消えます（半径 約'+r+'m）';
+        }
+      }
+    }catch(e){}
+  },700);
 })();
 </script>
 </body>
