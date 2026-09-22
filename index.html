@@ -6105,7 +6105,7 @@ setTimeout(hideSplash, 3500);
   var st={mode:'pen',color:COLORS[0],width:3,lines:[],redo:[],delBase:{}};
   var hist=[], map=null, Lg=null, layer=null, live=null, stroke=null, armed=false, erasing=false, raf=false, lastErase=null;
   window.KM_DRAW_STATE=st;
-  window.KM_DRAW_VER='v99';
+  window.KM_DRAW_VER='v100';
 
   function hv(a,b){var R=6371008.8,la1=(a&&a.lat!==undefined?a.lat:a[0])*Math.PI/180,lo1=(a&&a.lng!==undefined?a.lng:a[1])*Math.PI/180,la2=(b&&b.lat!==undefined?b.lat:b[0])*Math.PI/180,lo2=(b&&b.lng!==undefined?b.lng:b[1])*Math.PI/180,
     h=Math.sin((la2-la1)/2)*Math.sin((la2-la1)/2)+Math.cos(la1)*Math.cos(la2)*Math.sin((lo2-lo1)/2)*Math.sin((lo2-lo1)/2);
@@ -6421,7 +6421,7 @@ setTimeout(hideSplash, 3500);
     var d=document.createElement('div'); d.id='kmDrawPanel';
     var sw='';
     for(var i=0;i<COLORS.length;i++) sw+='<span class="sw" data-c="'+COLORS[i]+'" style="background:'+COLORS[i]+'"></span>';
-    d.innerHTML='<div class="hd"><span style="font-weight:800;color:#be123c">✏️ 手描きトレース <span style="font-size:10px;color:#666">v99</span></span>'
+    d.innerHTML='<div class="hd"><span style="font-weight:800;color:#be123c">✏️ 手描きトレース <span style="font-size:10px;color:#666">v100</span></span>'
       +'<span id="kmDvStat">線 0本 / 0点</span><button id="kmDvMin" class="mz" title="最小化">▾</button></div>'
       +'<div class="row"><button id="kmDvPen" class="big on">✏️ ペン</button>'
       +'<button id="kmDvEra" class="big">🧽 消しゴム</button>'
@@ -7027,12 +7027,26 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v99 09/23 01:30';
+  var BUILD='v100 09/23 01:30';
   var BTAG='v100';
+  /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
+  try{
+    var VK='km_app_ver', prevV=null;
+    try{ prevV=localStorage.getItem(VK); }catch(e){}
+    if(prevV!==BTAG){
+      try{ localStorage.setItem(VK,BTAG); }catch(e){}
+      if(!/[?&]fresh=/.test(location.href)){
+        var u=String(location.href).replace(/[?&]v=[0-9]+/g,'').replace(/[?&]fresh=[0-9]+/g,'');
+        u += (u.indexOf('?')<0?'?':'&')+'fresh='+Date.now();
+        try{ location.replace(u); }catch(e){}
+      }
+    }
+  }catch(e){}
+
   window.KM_BUILD=BUILD;
   try{ document.title='街道ウォーキング '+BTAG; }catch(e){}
   function kmForceVer(){ try{
-      var V='v99';
+      var V=BTAG;
       var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,null); var n,list=[];
       while((n=w.nextNode())){ var p=n.parentNode; if(!p) continue; var tg=p.nodeName;
         if(tg==='SCRIPT'||tg==='STYLE'||tg==='TEXTAREA') continue;
@@ -7043,7 +7057,7 @@ setTimeout(hideSplash, 3500);
         el.style.cssText='position:fixed;top:2px;left:50%;transform:translateX(-50%);z-index:2147483000;background:#0a8;color:#fff;font:bold 12px/1.4 system-ui;padding:2px 10px;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.3);pointer-events:none;';
         document.body.appendChild(el); }
       var vv=document.querySelector('.ver'); if(vv) vv.textContent=V;
-      el.textContent=V+' 読み込みOK';
+      el.textContent=V+' 読み込みOK'; try{ window.__kmBadgeText=el.textContent; }catch(e2){}
     }catch(e){} }
   window.kmForceVer=kmForceVer;
   /* (削除) 無限ループの原因: MutationObserver自己再発火 */
