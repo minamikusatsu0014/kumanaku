@@ -1218,7 +1218,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v102</span><span style="font-size:11px;color:#999;margin-left:4px">09/23 01:30</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v103</span><span style="font-size:11px;color:#999;margin-left:4px">09/23 01:30</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -6105,7 +6105,7 @@ setTimeout(hideSplash, 3500);
   var st={mode:'pen',color:COLORS[0],width:3,lines:[],redo:[],delBase:{}};
   var hist=[], map=null, Lg=null, layer=null, live=null, stroke=null, armed=false, erasing=false, raf=false, lastErase=null;
   window.KM_DRAW_STATE=st;
-  window.KM_DRAW_VER='v102';
+  window.KM_DRAW_VER='v103';
 
   function hv(a,b){var R=6371008.8,la1=(a&&a.lat!==undefined?a.lat:a[0])*Math.PI/180,lo1=(a&&a.lng!==undefined?a.lng:a[1])*Math.PI/180,la2=(b&&b.lat!==undefined?b.lat:b[0])*Math.PI/180,lo2=(b&&b.lng!==undefined?b.lng:b[1])*Math.PI/180,
     h=Math.sin((la2-la1)/2)*Math.sin((la2-la1)/2)+Math.cos(la1)*Math.cos(la2)*Math.sin((lo2-lo1)/2)*Math.sin((lo2-lo1)/2);
@@ -7027,8 +7027,8 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v102 09/24 03:00';
-  var BTAG='v102';
+  var BUILD='v103 09/24 05:00';
+  var BTAG='v103';
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
     var VK='km_app_ver', prevV=null;
@@ -8125,5 +8125,59 @@ setTimeout(hideSplash, 3500);
     }catch(e){} },1800); }catch(e){}
 })();
 /* KM_FINGER_ERASE_V102_END */
+</script>
+<script>
+/* KM_ENDPT_TOGGLE_V103_START
+   手描き線の「始点／終点」黄色マーカー(#ffd166)を指で隠せるようにする（設定は端末に保存） */
+(function(){
+  var KEY='km_show_endpts', dirty=false, btn=null;
+  function on(){ try{ var v=localStorage.getItem(KEY); return v===null?true:(v==='1'); }catch(e){ return true; } }
+  window.__kmShowEndPts=on;
+  function collect(l,kill,depth){
+    if(!l||depth>6) return;
+    try{
+      var f=l.options&&l.options.fillColor;
+      if(f && String(f).toLowerCase()==='#ffd166'){ kill.push(l); return; }   /* 始点/終点の黄色丸だけを対象 */
+      if(typeof l.eachLayer==='function'){ l.eachLayer(function(c){ collect(c,kill,depth+1); }); }
+    }catch(e){}
+  }
+  function sweep(){
+    if(on()) return 0;
+    var m=window.map; if(!m||!m.eachLayer) return 0;
+    var kill=[]; try{ m.eachLayer(function(l){ collect(l,kill,0); }); }catch(e){}
+    for(var i=0;i<kill.length;i++){ try{ m.removeLayer(kill[i]); }catch(e){} }
+    return kill.length;
+  }
+  window.kmHideEndPts=sweep;
+  function paint(){ if(!btn) return;
+    btn.textContent = on() ? '🟡 端点の点: 表示' : '🟡 端点の点: 非表示';
+    btn.style.background = on() ? '#1a2129' : '#7a4a00';
+    btn.style.color = on() ? '#dfffe0' : '#ffd166'; }
+  function tog(){
+    try{ localStorage.setItem(KEY, on()?'0':'1'); }catch(e){}
+    if(on()){ try{ if(window.kmRedraw) window.kmRedraw(); }catch(e){} } else { sweep(); }
+    paint(); return on();
+  }
+  function inject(){
+    try{
+      if(btn && btn.isConnected) return true;
+      var p=document.getElementById('kmDrawPanel'); if(!p) return false;
+      if(document.getElementById('kmEndPtBtn')) { btn=document.getElementById('kmEndPtBtn'); paint(); return true; }
+      var row=document.createElement('div'); row.style.cssText='display:flex;gap:4px;margin-top:4px';
+      btn=document.createElement('button'); btn.id='kmEndPtBtn'; btn.type='button';
+      btn.style.cssText='flex:1;font:11px system-ui;padding:6px 8px;border-radius:7px;border:1px solid #2b3540';
+      btn.onclick=function(ev){ try{ ev.preventDefault(); ev.stopPropagation(); }catch(e){} tog(); };
+      paint(); row.appendChild(btn); p.appendChild(row); return true;
+    }catch(e){ return false; }
+  }
+  function mark(){ dirty=true; }
+  try{ setInterval(function(){ inject(); if(!on()&&dirty){ dirty=false; sweep(); } },500); }catch(e){}
+  try{ document.addEventListener('touchend',function(){ mark(); setTimeout(function(){ inject(); if(!on()&&dirty){ dirty=false; sweep(); } },120); },true); }catch(e){}
+  try{ document.addEventListener('pointerup',function(){ mark(); setTimeout(function(){ inject(); if(!on()&&dirty){ dirty=false; sweep(); } },120); },true); }catch(e){}
+  try{ var m=window.map; if(m&&m.on){ m.on('zoomend',mark); m.on('moveend',mark); } }catch(e){}
+  try{ window.addEventListener('load',function(){ setTimeout(function(){ inject(); mark(); },700); }); }catch(e){}
+  try{ setTimeout(function(){ inject(); mark(); },300); }catch(e){}
+})();
+/* KM_ENDPT_TOGGLE_V103_END */
 </script>
 </html>
