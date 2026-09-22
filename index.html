@@ -1032,7 +1032,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   /* ---- 診断情報 ---- */
   window.__kmDiag = function(){
     return {
-      version: 'v82',
+      version: 'v83',
       url: (location.href||'').slice(0,90),
       protocol: location.protocol, file: isFile,
       storage: window.__kmStorageMode,
@@ -1145,7 +1145,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v82</span><span style="font-size:11px;color:#999;margin-left:4px">09/22 14:30</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v83</span><span style="font-size:11px;color:#999;margin-left:4px">09/22 20:10</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -4896,7 +4896,7 @@ function ghCommitDiff(cb){
   GH_STATE={ok:null,msg:"コミット中…",last:null};
   ghPut(cfg,base,text,plan.msg).then(function(r1){
     return ghGetFile(cfg,manP).then(function(cur){
-      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v82",files:[]};
+      var o={type:"kumanaku-kaido-diff-manifest",app:"全国くまなくウォーク",version:"v83",files:[]};
       if(cur.exists && cur.base64){ try{ var j=JSON.parse(unb64utf8(cur.base64)); if(j&&j.files) o=j; }catch(e){} }
       o.files=o.files||[]; o.version="v80";
       var _dir=(base.indexOf("/")>=0)? base.slice(0,base.lastIndexOf("/")+1) : "";
@@ -4945,7 +4945,7 @@ function tombRender(){
   });
 }
 
-window.KAIDO_UI={version:"v82",open:openPanel,total:function(){return ALL.length;},
+window.KAIDO_UI={version:"v83",open:openPanel,total:function(){return ALL.length;},
  refresh:function(){ if(LOADED){ renderTabs(); renderList(); } },
  reloadDiffs:reloadDiffs,
  diffState:function(){ return DIFF_STATE; },
@@ -5344,7 +5344,7 @@ function toGeoJSON(){
         geometry:{type:"LineString",coordinates:ln.map(function(q){ return [+q[1],+q[0]]; })}});
     });
   }
-  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v82",at:new Date().toISOString()},features:feats};
+  return {type:"FeatureCollection","x-generated":{app:"全国くまなくウォーク",version:"v83",at:new Date().toISOString()},features:feats};
 }
 function fromGeoJSON(gj){
   if(!gj||!gj.features) return 0;
@@ -5734,7 +5734,7 @@ function applyDiff(obj){
   notifyKaido();
   return n;
 }
-window.MANUAL_DRAW={version:"v82",open:open,closePanel:closePanel,api:{
+window.MANUAL_DRAW={version:"v83",open:open,closePanel:closePanel,api:{
   setData:function(d){ D.data=d; fillStreets(); syncUI(); },
   streetNames:function(){ return (D.data||[]).map(function(x){ return x.name; }); },
   start:start,add:addPoint,undo:undoPoint,del:delVertex,move:moveVertex,
@@ -5829,7 +5829,7 @@ setTimeout(hideSplash, 3500);
     }
     var p=document.getElementById('kmTracePanel');
     p.innerHTML =
-      '<div style="font-weight:700;color:#be123c;font-size:11px">旧道トレース v82</div>'+
+      '<div style="font-weight:700;color:#be123c;font-size:11px">旧道トレース v83</div>'+
       '<div id="kmTN" style="margin:2px 0 6px">点数: 0 / 状態: 停止</div>'+
       '<button id="kmTStart" style="padding:4px 7px;margin:2px 0;font-size:12px">開始</button> '+
       '<button id="kmTStop" style="padding:4px 7px;margin:2px 0;font-size:12px">終了</button><br>'+
@@ -5882,7 +5882,7 @@ setTimeout(hideSplash, 3500);
     };
     document.getElementById('kmTExp').onclick=function(ev){
       ev.preventDefault(); ev.stopPropagation();
-      var out={id:'西国街道',trace:'v82',datum:'WGS84',pts:pts.length,segs:[pts]};
+      var out={id:'西国街道',trace:'v83',datum:'WGS84',pts:pts.length,segs:[pts]};
       var a=document.createElement('a');
       a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(out));
       a.download='saigoku_trace_v70.json'; document.body.appendChild(a); a.click(); a.remove();
@@ -6030,7 +6030,7 @@ setTimeout(hideSplash, 3500);
   var st={mode:'pen',color:COLORS[0],width:3,lines:[],redo:[]};
   var hist=[], map=null, Lg=null, layer=null, live=null, stroke=null, armed=false, erasing=false, raf=false, lastErase=null;
   window.KM_DRAW_STATE=st;
-  window.KM_DRAW_VER='v82';
+  window.KM_DRAW_VER='v83';
 
   function hv(a,b){var R=6371008.8,la1=(a&&a.lat!==undefined?a.lat:a[0])*Math.PI/180,lo1=(a&&a.lng!==undefined?a.lng:a[1])*Math.PI/180,la2=(b&&b.lat!==undefined?b.lat:b[0])*Math.PI/180,lo2=(b&&b.lng!==undefined?b.lng:b[1])*Math.PI/180,
     h=Math.sin((la2-la1)/2)*Math.sin((la2-la1)/2)+Math.cos(la1)*Math.cos(la2)*Math.sin((lo2-lo1)/2)*Math.sin((lo2-lo1)/2);
@@ -6042,15 +6042,22 @@ setTimeout(hideSplash, 3500);
       R=(window.__kmEraseMul||12)*mpp; }catch(e){ R=40; }
     if(!isFinite(R)||R<=0) R=40; if(R<20) R=20; if(R>300) R=300; return R; }
 
-  function save(){ try{ localStorage.setItem(LS,JSON.stringify({lines:st.lines,color:st.color,width:st.width})); }catch(e){} }
+  function save(){ try{ localStorage.setItem(LS,JSON.stringify({v:83,lines:st.lines,color:st.color,width:st.width,kaitoCopied:!!st.kaitoCopied,kaitoCount:st.kaitoCount||0,editedBase:!!st.editedBase})); }catch(e){} }
   function load(){ try{ var j=JSON.parse(localStorage.getItem(LS)||'null');
-    if(j&&j.lines){ st.lines=j.lines; if(j.color)st.color=j.color; if(j.width)st.width=j.width; } }catch(e){} }
+    if(j&&j.lines){
+      st.lines=j.lines; if(j.color)st.color=j.color; if(j.width)st.width=j.width;
+      if(j.kaitoCount) st.kaitoCount=j.kaitoCount;
+      if(j.editedBase) st.editedBase=true;
+      if(j.kaitoCopied) st.kaitoCopied=true;
+      if(!st.kaitoCopied){ for(var i=0;i<st.lines.length;i++){ if(st.lines[i]&&st.lines[i].base){ st.kaitoCopied=true;
+        try{ st.kaitoCount=(window.KAIDO_LINES||[]).length; }catch(e){} break; } } }
+    } }catch(e){} try{ window.__kmLoaded=true; }catch(e){} }
   function snap(){ hist.push(JSON.stringify(st.lines)); if(hist.length>40) hist.shift(); }
   window.kmSnap=snap;
   window.kmEraseAt=eraseAt; window.kmEraseM=eraseM;
   function stat(){
     var n=0; for(var i=0;i<st.lines.length;i++) n+=st.lines[i].pts.length;
-    var e=document.getElementById('kmDvStat'); if(e) e.textContent='線 '+st.lines.length+'本 / '+n+'点';
+    var e=document.getElementById('kmDvStat'); if(e) e.textContent='線 '+st.lines.length+'本 / '+n+'点（自動保存）';
     var mc={pen:'ペン',eraser:'消しゴム',pan:'地図移動'};
     var m=document.getElementById('kmDvMode'); if(m) m.textContent=(st.mode==='pan'?'✋':'')+mc[st.mode];
   }
@@ -6147,7 +6154,7 @@ setTimeout(hideSplash, 3500);
       var ln=st.lines[i], p=ln.pts, keep=[], hit=false;
       for(var j=0;j<p.length;j++){ if(hv(ll,p[j])>R){ keep.push(p[j]); } else { keep.push(null); hit=true; } }
       if(!hit) continue;
-      ch=true;
+      ch=true; st.editedBase=true;
       var runs=segsSplit(keep);
       if(!runs.length){ st.lines.splice(i,1); continue; }
       if(runs.length===1 && runs[0].length===p.length) continue;
@@ -6159,7 +6166,8 @@ setTimeout(hideSplash, 3500);
                                name:(ln.name||'線')+'/断片'+(q+1),pts:runs[q]});
       }
     }
-    if(ch && !raf){ raf=true; setTimeout(function(){ raf=false; redraw(); },100); }
+    if(ch){ st.editedBase=true; try{ save(); }catch(e){}
+      if(!raf){ raf=true; setTimeout(function(){ raf=false; redraw(); },100); } }
   }
   function __kmSkipDraw(e){try{if(window.__kmIconMode)return true;var t=e.target;if(t&&t.closest&&t.closest('#kmDrawPanel,#kmTracePanel,.leaflet-control,button,[role="button"],input,select,textarea,a'))return true;}catch(x){}return false;} window.__kmSkipDraw=__kmSkipDraw;
   document.addEventListener('pointerdown',function(e){ if(__kmSkipDraw(e)) return; onDown(e); },{capture:true,passive:false});
@@ -6192,7 +6200,7 @@ setTimeout(hideSplash, 3500);
     var d=document.createElement('div'); d.id='kmDrawPanel';
     var sw='';
     for(var i=0;i<COLORS.length;i++) sw+='<span class="sw" data-c="'+COLORS[i]+'" style="background:'+COLORS[i]+'"></span>';
-    d.innerHTML='<div class="hd"><span style="font-weight:800;color:#be123c">✏️ 手描きトレース <span style="font-size:10px;color:#666">v82</span></span>'
+    d.innerHTML='<div class="hd"><span style="font-weight:800;color:#be123c">✏️ 手描きトレース <span style="font-size:10px;color:#666">v83</span></span>'
       +'<span id="kmDvStat">線 0本 / 0点</span><button id="kmDvMin" class="mz" title="最小化">▾</button></div>'
       +'<div class="row"><button id="kmDvPen" class="big on">✏️ ペン</button>'
       +'<button id="kmDvEra" class="big">🧽 消しゴム</button>'
@@ -6234,7 +6242,7 @@ setTimeout(hideSplash, 3500);
     function markC(){ d.querySelectorAll('.sw').forEach(function(el){ el.className='sw'+(el.getAttribute('data-c')===st.color?' on':''); }); }
     markC();
     pick('kmDvExp',function(){
-      var out={id:'tebiki_trace',ver:'v82',datum:'WGS84',lines:st.lines};
+      var out={id:'tebiki_trace',ver:'v83',datum:'WGS84',lines:st.lines};
       var a=document.createElement('a');
       a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(out));
       a.download='km_draw_v80.json'; document.body.appendChild(a); a.click(); a.remove();
@@ -6340,7 +6348,7 @@ setTimeout(hideSplash, 3500);
     var s=S(); if(!s) return 0;
     var had=s.lines.filter(function(l){return l.base;}).length;
     s.lines=s.lines.filter(function(l){return !l.base;});
-    s.kaitoCopied=false; sel=-1; appendIdx=-1;
+    s.kaitoCopied=false; s.editedBase=false; sel=-1; appendIdx=-1;
     try{ if(origLayer && window.map && !window.map.hasLayer(origLayer)) window.map.addLayer(origLayer); window.KM_KAIDO_HIDDEN=false; }catch(e){}
     RD(); paint(); paint2();
     return had;
@@ -6415,9 +6423,9 @@ setTimeout(hideSplash, 3500);
       appendIdx=-1; paint2(); });
     B('kmV79Del',function(){ var s=S(); if(!s||sel<0||!s.lines[sel]) return;
       try{ window.kmSnap&&window.kmSnap(); }catch(e){}
-      s.lines.splice(sel,1); sel=-1; RD(); paint(); paint2(); });
+      s.lines.splice(sel,1); sel=-1; s.editedBase=true; RD(); paint(); paint2(); });
     B('kmV79App',function(){ var s=S(); if(!s) return; if(sel<0){ paint2(); return; }
-      appendIdx=sel; try{window.__kmAppendIdx=sel;}catch(e){} s.mode='pen'; try{ window.map.dragging.disable(); window.map.getContainer().style.cursor='crosshair'; }catch(e){}
+      appendIdx=sel; try{window.__kmAppendIdx=sel;}catch(e){} s.editedBase=true; s.mode='pen'; try{ window.map.dragging.disable(); window.map.getContainer().style.cursor='crosshair'; }catch(e){}
       ['kmDvPen','kmDvEra','kmDvPan'].forEach(function(i){ var b=document.getElementById(i); if(b) b.className='big'; });
       var b=document.getElementById('kmDvPen'); if(b) b.className='big on';
       var h=document.getElementById('kmDvHint'); if(h) h.innerHTML='選択した線の端から<b>なぞって書き足し</b>（終わると自動でつながります）'; });
@@ -6439,11 +6447,11 @@ setTimeout(hideSplash, 3500);
   }
   function tick(){
     try{ if(window.map&&window.L){ if(!document.getElementById('kmDrawPanel')) ui(); } }catch(e){}
-    try{ var s=S(); if(s && !s.kaitoCopied && window.kaidoLayer){ copyBase(); } }catch(e){}
+    try{ var s=S(); if(s && window.__kmLoaded && !s.kaitoCopied && !s.editedBase && window.kaidoLayer){ copyBase(); } }catch(e){}
     if((++tries)>60) clearInterval(t);
   }
   var t=setInterval(tick,350);
-  window.addEventListener('load',function(){ setTimeout(function(){ ui(); var s=S(); if(s&&!s.kaitoCopied&&window.kaidoLayer) copyBase(); },600); });
+  window.addEventListener('load',function(){ setTimeout(function(){ ui(); var s=S(); if(s&&window.__kmLoaded&&!s.kaitoCopied&&!s.editedBase&&window.kaidoLayer) copyBase(); },600); });
   if(document.readyState==='complete') setTimeout(t,80);
 })();
 </script>
@@ -6451,7 +6459,7 @@ setTimeout(hideSplash, 3500);
 <script>/* KM_UI_V81 : 手描きトレース(ペン/消しゴム/選択)中は情報ポップアップを一元抑止 + 元ライン再描画ストップ */
 (function(){
   function busy(){
-    try{ var s=window.KM_DRAW_STATE; return !!(s && (s.mode==='pen'||s.mode==='eraser'||s.mode==='select'||s.mode==='icon')); }
+    try{ var s=window.KM_DRAW_STATE; return !!(s && (s.mode==='pen'||s.mode==='eraser'||s.mode==='select'||s.mode==='icon'||s.mode==='move')); }
     catch(e){ return false; }
   }
   window.__kmPopupBusy=busy;
@@ -6560,13 +6568,35 @@ setTimeout(hideSplash, 3500);
     }
     return best;
   }
+  function nearestLine(e){
+    var s=window.KM_DRAW_STATE; if(!s||!s.lines) return null;
+    var t=ctr(e), best=null, bd=36, userBest=null, ubd=36;
+    for(var i=0;i<s.lines.length;i++){
+      var ln=s.lines[i], p=ln&&ln.pts; if(!p||p.length<2) continue;
+      var step=Math.max(1,Math.floor(p.length/600));
+      for(var j=0;j<p.length;j+=step){
+        var q=window.map.latLngToContainerPoint(p[j]), d=dist(q,t);
+        if(d<bd){ bd=d; best={type:'line',idx:i}; }
+        if(!ln.base && d<ubd){ ubd=d; userBest={type:'line',idx:i}; }
+      }
+    }
+    return userBest||best;
+  }
+  function syncFlag(){ var s=window.KM_DRAW_STATE; window.__kmIconMode=!!(s&&(s.mode==='icon'||s.mode==='move')); return window.__kmIconMode; }
   function uiHit(e){ try{ var t=e.target; if(t&&t.closest&&t.closest('#kmDrawPanel,#kmTracePanel,.leaflet-control,button,[role="button"],input,select,textarea,a')) return true; }catch(x){} return false; }
   function onDown(e){
     if(uiHit(e)) return;
     var s=window.KM_DRAW_STATE; if(!s) return;
     if(s.mode==='icon'){
-      var hit=nearestIcon(e)||nearestEnd(e);
+      var hit=nearestIcon(e)||nearestEnd(e)||nearestLine(e);
       if(hit) drag=hit;
+      try{ e.preventDefault(); e.stopPropagation(); }catch(x){}
+      return;
+    }
+    if(s.mode==='move'){
+      drag=nearestLine(e);
+      if(drag){ drag.last=null; window.__kmLastDrag={type:'line',idx:drag.idx,x:0,y:0,armed:true}; }
+      else { window.__kmLastDrag=null; }
       try{ e.preventDefault(); e.stopPropagation(); }catch(x){}
       return;
     }
@@ -6583,9 +6613,16 @@ setTimeout(hideSplash, 3500);
     if(!ll) return;
     try{
       if(drag.type==='cp'){ drag.m.setLatLng(ll); }
-      else{
+      else if(drag.type==='end'){
         var s=window.KM_DRAW_STATE, ln=s&&s.lines[drag.idx]; if(!ln) return;
         ln.pts[drag.which]=[+ll.lat.toFixed(6),+ll.lng.toFixed(6)];
+        if(window.kmRedraw) window.kmRedraw();
+      }
+      else if(drag.type==='line'){
+        var s2=window.KM_DRAW_STATE, ln2=s2&&s2.lines[drag.idx]; if(!ln2) return;
+        var prev=drag.last||ll, dLa=ll.lat-prev.lat, dLo=ll.lng-prev.lng;
+        for(var i=0;i<ln2.pts.length;i++){ ln2.pts[i]=[+(ln2.pts[i][0]+dLa).toFixed(6), +(ln2.pts[i][1]+dLo).toFixed(6)]; }
+        drag.last=ll;
         if(window.kmRedraw) window.kmRedraw();
       }
       window.__kmLastDrag={type:drag.type,x:cpp.x,y:cpp.y};
@@ -6601,10 +6638,16 @@ setTimeout(hideSplash, 3500);
         off[k]=[+p.lat.toFixed(6),+p.lng.toFixed(6)]; save();
         window.__kmLastIconKey=k;
         toast('名所アイコンの位置を保存しました');
-      } else {
+      } else if(d.type==='end'){
+        try{ var s3=window.KM_DRAW_STATE; if(s3) s3.editedBase=true; }catch(x){}
         if(window.kmSnap) window.kmSnap();
         if(window.kmRedraw) window.kmRedraw();
-        toast('トレースの端点を移動しました');
+        toast('トレースの端点を移動しました（保存しました）');
+      } else if(d.type==='line'){
+        try{ var s4=window.KM_DRAW_STATE; if(s4) s4.editedBase=true; }catch(x){}
+        if(window.kmSnap) window.kmSnap();
+        if(window.kmRedraw) window.kmRedraw();
+        toast('手書きトレースを移動しました（位置を保存しました）');
       }
     }catch(x){}
   }
@@ -6622,8 +6665,23 @@ setTimeout(hideSplash, 3500);
     }catch(x){}
   }
   function syncBtn(){
-    var b=document.getElementById('kmIconBtn'), s=window.KM_DRAW_STATE;
-    if(b) b.className=(s&&s.mode==='icon')?'big on':'big';
+    var s=window.KM_DRAW_STATE;
+    var b=document.getElementById('kmIconBtn'); if(b) b.className=(s&&s.mode==='icon')?'big on':'big';
+    var m=document.getElementById('kmMoveBtn'); if(m) m.className=(s&&s.mode==='move')?'big on':'big';
+  }
+  function setMove(){
+    var s=window.KM_DRAW_STATE; if(!s) return;
+    s.mode=(s.mode==='move')?'pan':'move';
+    try{
+      var c=window.map.getContainer();
+      window.map.dragging.enable();
+      c.style.cursor=(s.mode==='move')?'move':'grab';
+      c.style.touchAction='none';
+    }catch(e){}
+    ['kmDvPen','kmDvEra','kmDvPan'].forEach(function(i){ var b=document.getElementById(i); if(b) b.className='big'; });
+    syncFlag(); syncBtn();
+    toast(s.mode==='move' ? 'トレース移動: 線を指でドラッグすると、その線が丸ごとずれます'
+                          : 'トレース移動: OFF（地図移動に戻しました）');
   }
   function setMode(){
     var s=window.KM_DRAW_STATE; if(!s) return;
@@ -6634,7 +6692,7 @@ setTimeout(hideSplash, 3500);
       else { window.map.dragging.enable(); c.style.cursor='grab'; c.style.touchAction='pan-x pan-y'; }
     }catch(e){}
     ['kmDvPen','kmDvEra','kmDvPan'].forEach(function(i){ var b=document.getElementById(i); if(b) b.className='big'; });
-    window.__kmIconMode=(s.mode==='icon');
+    syncFlag();
     syncBtn();
     toast(window.__kmIconMode ? 'アイコン移動: 名所アイコンやトレース端点を指でドラッグして動かせます'
                               : 'アイコン移動: OFF（地図移動に戻しました）');
@@ -6651,12 +6709,17 @@ setTimeout(hideSplash, 3500);
         document.getElementById('kmIconReset').onclick=function(ev){ ev.preventDefault(); ev.stopPropagation();
           off={}; window.KM_ICON_OFF=off; save(); applyAll(); toast('アイコンの移動をすべて解除しました'); };
       }
+      if(!document.getElementById('kmMoveRow')){
+        var row2=document.createElement('div'); row2.className='row'; row2.id='kmMoveRow';
+        row2.innerHTML='<button id="kmMoveBtn" class="big" style="flex:1">↕ トレース移動（ドラッグでずらす）</button>';
+        var hd2=p.querySelector('.hint'); if(hd2) p.insertBefore(row2,hd2); else p.appendChild(row2);
+        document.getElementById('kmMoveBtn').onclick=function(ev){ ev.preventDefault(); ev.stopPropagation(); setMove(); };
+      }
       syncBtn();
     }catch(e){}
   }
-  setInterval(function(){ window.__kmIconMode=!!(window.KM_DRAW_STATE&&window.KM_DRAW_STATE.mode==='icon'); ensureUI(); },700);
-  window.addEventListener('load',function(){ setTimeout(function(){
-    window.__kmIconMode=!!(window.KM_DRAW_STATE&&window.KM_DRAW_STATE.mode==='icon'); ensureUI(); applyAll(); },700); });
+  setInterval(function(){ syncFlag(); ensureUI(); },700);
+  window.addEventListener('load',function(){ setTimeout(function(){ syncFlag(); ensureUI(); applyAll(); },700); });
 })();
 </script>
 </body>
