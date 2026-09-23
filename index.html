@@ -1218,7 +1218,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v105</span><span style="font-size:11px;color:#999;margin-left:4px">09/23 01:30</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v106</span><span style="font-size:11px;color:#999;margin-left:4px">09/23 01:30</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -6105,7 +6105,7 @@ setTimeout(hideSplash, 3500);
   var st={mode:'pen',color:COLORS[0],width:3,lines:[],redo:[],delBase:{}};
   var hist=[], map=null, Lg=null, layer=null, live=null, stroke=null, armed=false, erasing=false, raf=false, lastErase=null;
   window.KM_DRAW_STATE=st;
-  window.KM_DRAW_VER='v105';
+  window.KM_DRAW_VER='v106';
 
   function hv(a,b){var R=6371008.8,la1=(a&&a.lat!==undefined?a.lat:a[0])*Math.PI/180,lo1=(a&&a.lng!==undefined?a.lng:a[1])*Math.PI/180,la2=(b&&b.lat!==undefined?b.lat:b[0])*Math.PI/180,lo2=(b&&b.lng!==undefined?b.lng:b[1])*Math.PI/180,
     h=Math.sin((la2-la1)/2)*Math.sin((la2-la1)/2)+Math.cos(la1)*Math.cos(la2)*Math.sin((lo2-lo1)/2)*Math.sin((lo2-lo1)/2);
@@ -7029,8 +7029,8 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v105 09/24 08:00';
-  var BTAG='v105';
+  var BUILD='v106 09/23 12:00';
+  var BTAG='v106';
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
     var VK='km_app_ver', prevV=null;
@@ -8357,7 +8357,534 @@ setTimeout(hideSplash, 3500);
       paint(); row.appendChild(btn); pl.appendChild(row); return true;
     }catch(e){ return false; }
   }
-  try{ setInterval(inject,600); }catch(e){}
+  try{ setInterval(inject,1200); }catch(e){}
+  try{ document.addEventListener('touchend',function(){ setTimeout(inject,120); },true); }catch(e){}
+  try{ document.addEventListener('pointerup',function(){ setTimeout(inject,120); },true); }catch(e){}
+  try{ var m=MM(); if(m&&m.on){ m.on('zoomend',function(){ cache.key=''; }); m.on('moveend',function(){ cache.key=''; }); } }catch(e){}
+  try{ window.addEventListener('load',function(){ setTimeout(function(){ inject(); cache.key=''; },800); }); }catch(e){}
+  try{ setTimeout(function(){ inject(); },300); }catch(e){}
+})();
+/* KM_SNAP_V104_END */
+</script>
+<script>
+/* KM_ERASE2_V106_START
+   なぞり消し 第2版（消えない原因を特定して作り直し）
+   ■消えなかった原因
+     旧街道の座標点の間隔を実測すると 京街道=平均34m(最大386m) と密な一方、
+     日光街道=平均764m(最大4.3km)・奥州街道=平均445m(最大7.9km) と点の間が非常に長い。
+     旧方式は「指が点そのものに乗った時だけ点を消す」仕組みだったため、長い直線区間では
+     どこをなぞっても点に触れず、結果的に何も消えなかった（＝2路線だけ消えない真因）。
+   ■対策：指の下の「線分」を分割して切れ目を入れる方式へ変更（全10路線が同じ処理を通る）
+     なぞった位置を線分に投影し、投影点の前後（消しゴム幅ぶん）を切り取って両側を残す。
+     点の密度に関係なく、なぞった範囲だけが必ず消える（速くなぞって点が飛んでも交差判定で補完）。
+   ■重さの対策
+     ・消しゴムを使っていない端末（記録が空）では地図を動かしても一切再処理しない
+     ・直前と同じ状態なら再適用しない（地図移動・拡大のたびの全再計算を廃止）
+     ・bbox で無関係な路線を除外し、再描画は内容が変わった時だけ */
+(function(){
+  var KEY='km_erase_strokes_v1';
+  var ORIG=null, BB=[], STROKES=[], cur=[], curR=25, lastRender=0, VER=1, lastRenderVer=-1, EXPECT=-1;
+  var R=6371008.8;
+
+  function ok(){ return !!(window.KAIDO_LINES && window.KAIDO_LINES.length); }
+  function each(g,f){ if(!g) return; for(var i=0;i<g.length;i++) f(g[i],i); }
+  function groupsOf(st){ var gs=(st&&st.segs)||[], out=[];
+    for(var i=0;i<gs.length;i++){ var g=gs[i]; if(!g||!g.length) continue;
+      if(typeof g[0]==='number'){ out=[]; out.push(gs); return out; }
+      out.push(g); }
+    return out; }
+  function hv(a,b){ var la1=Number(a[0])*Math.PI/180, lo1=Number(a[1])*Math.PI/180,
+      la2=Number(b[0])*Math.PI/180, lo2=Number(b[1])*Math.PI/180,
+      h=Math.sin((la2-la1)/2)*Math.sin((la2-la1)/2)+Math.cos(la1)*Math.cos(la2)*Math.sin((lo2-lo1)/2)*Math.sin((lo2-lo1)/2);
+    return 2*R*Math.asin(Math.sqrt(h)); }
+  /* 点Pから線分A-Bへの投影：t=位置(0..1), raw=未クランプ, d=距離(m), side=どちら側か */
+  function projSeg(P,A,B){
+    var la0=Number(P[0])*Math.PI/180, k=Math.cos(la0);
+    function X(q){ return (Number(q[1])-Number(P[1]))*Math.PI/180*R*k; }
+    function Y(q){ return (Number(q[0])-Number(P[0]))*Math.PI/180*R; }
+    var ax=X(A), ay=Y(A), bx=X(B), by=Y(B);
+    var dx=bx-ax, dy=by-ay, L2=dx*dx+dy*dy;
+    if(L2<=0){ var d0=Math.sqrt(ax*ax+ay*ay); return {t:0,raw:0,d:d0,side:0}; }
+    var u=((0-ax)*dx+(0-ay)*dy)/L2, tc=u<0?0:(u>1?1:u);
+    var cx=ax+tc*dx, cy=ay+tc*dy;
+    return {t:tc, raw:u, d:Math.sqrt(cx*cx+cy*cy), side:dx*(0-ay)-dy*(0-ax)};
+  }
+  function distSegM(p,a,b){ return projSeg(p,a,b).d; }
+  function lerp(A,B,t){ return [+(A[0]+(B[0]-A[0])*t).toFixed(6), +(A[1]+(B[1]-A[1])*t).toFixed(6)]; }
+  function bboxOf(st){ var gs=groupsOf(st), a1=1e9,a2=-1e9,o1=1e9,o2=-1e9;
+    for(var i=0;i<gs.length;i++){ var g=gs[i]; for(var j=0;j<g.length;j++){ var la=+g[j][0], lo=+g[j][1];
+      if(la<a1)a1=la; if(la>a2)a2=la; if(lo<o1)o1=lo; if(lo>o2)o2=lo; } }
+    return (a1<=a2)?[a1,a2,o1,o2]:null; }
+  function strokeBB(S){ var sp=S.p||[], w=Number(S.w)||25, a1=1e9,a2=-1e9,o1=1e9,o2=-1e9;
+    for(var i=0;i<sp.length;i++){ var la=+sp[i][0], lo=+sp[i][1];
+      if(la<a1)a1=la; if(la>a2)a2=la; if(lo<o1)o1=lo; if(lo>o2)o2=lo; }
+    if(a1>a2) return null;
+    var dlat=w/111320, dlng=w/(111320*Math.max(0.15,Math.cos((a1+a2)/2*Math.PI/180)));
+    return [a1-dlat,a2+dlat,o1-dlng,o2+dlng]; }
+  function maskPts(S){                       /* 判定用の軌跡（長すぎるときだけ間引く） */
+    var sp=S.p||[];
+    if(sp.length<=1200) return sp;
+    var out=[], n=sp.length, step=n/1200;
+    for(var i=0;i<n;i+=step) out.push(sp[Math.floor(i)]);
+    if(out[out.length-1]!==sp[n-1]) out.push(sp[n-1]);
+    return out;
+  }
+  function near(p){
+    for(var s=0;s<STROKES.length;s++){
+      var S=STROKES[s], sp=S.mk||S.p||[], w=Number(S.w)||25, bb=S.bb;
+      if(bb && (p[0]<bb[0]||p[0]>bb[1]||p[1]<bb[2]||p[1]>bb[3])) continue;
+      for(var t=0;t<sp.length;t++){
+        var d=(t+1<sp.length)?distSegM(p,sp[t],sp[t+1]):hv(p,sp[t]);
+        if(d<=w) return true;
+      }
+    }
+    return false;
+  }
+  /* 線分A-Bのうち「消す」区間（0..1のパラメータ、重なりは統合） */
+  function segGaps(A,B){
+    var L=hv(A,B); if(!(L>0)) return null;
+    var ivs=[];
+    for(var s=0;s<STROKES.length;s++){
+      var S=STROKES[s], sp=S.mk||S.p||[], w=Number(S.w)||25, bb=S.bb;
+      if(!sp.length) continue;
+      if(bb){ var pad=w/111320;
+        if(Math.max(A[0],B[0])+pad<bb[0]||Math.min(A[0],B[0])-pad>bb[1]||
+           Math.max(A[1],B[1])+pad<bb[2]||Math.min(A[1],B[1])-pad>bb[3]) continue; }
+      var prev=null;
+      for(var t=0;t<sp.length;t++){
+        var r=projSeg(sp[t],A,B);
+        if(r.d<=w){
+          var al=Math.sqrt(Math.max(0,w*w-r.d*r.d));
+          var t1=Math.max(0,r.t-al/L), t2=Math.min(1,r.t+al/L);
+          if(t2>t1) ivs.push([t1,t2]);
+        }
+        if(prev){                                  /* 速くなぞって点が飛んでも交差していれば切る */
+          var ra=projSeg(prev,A,B), rb=projSeg(sp[t],A,B);
+          if(ra.side*rb.side<0 && ra.raw>-0.2 && ra.raw<1.2 && rb.raw>-0.2 && rb.raw<1.2){
+            var tc=(ra.raw+rb.raw)/2, a2=Math.min(1,tc+w/L), a1=Math.max(0,tc-w/L);
+            if(a2>a1) ivs.push([a1,a2]);
+          }
+        }
+        prev=sp[t];
+      }
+    }
+    if(!ivs.length) return null;
+    ivs.sort(function(a,b){ return a[0]-b[0]; });
+    var mg=[ivs[0]];
+    for(var i=1;i<ivs.length;i++){ var l=mg[mg.length-1];
+      if(ivs[i][0]<=l[1]+1e-9){ if(ivs[i][1]>l[1]) l[1]=ivs[i][1]; } else mg.push(ivs[i]); }
+    return mg;
+  }
+  function countOf(st){ var n=0; each(groupsOf(st),function(g){ n+=g.length; }); return n; }
+  /* 1路線を「なぞった範囲だけ」切る。点の密度に依存しない */
+  function maskStreet(st){
+    var gs=groupsOf(st); if(!gs.length) return false;
+    var out=[], touched=false;
+    for(var i=0;i<gs.length;i++){
+      var g=gs[i], items=[], pendingRm=false;
+      for(var j=0;j<g.length;j++){
+        var P=[Number(g[j][0]),Number(g[j][1])], Q=(j+1<g.length)?[Number(g[j+1][0]),Number(g[j+1][1])]:null;
+        var rm=pendingRm||near(P); pendingRm=false;
+        if(rm){ items.push({br:true}); touched=true; } else items.push({ll:P});
+        if(Q){
+          var ivs=segGaps(P,Q);
+          if(ivs){ touched=true;
+            for(var k=0;k<ivs.length;k++){
+              var t1=ivs[k][0], t2=ivs[k][1];
+              if(t1<=1e-7){ items[items.length-1]={br:true}; }
+              else items.push({ll:lerp(P,Q,t1)});
+              items.push({br:true});
+              if(t2>=1-1e-7){ pendingRm=true; }
+              else items.push({ll:lerp(P,Q,t2)});
+            } }
+        }
+      }
+      var run=[];
+      for(var m=0;m<items.length;m++){
+        var it=items[m];
+        if(it.br){ if(run.length>1) out.push(run); run=[]; continue; }
+        run.push(it.ll);
+      }
+      if(run.length>1) out.push(run);
+    }
+    if(!touched) return false;
+    st.segs = out.length? out : [];
+    return true;
+  }
+  function snapshot(){
+    try{ if(!ok()){ ORIG=null; BB=[]; return false; }
+      ORIG=JSON.parse(JSON.stringify(window.KAIDO_LINES));
+      try{ if(window.__kmGeomApply) window.__kmGeomApply(ORIG); }catch(e2){}
+      BB=[]; for(var i=0;i<ORIG.length;i++) BB.push(bboxOf(ORIG[i]));
+      return true; }catch(e){ ORIG=null; BB=[]; return false; }
+  }
+  var LEGN={}, LEGS={};
+  function loadLegacy(){
+    try{ var n=JSON.parse(localStorage.getItem('km_kaido_removed_names_v1')||'null'); if(n) for(var k in n) LEGN[k]=1; }catch(e){}
+    try{ var o=JSON.parse(localStorage.getItem('km_kaido_override_v1')||'null'); if(o&&o.sigs) for(var q in o.sigs) LEGS[q]=1; }catch(e){}
+    try{ var d=JSON.parse(localStorage.getItem('km_draw_main')||'null'); if(d&&d.delBase) for(var nm in d.delBase) LEGN[nm]=1; }catch(e){}
+  }
+  function key5(x,y){ return (Math.round(Number(x)*100000)/100000).toFixed(5)+','+(Math.round(Number(y)*100000)/100000).toFixed(5); }
+  function legacyKill(st){
+    if(!st||!st.name) return false;
+    if(LEGN[st.name]) return true;
+    var tot=0, hit=0, gs=groupsOf(st);
+    for(var i=0;i<gs.length;i++){ var g=gs[i]||[]; for(var j=0;j<g.length;j++){ tot++; if(LEGS[key5(g[j][0],g[j][1])]) hit++; } }
+    return tot>0 && (hit/tot)>=0.7;
+  }
+  function hasLegacy(){ for(var k in LEGN) if(LEGN[k]) return true; return false; }
+  function streetHit(i){
+    var b=BB[i]; if(!b) return true;
+    for(var s=0;s<STROKES.length;s++){ var sb=STROKES[s].bb; if(!sb) continue;
+      if(b[0]<=sb[1]&&b[1]>=sb[0]&&b[2]<=sb[3]&&b[3]>=sb[2]) return true; }
+    return hasLegacy();
+  }
+  function save(){ try{
+    localStorage.setItem('km_kaido_override_v1',JSON.stringify({v:2,sigs:(function(){ var o={}; for(var k in LEGS) o[k]=1; return o; })()}));
+    localStorage.setItem('km_kaido_removed_names_v1',JSON.stringify((function(){ var o={}; for(var k in LEGN) o[k]=1; return o; })()));
+    localStorage.setItem(KEY,JSON.stringify(STROKES)); }catch(e){} }
+  function load(){
+    try{ var j=JSON.parse(localStorage.getItem(KEY)||'[]'); if(j&&j.length) STROKES=j; }catch(e){}
+    loadLegacy();
+    for(var i=0;i<STROKES.length;i++){ if(!STROKES[i].w) STROKES[i].w=25; STROKES[i].mk=maskPts(STROKES[i]); STROKES[i].bb=strokeBB(STROKES[i]); }
+  }
+  function applyAll(){
+    if(!ORIG){ if(!snapshot()) return 0; }
+    if(!STROKES.length && !hasLegacy()){ try{ window.KAIDO_LINES.__kmMaskVer=VER; }catch(e){} return 0; }        /* 何も消していない端末では何もしない（軽量化） */
+    for(var s=0;s<STROKES.length;s++){ STROKES[s].bb=strokeBB(STROKES[s]); }
+    var arr=JSON.parse(JSON.stringify(ORIG)), removed=0, changed=0;
+    for(var z0=0;z0<arr.length;z0++){ if(legacyKill(arr[z0])){ arr[z0].segs=[]; changed++; } }
+    for(var i=0;i<arr.length;i++){
+      if(!arr[i]) continue;
+      if(!streetHit(i)) continue;                        /* bbox で無関係な路線は触らない */
+      if(maskStreet(arr[i])) changed++;
+    }
+    var keep=[];
+    for(var j=0;j<arr.length;j++){ var st=arr[j];
+      if(st&&st.segs&&st.segs.length) keep.push(st); else removed++; }
+    try{ window.KAIDO_LINES.length=0; for(var q=0;q<keep.length;q++) window.KAIDO_LINES.push(keep[q]); }catch(e){}
+    EXPECT=0; for(var z=0;z<keep.length;z++) EXPECT+=countOf(keep[z]);
+    try{ window.KAIDO_LINES.__kmMaskVer=VER; }catch(e){}
+    lastRenderVer=-1;
+    return changed+removed;
+  }
+  function needApply(){ try{ return !(window.KAIDO_LINES && window.KAIDO_LINES.__kmMaskVer===VER); }catch(e){ return true; } }
+  function reRender(force){
+    var now=Date.now();
+    if(!force){ if(lastRenderVer===VER) return 'skip'; if(now-lastRender<150) return 'skip'; }
+    lastRender=now; lastRenderVer=VER;
+    try{
+      var kl=window.kaidoLayer, m=window.map;
+      if(!kl||!m||!m.hasLayer||!m.hasLayer(kl)) return 'off';
+      if(typeof window.trRenderKaido==='function'){ window.trRenderKaido(); return 'trRenderKaido'; }
+      if(typeof window.drawKaidoLines==='function'){ window.drawKaidoLines(); return 'drawKaidoLines'; }
+      if(kl.clearLayers) kl.clearLayers();
+      return 'cleared';
+    }catch(e){ return 'err'; }
+  }
+  var debT=null;
+  function ensure(){
+    if(needApply()){ applyAll(); try{ reRender(true); }catch(e){} }
+  }
+  function deb(){ if(debT) return; try{ debT=setTimeout(function(){ debT=null; ensure(); },280); }catch(e){ ensure(); } }
+  function api(){ return window.__kmEraseStrokes={strokes:STROKES,apply:applyAll,render:reRender,
+      resnap:function(){ ORIG=null; BB=[]; return applyAll(); },
+      undo:function(){ if(!STROKES.length) return 0; STROKES.pop(); VER++; save(); applyAll(); reRender(true); return STROKES.length; },
+      clear:function(){ STROKES.length=0; VER++; save(); applyAll(); reRender(true); return 0; },
+      state:function(){ return {n:STROKES.length, expected:EXPECT, ver:VER}; }}; }
+  window.__kmEraseVer=function(){ return VER; };
+  function radiusNow(){
+    try{ var m=window.map; if(!m) return 25;
+      var z=m.getZoom(), c=m.getCenter()||{lat:35};
+      var mpp=156543.03392*Math.cos((c.lat||0)*Math.PI/180)/Math.pow(2,z);
+      var px=Math.max(12,(window.__kmErasePx||22));
+      var r=px*mpp; if(!isFinite(r)||r<=0) r=25; return r;
+    }catch(e){ return 25; }
+  }
+  function flush(){
+    if(!cur.length) return 0;
+    if(cur.length===1) cur.push([cur[0][0],cur[0][1]]);
+    if(cur.length>2000) cur=cur.slice(0,2000);
+    var S={w:curR||25,p:cur}; S.mk=maskPts(S); S.bb=strokeBB(S);
+    STROKES.push(S); cur=[];
+    VER++; save(); applyAll(); try{ reRender(true); }catch(e){}
+    try{ if(window.KM_DRAW_STATE) window.KM_DRAW_STATE.editedBase=true; }catch(e){}
+    return STROKES.length;
+  }
+  /* なぞり軌跡の収集（消しゴムは1点ごとに kmEraseRing を呼ぶ。定義順に依存しないよう setter で包む） */
+  function collect(ll){
+    try{ if(!ll) return;
+      var la=(ll.lat!==undefined?ll.lat:ll[0]), lo=(ll.lng!==undefined?ll.lng:ll[1]);
+      if(isFinite(la)&&isFinite(lo)){ cur.push([+Number(la).toFixed(6),+Number(lo).toFixed(6)]); curR=radiusNow(); }
+    }catch(e){}
+  }
+  try{
+    var _ring=window.kmEraseRing, _store=_ring;
+    Object.defineProperty(window,'kmEraseRing',{ configurable:true,
+      get:function(){ return _store; },
+      set:function(f){
+        if(typeof f!=='function'){ _store=f; return; }
+        if(f.__kmWrapped){ _store=f; return; }
+        var w=function(ll){ collect(ll); try{ return f(ll); }catch(e){} };
+        try{ w.__kmWrapped=true; w.__kmCore=f; }catch(e){}
+        _store=w;
+      } });
+    if(typeof _ring==='function') window.kmEraseRing=_ring;
+  }catch(e){}
+  try{ document.addEventListener('pointerup',function(){ try{ flush(); }catch(e){} },true); }catch(e){}
+  try{ document.addEventListener('pointercancel',function(){ try{ flush(); }catch(e){} },true); }catch(e){}
+  try{ document.addEventListener('touchend',function(){ try{ setTimeout(flush,0); }catch(e){} },true); }catch(e){}
+  /* 元データ層の横取りを無効化（消しても全線が消えるのを防ぐ） */
+  try{ window.kmHideBase=function(){ reRender(true); return true; }; }catch(e){}
+  function boot(){
+    load();
+    if(!ORIG) snapshot();
+    ensure();
+    try{ setTimeout(ensure,120); setTimeout(ensure,600); setTimeout(ensure,1800); }catch(e){}
+    try{ var m=window.map;
+      if(m&&m.on){ m.on('zoomend',deb); m.on('moveend',deb); } }catch(e){}
+  }
+  window.kmEraseReapply=boot;
+  boot(); api();
+  try{ document.addEventListener('DOMContentLoaded',boot); }catch(e){}
+  try{ window.addEventListener('load',boot); }catch(e){}
+  /* 番犬：元データが初期値に戻されていたら、記憶した消去を再適用（判定は軽い） */
+  try{ setInterval(function(){ try{
+      if(!STROKES.length && !hasLegacy()) return;
+      if(!ok()) return;
+      var n=0; each(window.KAIDO_LINES,function(st){ n+=countOf(st); });
+      if(EXPECT>=0 && n>EXPECT){ applyAll(); reRender(true); }
+    }catch(e){} },2500); }catch(e){}
+})();
+/* KM_ERASE2_V106_END */
+</script>
+<script>
+/* KM_ENDPT_TOGGLE_V103_START
+   手描き線の「始点／終点」黄色マーカー(#ffd166)を指で隠せるようにする（設定は端末に保存） */
+(function(){
+  var KEY='km_show_endpts', dirty=false, btn=null;
+  function on(){ try{ var v=localStorage.getItem(KEY); return v===null?true:(v==='1'); }catch(e){ return true; } }
+  window.__kmShowEndPts=on;
+  function collect(l,kill,depth){
+    if(!l||depth>6) return;
+    try{
+      var f=l.options&&l.options.fillColor;
+      if(f && String(f).toLowerCase()==='#ffd166'){ kill.push(l); return; }   /* 始点/終点の黄色丸だけを対象 */
+      if(typeof l.eachLayer==='function'){ l.eachLayer(function(c){ collect(c,kill,depth+1); }); }
+    }catch(e){}
+  }
+  function sweep(){
+    if(on()) return 0;
+    var m=window.map; if(!m||!m.eachLayer) return 0;
+    var kill=[]; try{ m.eachLayer(function(l){ collect(l,kill,0); }); }catch(e){}
+    for(var i=0;i<kill.length;i++){ try{ m.removeLayer(kill[i]); }catch(e){} }
+    return kill.length;
+  }
+  window.kmHideEndPts=sweep;
+  function paint(){ if(!btn) return;
+    btn.textContent = on() ? '🟡 端点の点: 表示' : '🟡 端点の点: 非表示';
+    btn.style.background = on() ? '#1a2129' : '#7a4a00';
+    btn.style.color = on() ? '#dfffe0' : '#ffd166'; }
+  function tog(){
+    try{ localStorage.setItem(KEY, on()?'0':'1'); }catch(e){}
+    if(on()){ try{ if(window.kmRedraw) window.kmRedraw(); }catch(e){} } else { sweep(); }
+    paint(); return on();
+  }
+  function inject(){
+    try{
+      if(btn && btn.isConnected) return true;
+      var p=document.getElementById('kmDrawPanel'); if(!p) return false;
+      if(document.getElementById('kmEndPtBtn')) { btn=document.getElementById('kmEndPtBtn'); paint(); return true; }
+      var row=document.createElement('div'); row.style.cssText='display:flex;gap:4px;margin-top:4px';
+      btn=document.createElement('button'); btn.id='kmEndPtBtn'; btn.type='button';
+      btn.style.cssText='flex:1;font:11px system-ui;padding:6px 8px;border-radius:7px;border:1px solid #2b3540';
+      btn.onclick=function(ev){ try{ ev.preventDefault(); ev.stopPropagation(); }catch(e){} tog(); };
+      paint(); row.appendChild(btn); p.appendChild(row); return true;
+    }catch(e){ return false; }
+  }
+  function mark(){ dirty=true; }
+  try{ setInterval(function(){ inject(); if(!on()&&dirty){ dirty=false; sweep(); } },500); }catch(e){}
+  try{ document.addEventListener('touchend',function(){ mark(); setTimeout(function(){ inject(); if(!on()&&dirty){ dirty=false; sweep(); } },120); },true); }catch(e){}
+  try{ document.addEventListener('pointerup',function(){ mark(); setTimeout(function(){ inject(); if(!on()&&dirty){ dirty=false; sweep(); } },120); },true); }catch(e){}
+  try{ var m=window.map; if(m&&m.on){ m.on('zoomend',mark); m.on('moveend',mark); } }catch(e){}
+  try{ window.addEventListener('load',function(){ setTimeout(function(){ inject(); mark(); },700); }); }catch(e){}
+  try{ setTimeout(function(){ inject(); mark(); },300); }catch(e){}
+})();
+/* KM_ENDPT_TOGGLE_V103_END */
+</script>
+<script>
+/* KM_SNAP_V104_START
+   端点スナップ（マグネット）：線の始点／終点が近くの端点に吸い付いて自動でつながる
+   ・判定は「画面ピクセル」で行うので、ズームしても効き方が変わらない
+   ・吸い付く候補は手描き線／自作線／保存した手描き／旧街道データの端点
+   ・画面上に候補が出るので、離す前に「つながる」ことが分かる
+   ・🧲 ボタンで 切→小→中→大 を切替（正確に自由描きしたいときは「切」） */
+(function(){
+  var KEY='km_snap_px', CYC=[0,12,18,28], NM=['切','小','中','大'], DEF=18;
+  function px(){ try{ var v=parseInt(localStorage.getItem(KEY),10); if(isNaN(v)) return DEF; return v; }catch(e){ return DEF; } }
+  function on(){ return px()>0; }
+  var cache={key:'',at:0,pts:[]}, hl=null, hlay=null, chip=null, btn=null, busy=false;
+
+  function MM(){ return window.map; }
+  function LL(){ return window.L; }
+
+  function push(list, out, label){
+    if(!list) return;
+    for(var i=0;i<list.length;i++){
+      var ln=list[i]; if(!ln) continue;
+      var pts=ln.pts||ln; if(!pts||!pts.length) continue;
+      try{
+        var a=pts[0], b=pts[pts.length-1];
+        if(a&&a.length>=2) out.push({ll:[+a[0],+a[1]],label:label});
+        if(b&&b.length>=2&&pts.length>1) out.push({ll:[+b[0],+b[1]],label:label});
+      }catch(e){}
+    }
+  }
+  function endpoints(){
+    var out=[];
+    try{ var st=window.KM_DRAW_STATE; if(st&&st.lines) push(st.lines,out,'手描き'); }catch(e){}
+    try{ var ed=window.kmEditor&&window.kmEditor.state; if(ed&&ed.lines) push(ed.lines,out,'自作'); }catch(e){}
+    try{ var man=window.__kmMan&&window.__kmMan.D; if(man&&man.man){ for(var k in man.man) push(man.man[k],out,'保存線'); } }catch(e){}
+    try{ var KL=window.KAIDO_LINES||[];
+      for(var i=0;i<KL.length;i++){ var gs=(KL[i]&&KL[i].segs)||[];
+        for(var g=0;g<gs.length;g++){ var sg=gs[g]; if(!sg||!sg.length) continue;
+          out.push({ll:[+sg[0][0],+sg[0][1]],label:'旧街道'});
+          if(sg.length>1) out.push({ll:[+sg[sg.length-1][0],+sg[sg.length-1][1]],label:'旧街道'}); } } }catch(e){}
+    return out;
+  }
+  /* 端点の画面座標をまとめて作り置き（ズーム/移動/一定時間で作り直す） */
+  function build(){
+    if(busy) return; var mm=MM(); if(!mm) return;
+    var key=''; try{ var c=mm.getCenter(); key=mm.getZoom()+'|'+c.lat.toFixed(4)+','+c.lng.toFixed(4); }catch(e){ key='?'; }
+    var now=Date.now();
+    if(key===cache.key && (now-cache.at)<1200) return;
+    busy=true;
+    try{
+      var eps=endpoints(), pts=[];
+      for(var i=0;i<eps.length;i++){
+        try{ var q=mm.latLngToContainerPoint(eps[i].ll);
+          if(q&&isFinite(q.x)&&isFinite(q.y)) pts.push({x:q.x,y:q.y,ll:eps[i].ll,label:eps[i].label}); }catch(e){}
+      }
+      cache={key:key,at:now,pts:pts};
+    }catch(e){}
+    busy=false;
+  }
+  function xy(ev){
+    try{
+      var e=ev&&ev.originalEvent?ev.originalEvent:ev; if(!e) return null;
+      var cx=(e.clientX!==undefined)?e.clientX:(e.pageX!==undefined?e.pageX:null);
+      var cy=(e.clientY!==undefined)?e.clientY:(e.pageY!==undefined?e.pageY:null);
+      if(cx===null||cy===null) return null;
+      var r=null; try{ r=MM().getContainer().getBoundingClientRect(); }catch(x){ r=null; }
+      return {x:cx-(r?r.left:0), y:cy-(r?r.top:0)};
+    }catch(x){ return null; }
+  }
+  function nearest(ev){
+    build();
+    var t=xy(ev); if(!t) return null;
+    var T=px(), best=null, bd=1e18;
+    for(var i=0;i<cache.pts.length;i++){
+      var p=cache.pts[i], dx=p.x-t.x, dy=p.y-t.y, d=dx*dx+dy*dy;
+      if(d<bd){ bd=d; best=p; }
+    }
+    if(!best) return null;
+    bd=Math.sqrt(bd);
+    return (bd<=T)?{pt:best,d:bd}:null;
+  }
+  /* --- 呼び出し口：始点を吸着 --- */
+  window.__kmSnapLL=function(ll,ev){
+    if(!on()||!ll) return ll;
+    var n=nearest(ev); if(!n) return ll;
+    try{ return LL().latLng(n.pt.ll[0],n.pt.ll[1]); }catch(e){ return ll; }
+  };
+  /* --- 呼び出し口：指を離したとき、終点を吸着（同じ点なら重複を除く） --- */
+  window.__kmSnapLast=function(pts){
+    if(!on()||!pts||pts.length<2) return pts;
+    try{
+      var mm=MM(); if(!mm) return pts;
+      var T=px(); build();
+      var last=pts[pts.length-1], p=mm.latLngToContainerPoint(last), bd=1e18, best=null;
+      for(var i=0;i<cache.pts.length;i++){
+        var q=cache.pts[i], dx=q.x-p.x, dy=q.y-p.y, d=Math.sqrt(dx*dx+dy*dy);
+        if(d<bd){ bd=d; best=q; }
+      }
+      if(best&&bd<=T){
+        var prev=pts[pts.length-2];
+        var dup=prev&&Math.abs(prev[0]-best.ll[0])<1e-9&&Math.abs(prev[1]-best.ll[1])<1e-9;
+        if(dup) pts.pop(); else pts[pts.length-1]=[+best.ll[0].toFixed(6),+best.ll[1].toFixed(6)];
+      }
+    }catch(e){}
+    return pts;
+  };
+  window.__kmSnapPx=px;
+  /* --- 候補の見える化 --- */
+  function ensureHl(){
+    var mm=MM(), ll=LL(); if(!mm||!ll) return false;
+    try{ if(!hlay){ hlay=ll.layerGroup().addTo(mm); } }catch(e){ return false; }
+    try{
+      if(!hl){ hl=ll.circleMarker([0,0],{radius:10,color:'#7CFF7C',weight:3,fillColor:'#00E5FF',
+        fillOpacity:.18,interactive:false}).addTo(hlay); }
+    }catch(e){ return false; }
+    return true;
+  }
+  function showHl(n){
+    var mm=MM(); if(!mm||!n) return hideHl();
+    if(!ensureHl()) return;
+    try{ hl.setLatLng(n.pt.ll); hlay.addLayer(hl); }catch(e){}
+    if(!chip){ try{
+      chip=document.createElement('div'); chip.id='kmSnapChip';
+      chip.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:150px;z-index:2147483002;'
+        +'background:rgba(12,40,20,.94);color:#B6FFC4;font:12px system-ui;padding:6px 11px;border-radius:9px;'
+        +'border:1px solid #2f6b45;max-width:86vw;text-align:center';
+      document.body.appendChild(chip); }catch(e){ chip=null; } }
+    if(chip){ chip.style.display='block';
+      chip.textContent='🧲 '+n.pt.label+'の端点につながります（'+Math.round(n.d)+'px）'; }
+  }
+  function hideHl(){
+    try{ if(hl&&hlay) hlay.removeLayer(hl); }catch(e){}
+    if(chip) chip.style.display='none';
+  }
+  window.kmSnapHide=hideHl;
+  try{ document.addEventListener('pointermove',function(ev){
+      try{
+        var st=window.KM_DRAW_STATE;
+        if(!on() || (st&&st.mode==='eraser') || (st&&st.mode==='pan')){ hideHl(); return; }
+        var n=nearest(ev); if(n) showHl(n); else hideHl();
+      }catch(e){}
+    },{capture:true,passive:true}); }catch(e){}
+  try{ document.addEventListener('pointerdown',function(){ hideHl(); },true); }catch(e){}
+  try{ document.addEventListener('pointerup',function(){ try{ setTimeout(hideHl,40); }catch(x){} },true); }catch(e){}
+  try{ document.addEventListener('pointercancel',hideHl,true); }catch(e){}
+  try{ document.addEventListener('scroll',hideHl,true); }catch(e){}
+  /* --- 切替ボタン（手描きパネル内） --- */
+  function paint(){ if(!btn) return;
+    var v=px(), i=CYC.indexOf(v); if(i<0) i=2;
+    btn.textContent='🧲 端点スナップ: '+NM[i];
+    if(v===0){ btn.style.background='#1a2129'; btn.style.color='#9fb0bd'; }
+    else { btn.style.background='#14532d'; btn.style.color='#B6FFC4'; }
+    try{ btn.title='半径 '+v+'px 以内の端点に吸い付きます'; }catch(e){}
+  }
+  function cycle(){
+    var v=px(), i=CYC.indexOf(v); if(i<0) i=2;
+    var nv=CYC[(i+1)%CYC.length];
+    try{ localStorage.setItem(KEY,String(nv)); }catch(e){}
+    if(nv>0){ build(); } else { hideHl(); }
+    paint(); return nv;
+  }
+  function inject(){
+    try{
+      if(btn&&btn.isConnected) return true;
+      var pl=document.getElementById('kmDrawPanel'); if(!pl) return false;
+      var ex=document.getElementById('kmSnapBtn');
+      if(ex){ btn=ex; paint(); return true; }
+      var row=document.createElement('div'); row.style.cssText='display:flex;gap:4px;margin-top:4px';
+      btn=document.createElement('button'); btn.id='kmSnapBtn'; btn.type='button';
+      btn.style.cssText='flex:1;font:11px system-ui;padding:6px 8px;border-radius:7px;border:1px solid #2b3540';
+      btn.onclick=function(ev){ try{ ev.preventDefault(); ev.stopPropagation(); }catch(e){} cycle(); };
+      paint(); row.appendChild(btn); pl.appendChild(row); return true;
+    }catch(e){ return false; }
+  }
+  try{ setInterval(inject,1200); }catch(e){}
   try{ document.addEventListener('touchend',function(){ setTimeout(inject,120); },true); }catch(e){}
   try{ document.addEventListener('pointerup',function(){ setTimeout(inject,120); },true); }catch(e){}
   try{ var m=MM(); if(m&&m.on){ m.on('zoomend',function(){ cache.key=''; }); m.on('moveend',function(){ cache.key=''; }); } }catch(e){}
@@ -8664,7 +9191,8 @@ setTimeout(hideSplash, 3500);
   boot();
   try{ document.addEventListener('DOMContentLoaded',boot); }catch(e){}
   try{ window.addEventListener('load',function(){ setTimeout(boot,300); setTimeout(boot,1200); }); }catch(e){}
-  try{ setInterval(function(){ if(!chip) build(); if(mode==='off') loadG(); },1500); }catch(e){}
+  try{ setInterval(function(){ if(!chip) build(); },2000); }catch(e){}
+  try{ document.addEventListener('visibilitychange',function(){ if(!document.hidden) loadG(); }); }catch(e){}
 })();
 /* KM_EDITALL_V105_END */
 </script>
