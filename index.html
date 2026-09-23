@@ -1218,7 +1218,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v104</span><span style="font-size:11px;color:#999;margin-left:4px">09/23 01:30</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v105</span><span style="font-size:11px;color:#999;margin-left:4px">09/23 01:30</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -6105,7 +6105,7 @@ setTimeout(hideSplash, 3500);
   var st={mode:'pen',color:COLORS[0],width:3,lines:[],redo:[],delBase:{}};
   var hist=[], map=null, Lg=null, layer=null, live=null, stroke=null, armed=false, erasing=false, raf=false, lastErase=null;
   window.KM_DRAW_STATE=st;
-  window.KM_DRAW_VER='v104';
+  window.KM_DRAW_VER='v105';
 
   function hv(a,b){var R=6371008.8,la1=(a&&a.lat!==undefined?a.lat:a[0])*Math.PI/180,lo1=(a&&a.lng!==undefined?a.lng:a[1])*Math.PI/180,la2=(b&&b.lat!==undefined?b.lat:b[0])*Math.PI/180,lo2=(b&&b.lng!==undefined?b.lng:b[1])*Math.PI/180,
     h=Math.sin((la2-la1)/2)*Math.sin((la2-la1)/2)+Math.cos(la1)*Math.cos(la2)*Math.sin((lo2-lo1)/2)*Math.sin((lo2-lo1)/2);
@@ -7029,8 +7029,8 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v104 09/24 06:00';
-  var BTAG='v104';
+  var BUILD='v105 09/24 08:00';
+  var BTAG='v105';
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
     var VK='km_app_ver', prevV=null;
@@ -8025,7 +8025,9 @@ setTimeout(hideSplash, 3500);
   }
   function snapshot(){
     try{ if(!ok()){ ORIG=null; return false; }
-      ORIG=JSON.parse(JSON.stringify(window.KAIDO_LINES)); return true; }catch(e){ ORIG=null; return false; }
+      ORIG=JSON.parse(JSON.stringify(window.KAIDO_LINES));
+      try{ if(window.__kmGeomApply) window.__kmGeomApply(ORIG); }catch(e2){}
+      return true; }catch(e){ ORIG=null; return false; }
   }
   function applyAll(){
     if(!ORIG){ if(!snapshot()) return 0; }
@@ -8058,7 +8060,7 @@ setTimeout(hideSplash, 3500);
       return 'cleared';
     }catch(e){ return 'err'; }
   }
-  function api(){ return window.__kmEraseStrokes={strokes:STROKES,apply:applyAll,render:reRender,
+  function api(){ return window.__kmEraseStrokes={strokes:STROKES,apply:applyAll,render:reRender,resnap:function(){ ORIG=null; return applyAll(); },
       undo:function(){ if(!STROKES.length) return 0; STROKES.pop(); save(); applyAll(); reRender(); return STROKES.length; },
       clear:function(){ STROKES.length=0; save(); applyAll(); reRender(); return 0; },
       state:function(){ return {n:STROKES.length, expected:EXPECT}; }}; }
@@ -8363,5 +8365,307 @@ setTimeout(hideSplash, 3500);
   try{ setTimeout(function(){ inject(); },300); }catch(e){}
 })();
 /* KM_SNAP_V104_END */
+</script>
+<script>
+/* KM_EDITALL_V105_START
+   どの旧街道でも「消す／書き加える／ずらす」を同じ仕組みで編集できるようにする
+   ・街道路線セレクタ：データ内の全街道から選んで地図を移動＋編集対象にする（京街道も東海道も同列）
+   ・↔ ずらす：線をつかんで動かす（1本まるごと平行移動）。手描き線にも使える
+   ・➕ 足す：タップした場所を線の端に継ぎ足す
+   ・編集結果は街道名ごとに保存（km_kaido_geom_v1）。再起動・再描画でも維持される */
+(function(){
+  var GKEY='km_kaido_geom_v1';
+  var GEOM={};
+  var mode='off';                /* off | shift | add */
+  var activeName=null;
+  var drag=null, lastR=0, chip=null, panel=null, modeBtns={}, listBox=null, tip=null;
+
+  function MAP(){ try{ return window.map||null; }catch(e){ return null; } }
+  function LB(){ try{ return window.L||null; }catch(e){ return null; } }
+  function KL(){ try{ return window.KAIDO_LINES||[]; }catch(e){ return []; } }
+  function cp(o){ return JSON.parse(JSON.stringify(o)); }
+  function byName(n){ var a=KL(); for(var i=0;i<a.length;i++){ if(a[i]&&a[i].name===n) return a[i]; } return null; }
+  function names(){ var a=KL(), o=[]; for(var i=0;i<a.length;i++){ if(a[i]&&a[i].name) o.push(a[i].name); } return o; }
+
+  function toast(t){ try{
+    var d=document.createElement('div'); d.textContent=t;
+    d.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:170px;z-index:2147483004;background:rgba(20,24,28,.95);color:#eaffea;font:12px system-ui;padding:7px 12px;border-radius:9px;max-width:86vw;text-align:center';
+    document.body.appendChild(d); setTimeout(function(){ try{ if(d.parentNode) d.parentNode.removeChild(d); }catch(e){} },1900);
+  }catch(e){} }
+
+  /* ---- 保存層：街道名ごとのジオメトリ上書き（絶対値なので何度適用しても同じ結果） ---- */
+  function loadG(){ try{ var j=JSON.parse(localStorage.getItem(GKEY)||'null'); if(j&&typeof j==='object') GEOM=j; }catch(e){} }
+  function saveG(){ try{ localStorage.setItem(GKEY,JSON.stringify(GEOM)); }catch(e){} }
+  window.__kmGeomApply=function(arr){
+    if(!arr||!arr.length) return 0; var n=0;
+    for(var i=0;i<arr.length;i++){ var it=arr[i]; if(!it||!it.name) continue;
+      if(GEOM[it.name]){ it.segs=cp(GEOM[it.name]); n++; } }
+    return n;
+  };
+  window.kmGeomList=function(){ return cp(GEOM); };
+  window.kmGeomNames=function(){ return names(); };
+  window.kmGeomActive=function(){ return activeName; };
+  window.kmGeomMode=function(){ return mode; };
+
+  function reRender(){ try{ var e=window.__kmEraseStrokes; if(e&&e.render) e.render(); }catch(e){} }
+  function applyLive(){
+    window.__kmGeomApply(KL());
+    try{ var e=window.__kmEraseStrokes; if(e){ if(e.resnap) e.resnap(); else e.apply(); } }catch(e){}
+    try{ if(window.kmRedraw) window.kmRedraw(); }catch(e){}
+    reRender();
+  }
+  function shiftSegs(segs,dlat,dlng){
+    var o=cp(segs||[]);
+    for(var g=0;g<o.length;g++){ var sg=o[g]||[]; for(var j=0;j<sg.length;j++){ sg[j][0]=+(sg[j][0]+dlat).toFixed(6); sg[j][1]=+(sg[j][1]+dlng).toFixed(6); } }
+    return o;
+  }
+  /* ---- 対象（旧街道データ／手描き線）を同じ形で扱う ---- */
+  function targets(){
+    var out=[], a=KL();
+    for(var i=0;i<a.length;i++){ var it=a[i]; if(it&&it.name&&it.segs&&it.segs.length) out.push({kind:'base',name:it.name,segs:it.segs}); }
+    try{ var st=window.KM_DRAW_STATE;
+      if(st&&st.lines){ for(var j=0;j<st.lines.length;j++){ var ln=st.lines[j];
+        if(ln&&ln.pts&&ln.pts.length) out.push({kind:'draw',name:'手描き'+(j+1),segs:[ln.pts],ref:ln}); } } }catch(e){}
+    return out;
+  }
+  function segsOf(name){
+    var a=KL(); for(var i=0;i<a.length;i++){ if(a[i]&&a[i].name===name) return a[i].segs; }
+    try{ var st=window.KM_DRAW_STATE; var m=/^手描き(\d+)$/.exec(name);
+      if(st&&st.lines&&m){ var ln=st.lines[parseInt(m[1],10)-1]; if(ln&&ln.pts) return [ln.pts]; } }catch(e){}
+    return null;
+  }
+  function setSegs(name,segs){
+    var a=KL(); for(var i=0;i<a.length;i++){ if(a[i]&&a[i].name===name){ a[i].segs=segs; GEOM[name]=cp(segs); saveG(); return true; } }
+    try{ var st=window.KM_DRAW_STATE; var m=/^手描き(\d+)$/.exec(name);
+      if(st&&st.lines&&m){ var ln=st.lines[parseInt(m[1],10)-1]; if(ln){ ln.pts=segs[0]; return true; } } }catch(e){}
+    return false;
+  }
+  function persistDraw(){ try{ if(window.kmRedraw) window.kmRedraw(); }catch(e){} }
+
+  /* ---- 外部から呼べる編集API（ドラッグと同じ処理） ---- */
+  window.kmGeomShift=function(name,dlat,dlng){
+    var segs=segsOf(name); if(!segs) return 0;
+    var nv=shiftSegs(segs,dlat,dlng);
+    setSegs(name,nv); applyLive(); persistDraw();
+    return nv.reduce(function(a,g){ return a+(g?g.length:0); },0);
+  };
+  window.kmGeomAdd=function(name,lat,lng,atStart){
+    var segs=segsOf(name); if(!segs) return 0;
+    if(!segs.length){ segs.push([[+lat,+lng]]); }
+    else{
+      var gi=atStart?0:(segs.length-1), sg=segs[gi];
+      if(!sg||!sg.length){ segs[gi]=[[+lat,+lng]]; }
+      else if(sg.length<2){ sg.push([+lat,+lng]); }
+      else if(atStart) sg.unshift([+lat,+lng]);
+      else sg.push([+lat,+lng]);
+    }
+    setSegs(name,segs); applyLive(); persistDraw(); return 1;
+  };
+  window.kmGeomRemove=function(name){
+    var segs=segsOf(name); if(!segs) return false;
+    if(/^手描き\d+$/.test(name)){
+      try{ var st=window.KM_DRAW_STATE, m=/^手描き(\d+)$/.exec(name);
+        st.lines.splice(parseInt(m[1],10)-1,1); applyLive(); persistDraw(); return true; }catch(e){}
+    }
+    try{ delete GEOM[name]; saveG(); }catch(e){}
+    var a=KL(); for(var i=0;i<a.length;i++){ if(a[i]&&a[i].name===name){ a[i].segs=[]; break; } }
+    applyLive(); return true;
+  };
+  window.kmGeomFit=function(name){
+    var segs=segsOf(name), m=MAP(), L=LB(); if(!segs||!m||!L) return false;
+    try{
+      var b=L.latLngBounds([]);
+      for(var g=0;g<segs.length;g++){ var sg=segs[g]||[]; for(var j=0;j<sg.length;j++){ b.extend([sg[j][0],sg[j][1]]); } }
+      if(b.isValid()) m.fitBounds(b,{padding:[40,40]});
+      return true;
+    }catch(e){ return false; }
+  };
+
+  /* ---- つかんだ場所の最寄りの線を探す（画面ピクセル距離） ---- */
+  function nearestTarget(ll){
+    var m=MAP(); if(!m) return null;
+    var p=null; try{ p=m.latLngToContainerPoint(ll); }catch(e){ return null; }
+    if(!p) return null;
+    var list=targets(), best=null, bd=1e18;
+    for(var i=0;i<list.length;i++){
+      var gs=list[i].segs||[];
+      for(var g=0;g<gs.length;g++){
+        var sg=gs[g]||[];
+        for(var j=0;j<sg.length;j++){
+          var q=null; try{ q=m.latLngToContainerPoint(sg[j]); }catch(e){ q=null; }
+          if(!q) continue;
+          var d=Math.sqrt((q.x-p.x)*(q.x-p.x)+(q.y-p.y)*(q.y-p.y));
+          if(j+1<sg.length){
+            var q2=null; try{ q2=m.latLngToContainerPoint(sg[j+1]); }catch(e){ q2=null; }
+            if(q2){ var dx=q2.x-q.x, dy=q2.y-q.y, L2=dx*dx+dy*dy;
+              var t=L2>0?((p.x-q.x)*dx+(p.y-q.y)*dy)/L2:0; t=t<0?0:(t>1?1:t);
+              var ex=q.x+t*dx-p.x, ey=q.y+t*dy-p.y, ds=Math.sqrt(ex*ex+ey*ey);
+              if(ds<d) d=ds; }
+          }
+          if(d<bd){ bd=d; best=list[i]; }
+        }
+      }
+    }
+    return (best&&bd<=36)?{name:best.name,d:bd}:null;
+  }
+
+  /* ---- ずらす：ドラッグで線を平行移動 ---- */
+  function llFrom(ev){
+    var m=MAP(); if(!m) return null;
+    try{ return m.mouseEventToLatLng(ev); }catch(e){ return null; }
+  }
+  function onDown(ev){
+    if(mode!=='shift') return;
+    var ll=llFrom(ev); if(!ll) return;
+    var n=nearestTarget(ll); if(!n) return;
+    var segs=segsOf(n.name); if(!segs) return;
+    drag={name:n.name,start:{lat:ll.lat,lng:ll.lng},orig:cp(segs)};
+    setActive(n.name);
+    try{ ev.preventDefault(); ev.stopPropagation(); }catch(e){}
+  }
+  function onMove(ev){
+    if(mode!=='shift'||!drag) return;
+    var ll=llFrom(ev); if(!ll) return;
+    var nv=shiftSegs(drag.orig, ll.lat-drag.start.lat, ll.lng-drag.start.lng);
+    setSegs(drag.name,nv);
+    var now=Date.now(); if(now-lastR>90){ lastR=now; reRender(); }
+    try{ ev.preventDefault(); ev.stopPropagation(); }catch(e){}
+  }
+  function onUp(ev){
+    if(mode!=='shift'||!drag) return;
+    applyLive(); persistDraw();
+    toast(drag.name+' をずらして保存しました');
+    drag=null;
+  }
+  /* ---- 足す：タップした場所を線の端へ継ぎ足す ---- */
+  function onTapAdd(ev){
+    if(mode!=='add') return;
+    var ll=llFrom(ev); if(!ll) return;
+    var nm = activeName || ((function(){ var n=nearestTarget(ll); return n?n.name:null; })());
+    if(!nm){ toast('先に「🏷 街道を選ぶ」で対象を選んでください'); return; }
+    window.kmGeomAdd(nm, +ll.lat.toFixed(6), +ll.lng.toFixed(6), false);
+    toast(nm+' に1点継ぎ足しました（全'+(function(){ var s=segsOf(nm)||[]; var c=0; for(var g=0;g<s.length;g++) c+=s[g].length; return c; })()+'点）');
+  }
+
+  /* ---- 見た目：選択中の街道を緑の破線で強調 ---- */
+  var hlay=null, hline=null;
+  function hlHide(){ try{ if(hline&&hlay) hlay.removeLayer(hline); }catch(e){} }
+  function hlShow(name){
+    var L=LB(), m=MAP(); if(!L||!m) return;
+    var segs=segsOf(name); if(!segs) return;
+    try{ if(!hlay) hlay=L.layerGroup().addTo(m); }catch(e){ return; }
+    hlHide();
+    try{
+      for(var g=0;g<segs.length;g++){ var sg=segs[g]||[]; if(sg.length<2) continue;
+        if(!hline) hline=L.polyline(sg,{color:'#7CFF7C',weight:8,opacity:.35,dashArray:'6,6',interactive:false}).addTo(hlay);
+        else { hline.setLatLngs(sg); hlay.addLayer(hline); } }
+    }catch(e){}
+  }
+  function setActive(name){
+    activeName=name; window.__kmActiveKaido=name;
+    try{ kmGeomFit(name); }catch(e){}
+    hlShow(name);
+    if(tip) tip.textContent='編集中: '+name;
+    paintList();
+  }
+
+  /* ---- UI ---- */
+  function paintMode(){
+    var defs=[['off','⏹ 終了'],['shift','↔ ずらす'],['add','➕ 足す']];
+    for(var i=0;i<defs.length;i++){ var b=modeBtns[defs[i][0]]; if(!b) continue;
+      var on=(mode===defs[i][0]);
+      b.style.background=on?'#14532d':'#1a2129';
+      b.style.color=on?'#B6FFC4':'#dfffe0';
+      b.style.borderColor=on?'#2f6b45':'#2b3540'; }
+  }
+  window.kmGeomSetMode=function(m){
+    if(m!=='shift'&&m!=='add') m='off';
+    mode=m; drag=null; if(mode==='off') hlHide();
+    paintMode();
+    toast(mode==='shift'?'↔ ずらすモード: 線をつかんで動かしてください'
+         : mode==='add'?'➕ 足すモード: 線の端に継ぎ足したい場所をタップ'
+         : '編集モードを終了しました');
+    return mode;
+  };
+  function paintList(){
+    if(!listBox) return;
+    var ns=names(), h='';
+    for(var i=0;i<ns.length;i++){
+      var sel=(ns[i]===activeName);
+      h+='<button data-nm="'+ns[i].replace(/"/g,'')+'" class="kmGBase" style="text-align:left;font:11px system-ui;padding:6px 8px;border-radius:7px;margin:2px 0;width:100%;'
+        + (sel?'background:#14532d;color:#B6FFC4;border:1px solid #2f6b45':'background:#1a2129;color:#dfffe0;border:1px solid #2b3540')+'">'
+        + (sel?'● ':'○ ')+ns[i]+'</button>';
+    }
+    listBox.innerHTML=h;
+    try{
+      var bs=listBox.getElementsByTagName('button');
+      for(var k=0;k<bs.length;k++){ (function(bb){ bb.onclick=function(ev){ try{ ev.preventDefault(); ev.stopPropagation(); }catch(e){} setActive(bb.getAttribute('data-nm')); }; })(bs[k]); }
+    }catch(e){}
+  }
+  function build(){
+    try{
+      if(chip&&chip.isConnected){ return true; }
+      if(!document.body) return false;
+      var st=document.createElement('style');
+      st.textContent='#kmGeomChip{position:fixed;left:6px;bottom:136px;z-index:2147483011;font:12px system-ui;padding:9px 11px;border-radius:9px;border:1px solid #2b3540;background:#101418;color:#B6FFC4;box-shadow:0 3px 10px rgba(0,0,0,.5)}'
+        +'#kmGeomPanel{position:fixed;left:6px;right:6px;top:96px;z-index:2147483012;background:rgba(16,20,24,.97);color:#dfffe0;font:11px system-ui;border-radius:10px;padding:8px;display:none;max-height:66vh;overflow:auto;border:1px solid #2b3540}';
+      document.head.appendChild(st);
+      chip=document.createElement('button'); chip.id='kmGeomChip'; chip.type='button'; chip.textContent='🏷 街道を選んで編集';
+      chip.onclick=function(ev){ try{ ev.preventDefault(); ev.stopPropagation(); }catch(e){}
+        if(!panel) return; var op=(panel.style.display==='block'); panel.style.display=op?'none':'block'; if(!op) paintList(); };
+      document.body.appendChild(chip);
+
+      panel=document.createElement('div'); panel.id='kmGeomPanel';
+      var h='<div style="display:flex;gap:5px;align-items:center;margin-bottom:6px">'
+        + '<b style="flex:1;color:#B6FFC4">🏷 街道路線の編集（全路線共通）</b>'
+        + '<button id="kmGeomClose" style="font:11px system-ui;padding:5px 8px;border-radius:7px;background:#1a2129;color:#dfffe0;border:1px solid #2b3540">閉じる</button></div>'
+        + '<div id="kmGeomTip" style="color:#9fe8ff;margin-bottom:6px">選ぶと地図がその路線へ移動します</div>'
+        + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">'
+        + '<button id="kmGeomShift" style="font:11px system-ui;padding:6px 9px;border-radius:7px;border:1px solid #2b3540">↔ ずらす</button>'
+        + '<button id="kmGeomAdd" style="font:11px system-ui;padding:6px 9px;border-radius:7px;border:1px solid #2b3540">➕ 足す</button>'
+        + '<button id="kmGeomOff" style="font:11px system-ui;padding:6px 9px;border-radius:7px;border:1px solid #2b3540">⏹ 終了</button>'
+        + '<button id="kmGeomReload" style="font:11px system-ui;padding:6px 9px;border-radius:7px;border:1px solid #2b3540">♻ 元に戻す</button></div>'
+        + '<div id="kmGeomList"></div>';
+      panel.innerHTML=h;
+      document.body.appendChild(panel);
+
+      modeBtns={off:document.getElementById('kmGeomOff'),shift:document.getElementById('kmGeomShift'),add:document.getElementById('kmGeomAdd')};
+      listBox=document.getElementById('kmGeomList'); tip=document.getElementById('kmGeomTip');
+      modeBtns.shift.onclick=function(ev){ try{ ev.preventDefault(); ev.stopPropagation(); }catch(e){} window.kmGeomSetMode('shift'); };
+      modeBtns.add.onclick=function(ev){ try{ ev.preventDefault(); ev.stopPropagation(); }catch(e){} window.kmGeomSetMode('add'); };
+      modeBtns.off.onclick=function(ev){ try{ ev.preventDefault(); ev.stopPropagation(); }catch(e){} window.kmGeomSetMode('off'); };
+      var cl=document.getElementById('kmGeomClose'); if(cl) cl.onclick=function(ev){ try{ ev.preventDefault(); ev.stopPropagation(); }catch(e){} panel.style.display='none'; };
+      var rl=document.getElementById('kmGeomReload');
+      if(rl) rl.onclick=function(ev){ try{ ev.preventDefault(); ev.stopPropagation(); }catch(e){}
+        try{ GEOM={}; localStorage.removeItem(GKEY); }catch(e){}
+        var a=KL(); for(var i=0;i<a.length;i++){ if(a[i]) a[i].segs=a[i].segs; }
+        applyLive(); toast('この端末の編集内容を消しました（元データに戻します）'); };
+      paintMode(); paintList(); return true;
+    }catch(e){ return false; }
+  }
+
+  /* ---- 入力の登録（Leaflet より先に受け取る） ---- */
+  try{ document.addEventListener('pointerdown',onDown,{capture:true,passive:false}); }catch(e){}
+  try{ document.addEventListener('pointermove',onMove,{capture:true,passive:false}); }catch(e){}
+  try{ document.addEventListener('pointerup',onUp,true); }catch(e){}
+  try{ document.addEventListener('pointercancel',function(){ if(drag){ applyLive(); persistDraw(); drag=null; } },true); }catch(e){}
+  try{ document.addEventListener('click',onTapAdd,true); }catch(e){}
+
+  /* ---- 起動：保存した編集を元データへ適用 ---- */
+  function boot(){
+    loadG(); build();
+    var n=window.__kmGeomApply(KL());
+    try{ var e=window.__kmEraseStrokes; if(e){ if(e.resnap) e.resnap(); else e.apply(); } }catch(x){}
+    try{ if(window.kmRedraw) window.kmRedraw(); }catch(x){}
+    reRender(); paintList();
+    return n;
+  }
+  window.kmGeomBoot=boot;
+  boot();
+  try{ document.addEventListener('DOMContentLoaded',boot); }catch(e){}
+  try{ window.addEventListener('load',function(){ setTimeout(boot,300); setTimeout(boot,1200); }); }catch(e){}
+  try{ setInterval(function(){ if(!chip) build(); if(mode==='off') loadG(); },1500); }catch(e){}
+})();
+/* KM_EDITALL_V105_END */
 </script>
 </html>
