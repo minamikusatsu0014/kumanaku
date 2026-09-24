@@ -1,17 +1,32 @@
 {
   "name": "街道ウォーキング",
-  "short_name": "街道ウォーキング",
-  "description": "日本全国を歩いた場所を100mメッシュで塗りつぶし、市町村・名所の踏破を記録する地図アプリ",
-  "lang": "ja",
+  "short_name": "街道ウォーク",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#f0ede5",
+  "orientation": "any",
+  "background_color": "#101418",
   "theme_color": "#2e7d32",
+  "lang": "ja",
+  "description": "日本全国を歩いた場所を100mメッシュで塗りつぶし、市町村・名所の踏破を記録する地図アプリ",
   "icons": [
-    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "./icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }

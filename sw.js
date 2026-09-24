@@ -1,59 +1,65 @@
-/* 京都くまなくウォーク Service Worker (GitHub Pages用) */
-const CACHE = 'kyoto-kumanaku-v45';
-const BASE = self.registration.scope;
-const APP_SHELL = [
-  BASE,
-  BASE + 'index.html',
-  BASE + 'manifest.json',
-  BASE + 'icon-192.png',
-  BASE + 'icon-512.png',
-  BASE + 'icon-maskable-512.png',
-  BASE + 'icon-180.png'
-];
+/* 街道ウォーキング v115 — インストール要件用の最小サービスワーカー
+   HTML はネットワーク優先（更新がすぐ反映される）、
+   それ以外の同一オリジン資産はキャッシュ優先。 */
+var CACHE = 'kumanaku-v115';
+var SHELL = ['./', './index.html'];
 
-self.addEventListener('install', e => {
+self.addEventListener('install', function (e) {
+  self.skipWaiting();
   e.waitUntil(
-    caches.open(CACHE)
-      .then(c => c.addAll(APP_SHELL))
-      .then(() => self.skipWaiting())
+    caches.open(CACHE).then(function (c) {
+      return c.addAll(SHELL).catch(function () {});
+    })
   );
 });
 
-self.addEventListener('activate', e => {
+self.addEventListener('activate', function (e) {
   e.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
+    caches.keys().then(function (ks) {
+      return Promise.all(
+        ks.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.delete(k); })
+      );
+    }).then(function () { return self.clients.claim(); })
   );
 });
 
-self.addEventListener('fetch', e => {
-  const url = new URL(e.request.url);
-  if (url.origin !== self.location.origin) {
+self.addEventListener('fetch', function (e) {
+  var req = e.request;
+  if (req.method !== 'GET') return;
+  var url;
+  try { url = new URL(req.url); } catch (err) { return; }
+  if (url.origin !== self.location.origin) return;
+
+  var accept = req.headers.get('accept') || '';
+  var isHTML = req.mode === 'navigate' || accept.indexOf('text/html') >= 0;
+
+  if (isHTML) {
     e.respondWith(
-      fetch(e.request).then(res => {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone)).catch(() => {});
+      fetch(req, { cache: 'no-store' }).then(function (res) {
+        if (res && res.ok) {
+          caches.open(CACHE).then(function (c) { c.put('./index.html', res.clone()).catch(function () {}); });
+        }
         return res;
-      }).catch(() => caches.match(e.request))
+      }).catch(function () {
+        return caches.open(CACHE).then(function (c) {
+          return c.match('./index.html').then(function (h) {
+            return h || c.match('./') || Response.error();
+          });
+        });
+      })
     );
     return;
   }
-  // 同一オリジン: HTML と sw.js は network-first(常に最新を取得)。それ以外は cache-first。
-  const p = url.pathname;
-  const netFirst = (e.request.mode === 'navigate') ||
-                   p.endsWith('/') || p.endsWith('index.html') || p.endsWith('sw.js');
-  if (netFirst) {
-    e.respondWith(
-      fetch(e.request).then(res => {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone)).catch(() => {});
-        return res;
-      }).catch(() => caches.match(e.request))
-    );
-    return;
-  }
+
   e.respondWith(
-    caches.match(e.request).then(hit => hit || fetch(e.request))
+    caches.open(CACHE).then(function (c) {
+      return c.match(req).then(function (hit) {
+        if (hit) return hit;
+        return fetch(req).then(function (res) {
+          if (res && res.ok) c.put(req, res.clone()).catch(function () {});
+          return res;
+        });
+      });
+    }).catch(function () { return fetch(req); })
   );
 });
