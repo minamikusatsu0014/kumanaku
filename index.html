@@ -6105,7 +6105,7 @@ setTimeout(hideSplash, 3500);
   var st={mode:'pen',color:COLORS[0],width:3,lines:[],redo:[],delBase:{}};
   var hist=[], map=null, Lg=null, layer=null, live=null, stroke=null, armed=false, erasing=false, raf=false, lastErase=null;
   window.KM_DRAW_STATE=st;
-  window.KM_DRAW_VER='v110';
+  window.KM_DRAW_VER='v111';
 
   function hv(a,b){var R=6371008.8,la1=(a&&a.lat!==undefined?a.lat:a[0])*Math.PI/180,lo1=(a&&a.lng!==undefined?a.lng:a[1])*Math.PI/180,la2=(b&&b.lat!==undefined?b.lat:b[0])*Math.PI/180,lo2=(b&&b.lng!==undefined?b.lng:b[1])*Math.PI/180,
     h=Math.sin((la2-la1)/2)*Math.sin((la2-la1)/2)+Math.cos(la1)*Math.cos(la2)*Math.sin((lo2-lo1)/2)*Math.sin((lo2-lo1)/2);
@@ -6429,7 +6429,7 @@ setTimeout(hideSplash, 3500);
     var d=document.createElement('div'); d.id='kmDrawPanel';
     var sw='';
     for(var i=0;i<COLORS.length;i++) sw+='<span class="sw" data-c="'+COLORS[i]+'" style="background:'+COLORS[i]+'"></span>';
-    d.innerHTML='<div class="hd"><span style="font-weight:800;color:#be123c">✏️ 手描きトレース <span style="font-size:10px;color:#666">v110</span></span>'
+    d.innerHTML='<div class="hd"><span style="font-weight:800;color:#be123c">✏️ 手描きトレース <span style="font-size:10px;color:#666">v111</span></span>'
       +'<span id="kmDvStat">線 0本 / 0点</span><button id="kmDvMin" class="mz" title="最小化">▾</button></div>'
       +'<div class="row"><button id="kmDvPen" class="big on">✏️ ペン</button>'
       +'<button id="kmDvEra" class="big">🧽 消しゴム</button>'
@@ -6437,7 +6437,8 @@ setTimeout(hideSplash, 3500);
       +'<div class="row"><button id="kmDvUndo" class="sm">↶ 戻す</button>'
       +'<button id="kmDvRedo" class="sm">↷ 進む</button>'
       +'<button id="kmDvClr" class="sm">🗑 全消去</button>'
-      +'<button id="kmDvExp" class="sm">💾 書出</button></div>'
+      +'<button id="kmDvExp" class="sm">💾 書出</button>'
+      +'<button id="kmDvImp" class="sm">📥 読込</button></div>'
       +'<div class="row"><span style="font-size:11px;color:#555">色</span>'+sw
       +'<span style="font-size:11px;color:#555;margin-left:4px">太さ</span>'
       +'<button id="kmDvW3" class="sm" style="max-width:52px">細</button>'
@@ -6491,6 +6492,40 @@ setTimeout(hideSplash, 3500);
       a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(out));
       a.download='km_draw_v99.json'; document.body.appendChild(a); a.click(); a.remove();
       document.getElementById('kmDvHint').innerHTML='書き出しました（'+st.lines.length+'本）';
+    });
+    /* v111: 「💾 書出」で作ったJSONを、そのまま読み戻せるようにした */
+    pick('kmDvImp',function(){
+      var f=document.createElement('input'); f.type='file'; f.accept='.json,application/json';
+      f.onchange=function(){
+        var file=f.files&&f.files[0]; f.value=''; if(!file) return;
+        var r=new FileReader();
+        r.onload=function(){ try{
+            var j=JSON.parse(String(r.result));
+            var L2=null;
+            if(Object.prototype.toString.call(j)==='[object Array]') L2=j;
+            else if(j && j.lines) L2=j.lines;
+            if(!L2 || !L2.length) throw new Error('no lines');
+            if(!confirm('いまの線（'+st.lines.length+'本）に、ファイルの '+L2.length+' 本を追加します。よろしいですか？')) return;
+            var added=0;
+            for(var i=0;i<L2.length;i++){
+              var raw=(L2[i]&&L2[i].pts)?L2[i].pts:[], p=[];
+              for(var k=0;k<raw.length;k++){
+                var v=raw[k], A=null;
+                if(Object.prototype.toString.call(v)==='[object Array]') A=[+v[0],+v[1]];
+                else if(v&&typeof v.lat==='number') A=[+v.lat,+v.lng];
+                else if(typeof v==='string'){ var c=v.split(','); if(c.length>=2) A=[+c[0],+c[1]]; }
+                if(A && isFinite(A[0]) && isFinite(A[1])) p.push(A);
+              }
+              if(p.length>=2){ snap();
+                st.lines.push({color:(L2[i].color||st.color), width:(L2[i].width||st.width), pts:p}); added++; }
+            }
+            if(!added) throw new Error('no valid lines');
+            st.redo=[]; redraw();
+            document.getElementById('kmDvHint').innerHTML='読み込みました：'+added+'本を追加（現在 '+st.lines.length+'本）／自動保存済み';
+          }catch(e){ alert('読み込めませんでした。このアプリの「💾 書出」で保存したJSONファイルを選んでください。'); } };
+        r.readAsText(file);
+      };
+      f.click();
     });
     applyMode();
   }
@@ -7035,8 +7070,8 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v110 09/24 09:00';
-  var BTAG='v110';
+  var BUILD='v111 09/24 10:30';
+  var BTAG='v111';
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
     var VK='km_app_ver', prevV=null;
