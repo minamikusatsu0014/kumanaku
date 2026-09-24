@@ -1239,6 +1239,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   <button class="menu-btn" id="addBtn">📲 アプリ化</button>
   <button class="menu-btn" id="locBtn">📍 現在地</button>
   <button class="menu-btn" id="expBtn">💾 保存出力（線も含む）</button>
+  <button class="menu-btn" id="kmSyncBtn">🔗 同期・送る</button>
   <button class="menu-btn" id="memoBtn">📝 メモ追加</button>
   <button class="menu-btn" id="memoListBtn">🗒 メモ一覧</button>
   <button class="menu-btn" id="photoBtn">📷 写真</button>
@@ -1390,7 +1391,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </div>
 
 <script>
-/* v117: アプリとしてインストールできるよう Service Worker を登録する。
+/* v118: アプリとしてインストールできるよう Service Worker を登録する。
    sw.js は HTML をネットワーク優先で扱うため、更新が反映されない事故は起きない。 */
 if('serviceWorker' in navigator && location.protocol==='https:'){
   window.addEventListener('load',function(){
@@ -3187,7 +3188,7 @@ document.getElementById('impFile').addEventListener('change',function(){
         trackLine=L.polyline(data.track,{color:'#e53935',weight:3,opacity:.8}).addTo(trackLayer);
         rebuildFreeMarkers(); refreshMemoIcons(); renderPhotoLayer();
         updateStats(); save();
-        /* v117: ファイルに手描きの線が入っていれば、既存の線を消さずに追加で戻す */
+        /* v118: ファイルに手描きの線が入っていれば、既存の線を消さずに追加で戻す */
         var __nd=0;
         try{
           if(d.draw && d.draw.lines && d.draw.lines.length && window.__kmDrawAPI){
@@ -6122,8 +6123,8 @@ setTimeout(hideSplash, 3500);
   var st={mode:'pen',color:COLORS[0],width:3,lines:[],redo:[],delBase:{}};
   var hist=[], map=null, Lg=null, layer=null, live=null, stroke=null, armed=false, erasing=false, raf=false, lastErase=null;
   window.KM_DRAW_STATE=st;
-  window.KM_DRAW_VER='v117';
-  /* v117: 右メニューの「読込」など別の処理からも、手描きの線を復元できるようにする。
+  window.KM_DRAW_VER='v118';
+  /* v118: 右メニューの「読込」など別の処理からも、手描きの線を復元できるようにする。
      保存先のキー(km_draw_main)は v100 以降ずっと同じ。ここでは中身の操作だけを公開する。 */
   window.__kmDrawAPI={
     add:function(L){
@@ -6145,7 +6146,30 @@ setTimeout(hideSplash, 3500);
       return n;
     },
     count:function(){ try{ return st.lines.length; }catch(e){ return 0; } },
-    lines:function(){ try{ return st.lines; }catch(e){ return []; } }
+    lines:function(){ try{ return st.lines; }catch(e){ return []; } },
+    /* v118: 同期・受け渡し用。merge は重複を除いて追加、clear は全消去 */
+    merge:function(L){
+      var sig={}, ex=st.lines, i, j;
+      for(i=0;i<ex.length;i++){ try{ sig[JSON.stringify([ex[i].color,ex[i].width,ex[i].pts])]=1; }catch(e){} }
+      var keep=[];
+      for(j=0;j<L.length;j++){
+        var it=L[j], pts=[], raw=(it&&it.pts)?it.pts:(it||[]);
+        for(var k=0;k<raw.length;k++){
+          var v=raw[k];
+          if(Object.prototype.toString.call(v)==='[object Array]') pts.push([+v[0],+v[1]]);
+          else if(v&&typeof v.lat==='number') pts.push([+v.lat,+v.lng]);
+        }
+        if(pts.length<2) continue;
+        var key=JSON.stringify([it.color||st.color, it.width||st.width, pts]);
+        if(sig[key]) continue;
+        sig[key]=1; keep.push({color:it.color||st.color, width:it.width||st.width, pts:pts});
+      }
+      if(!keep.length) return 0;
+      for(var m2=0;m2<keep.length;m2++) st.lines.push(keep[m2]);
+      try{ st.redo=[]; }catch(e){} try{ redraw(); }catch(e){} try{ save(); }catch(e){}
+      return keep.length;
+    },
+    clear:function(){ try{ st.lines.length=0; st.redo=[]; redraw(); save(); }catch(e){} return 0; }
   };
 
   function hv(a,b){var R=6371008.8,la1=(a&&a.lat!==undefined?a.lat:a[0])*Math.PI/180,lo1=(a&&a.lng!==undefined?a.lng:a[1])*Math.PI/180,la2=(b&&b.lat!==undefined?b.lat:b[0])*Math.PI/180,lo2=(b&&b.lng!==undefined?b.lng:b[1])*Math.PI/180,
@@ -6502,7 +6526,7 @@ setTimeout(hideSplash, 3500);
     var d=document.createElement('div'); d.id='kmDrawPanel';
     var sw='';
     for(var i=0;i<COLORS.length;i++) sw+='<span class="sw" data-c="'+COLORS[i]+'" style="background:'+COLORS[i]+'"></span>';
-    d.innerHTML='<div class="hd"><span style="font-weight:800;color:#be123c">✏️ 手描きトレース <span style="font-size:10px;color:#666">v117</span></span>'
+    d.innerHTML='<div class="hd"><span style="font-weight:800;color:#be123c">✏️ 手描きトレース <span style="font-size:10px;color:#666">v118</span></span>'
       +'<span id="kmDvStat">線 0本 / 0点</span><button id="kmDvMin" class="mz" title="最小化">▾</button></div>'
       +'<div class="row"><button id="kmDvPen" class="big on">✏️ ペン</button>'
       +'<button id="kmDvEra" class="big">🧽 消しゴム</button>'
@@ -6552,7 +6576,7 @@ setTimeout(hideSplash, 3500);
     pick('kmDvE1',function(){ window.__kmErasePx=14; try{localStorage.setItem('km_erase_px','14');}catch(e){} markE(); });
     pick('kmDvE2',function(){ window.__kmErasePx=22; try{localStorage.setItem('km_erase_px','22');}catch(e){} markE(); });
     pick('kmDvE3',function(){ window.__kmErasePx=34; try{localStorage.setItem('km_erase_px','34');}catch(e){} markE(); });
-    /* v117: 消しゴムの記録を全部取り消して、消えてしまった旧街道の線を戻す */
+    /* v118: 消しゴムの記録を全部取り消して、消えてしまった旧街道の線を戻す */
     pick('kmDvEraBack',function(){
       if(!confirm('消しゴムで消した記録をすべて取り消し、旧街道の線を元に戻します。よろしいですか？')) return;
       try{
@@ -7155,8 +7179,8 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v117 09/24 23:00';
-  var BTAG='v117';
+  var BUILD='v118 09/24 23:30';
+  var BTAG='v118';
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
     var VK='km_app_ver', prevV=null;
@@ -8136,7 +8160,7 @@ setTimeout(hideSplash, 3500);
 (function(){
   var KEY='km_erase_strokes_v1';
   var ORIG=null, STROKES=[], cur=[], curR=25, EXPECT=-1, lastRender=0;
-  window.kmEraseMaxM=300;   /* v117: 消しゴム半径の上限(m)。縮小表示での誤消去を防ぐ */
+  window.kmEraseMaxM=300;   /* v118: 消しゴム半径の上限(m)。縮小表示での誤消去を防ぐ */
   var R=6371008.8;
   function ok(){ return !!(window.KAIDO_LINES && window.KAIDO_LINES.length); }
   function each(g,f){ if(!g) return; for(var i=0;i<g.length;i++) f(g[i],i); }
@@ -8557,7 +8581,7 @@ setTimeout(hideSplash, 3500);
 (function(){
   var KEY='km_erase_strokes_v1';
   var ORIG=null, BB=[], STROKES=[], cur=[], curR=25, lastRender=0, VER=1, lastRenderVer=-1, EXPECT=-1;
-  window.kmEraseMaxM=300;   /* v117: 消しゴム半径の上限(m) */
+  window.kmEraseMaxM=300;   /* v118: 消しゴム半径の上限(m) */
   var R=6371008.8;
 
   function ok(){ return !!(window.KAIDO_LINES && window.KAIDO_LINES.length); }
@@ -9705,8 +9729,8 @@ setTimeout(hideSplash, 3500);
     }); }catch(e){}
     try{ m.on('moveend',function(){ scheduleCull(); }); }catch(e){}
     try{ m.on('zoomend',function(){ scheduleCull(); }); }catch(e){}
-    try{ if(!$('km-perf-v117-style')){
-      var st=document.createElement('style'); st.id='km-perf-v117-style';
+    try{ if(!$('km-perf-v118-style')){
+      var st=document.createElement('style'); st.id='km-perf-v118-style';
       st.textContent='#map.kmOriOn{will-change:transform}'
         +'#map .leaflet-marker-pane,#map .leaflet-overlay-pane{will-change:auto}';
       document.head.appendChild(st);
@@ -9724,7 +9748,7 @@ setTimeout(hideSplash, 3500);
 })();
 /* KM_PERF_V115_END */
 /* KM_ORIENT_V115_START : 地図の向き切替（通常→左右反転→上下反転→180°回転）。
-   v117 で直したところ:
+   v118 で直したところ:
    1) ドラッグ時、指の現在点だけでなく「開始点」も同じ基準で逆変換する。
       （開始点を変換していなかったため、ドラッグ開始ごとに画面中心からの距離の2倍だけ
         地図が飛び、その補正でズーム扱いになり「地図が小さくなる」症状が出ていた）
@@ -9779,8 +9803,8 @@ setTimeout(hideSplash, 3500);
       if(m.k==='none'){ c.style.willChange='auto'; c.style.backfaceVisibility=''; }
       else{ c.style.willChange='transform'; c.style.backfaceVisibility='hidden'; }
     }catch(e){}
-    var st=$('km-orient-v117-style');
-    if(!st){ try{ st=document.createElement('style'); st.id='km-orient-v117-style'; document.head.appendChild(st); }catch(e){ st=null; } }
+    var st=$('km-orient-v118-style');
+    if(!st){ try{ st=document.createElement('style'); st.id='km-orient-v118-style'; document.head.appendChild(st); }catch(e){ st=null; } }
     if(st){
       st.textContent = m.ct
         ? '#map .leaflet-control-zoom,#map .leaflet-control-attribution,#map .leaflet-control-scale,'
@@ -9887,7 +9911,7 @@ setTimeout(hideSplash, 3500);
   function inject(){
     var p=$('kmDrawPanel'), bar=$('kmMiniBar');
     if(p&&!$('kmOrientRow')){
-      var st=$('km-orient-v117-style');
+      var st=$('km-orient-v118-style');
       if(st&&st.textContent.indexOf('kmOri')<0){
         st.textContent+=(st.textContent?'':'')
           +'#kmDrawPanel #kmOrientRow{margin-top:5px;gap:4px}'
@@ -9917,4 +9941,399 @@ setTimeout(hideSplash, 3500);
   try{ window.addEventListener('load',function(){ setTimeout(function(){ try{ wire(); wireDrag(); inject(); apply(); }catch(e){} },600); }); }catch(e){}
 })();
 /* KM_ORIENT_V115_END */</script>
+<script>
+/* KM_QR_V118: 小さなQRコードを自前で生成（バイトモード / 誤り訂正L / 型番1〜10） */
+(function(){
+  var EXP=new Array(256), LOG=new Array(256);
+  (function(){ var x=1; for(var i=0;i<255;i++){ EXP[i]=x; LOG[x]=i; x<<=1; if(x&0x100) x^=0x11d; } EXP[255]=EXP[0]; })();
+  function gmul(a,b){ if(!a||!b) return 0; return EXP[(LOG[a]+LOG[b])%255]; }
+  function mulPoly(a,b){ var r=[],i,j; for(i=0;i<a.length+b.length-1;i++) r.push(0);
+    for(i=0;i<a.length;i++) for(j=0;j<b.length;j++) r[i+j]^=gmul(a[i],b[j]); return r; }
+  function genPoly(n){ var g=[1]; for(var i=0;i<n;i++) g=mulPoly(g,[1,EXP[i]]); return g; }
+  function eccOf(data,n){ var g=genPoly(n), res=data.concat(new Array(n).fill(0));
+    for(var i=0;i<data.length;i++){ var c=res[i]; if(c){ for(var j=0;j<g.length;j++) res[i+j]^=gmul(g[j],c); } }
+    return res.slice(data.length); }
+  var CAP=[17,32,53,78,106,134,154,192,230,271];
+  var ECC=[7,10,15,20,26,18,20,24,30,18];
+  var BLKD=[[19],[34],[55],[80],[108],[68,68],[78,78],[97,97],[116,116],[68,68,69,69]];
+  var AP=[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50]];
+  function gb(x,i){ return ((x>>>i)&1)!==0; }
+  window.__kmQR=function(text){
+    text=String(text);
+    var v=0; for(var i=0;i<CAP.length;i++){ if(text.length<=CAP[i]){ v=i+1; break; } }
+    if(!v) return null;
+    var size=v*4+17, m=[], fn=[], x, y;
+    for(y=0;y<size;y++){ var mr=[], fr=[]; for(x=0;x<size;x++){ mr.push(0); fr.push(0); } m.push(mr); fn.push(fr); }
+    function setFn(px,py,val){ if(px<0||py<0||px>=size||py>=size) return; m[py][px]=val?1:0; fn[py][px]=1; }
+    function finder(cx,cy){ for(var dy=-4;dy<=4;dy++) for(var dx=-4;dx<=4;dx++){
+      var d=Math.max(Math.abs(dx),Math.abs(dy)); setFn(cx+dx,cy+dy,(d===2||d===4)?0:1); } }
+    finder(3,3); finder(size-4,3); finder(3,size-4);
+    for(var t=8;t<size-8;t++){ setFn(t,6,(t%2===0)?1:0); setFn(6,t,(t%2===0)?1:0); }
+    var ap=AP[v-1];
+    for(var ai=0;ai<ap.length;ai++) for(var aj=0;aj<ap.length;aj++){
+      var cx=ap[aj], cy=ap[ai];
+      if((cx===6&&cy===6)||(cx===6&&cy===size-7)||(cx===size-7&&cy===6)) continue;
+      for(var dy2=-2;dy2<=2;dy2++) for(var dx2=-2;dx2<=2;dx2++){
+        var dd=Math.max(Math.abs(dx2),Math.abs(dy2)); setFn(cx+dx2,cy+dy2,dd===1?0:1); }
+    }
+    for(var i2=0;i2<=8;i2++){ if(i2!==6){ setFn(8,i2,0); setFn(i2,8,0); } }
+    for(var i3=0;i3<8;i3++){ setFn(size-1-i3,8,0); setFn(8,size-1-i3,0); }
+    setFn(8,size-8,1);
+    if(v>=7){
+      var rem=v; for(var k=0;k<12;k++) rem=(rem<<1)^(((rem>>>11)&1)*0x1F25);
+      var vb=(v<<12|rem);
+      for(var i4=0;i4<18;i4++){ var bit=gb(vb,i4);
+        setFn(size-11+(i4%3), Math.floor(i4/3), bit); setFn(Math.floor(i4/3), size-11+(i4%3), bit); }
+    }
+    var bits=[];
+    function put(val,len){ for(var q=len-1;q>=0;q--) bits.push((val>>>q)&1); }
+    put(4,4); put(text.length, v<=9?8:16);
+    for(var i5=0;i5<text.length;i5++) put(text.charCodeAt(i5)&0xff,8);
+    var dl=BLKD[v-1], dcap=0; for(var i6=0;i6<dl.length;i6++) dcap+=dl[i6];
+    var total=dcap*8;
+    for(var t2=0;t2<4 && bits.length<total;t2++) bits.push(0);
+    while(bits.length%8) bits.push(0);
+    var cw=[]; for(var i7=0;i7<bits.length;i7+=8){ var b2=0; for(var j=0;j<8;j++) b2=(b2<<1)|bits[i7+j]; cw.push(b2); }
+    var padb=[0xEC,0x11], pi=0;
+    while(cw.length<dcap) cw.push(padb[(pi++)%2]);
+    var blocks=[], ecs=[], off=0;
+    for(var i8=0;i8<dl.length;i8++){ var d8=cw.slice(off,off+dl[i8]); off+=dl[i8]; blocks.push(d8); ecs.push(eccOf(d8,ECC[v-1])); }
+    var data=[], maxD=0; for(var i9=0;i9<dl.length;i9++) maxD=Math.max(maxD,dl[i9]);
+    for(var r2=0;r2<maxD;r2++) for(var b3=0;b3<blocks.length;b3++) if(r2<blocks[b3].length) data.push(blocks[b3][r2]);
+    for(var r3=0;r3<ECC[v-1];r3++) for(var b4=0;b4<ecs.length;b4++) data.push(ecs[b4][r3]);
+    var nbit=data.length*8, idx=0;
+    for(var right=size-1;right>=1;right-=2){
+      if(right===6) right=5;
+      for(var vert=0;vert<size;vert++) for(var jj=0;jj<2;jj++){
+        var xx=right-jj, upward=(((right+1)&2)===0), yy=upward?(size-1-vert):vert;
+        if(!fn[yy][xx] && idx<nbit){ m[yy][xx]=((data[idx>>>3]>>>(7-(idx&7)))&1); idx++; }
+      }
+    }
+    var base=m.map(function(r){ return r.slice(); });
+    function setFormat(mask){
+      for(var y2=0;y2<size;y2++) for(var x2=0;x2<size;x2++) m[y2][x2]=base[y2][x2];
+      var db=(1<<3)|mask, rm=db;
+      for(var k2=0;k2<10;k2++) rm=(rm<<1)^(((rm>>>9)&1)*0x537);
+      var fb=((db<<10)|rm)^0x5412;
+      for(var i10=0;i10<=5;i10++) setFn(8,i10,gb(fb,i10));
+      setFn(8,7,gb(fb,6)); setFn(8,8,gb(fb,7)); setFn(7,8,gb(fb,8));
+      for(var i11=9;i11<15;i11++) setFn(14-i11,8,gb(fb,i11));
+      for(var i12=0;i12<8;i12++) setFn(size-1-i12,8,gb(fb,i12));
+      for(var i13=8;i13<15;i13++) setFn(8,size-15+i13,gb(fb,i13));
+      setFn(8,size-8,1);
+    }
+    function applyMask(mask){
+      for(var y3=0;y3<size;y3++) for(var x3=0;x3<size;x3++){
+        if(fn[y3][x3]) continue;
+        var inv=false;
+        switch(mask){
+          case 0: inv=((x3+y3)%2===0); break;
+          case 1: inv=(y3%2===0); break;
+          case 2: inv=(x3%3===0); break;
+          case 3: inv=((x3+y3)%3===0); break;
+          case 4: inv=((Math.floor(x3/3)+Math.floor(y3/2))%2===0); break;
+          case 5: inv=(((x3*y3)%2 + (x3*y3)%3)===0); break;
+          case 6: inv=((((x3*y3)%2 + (x3*y3)%3)%2)===0); break;
+          case 7: inv=((((x3+y3)%2 + (x3*y3)%3)%2)===0); break;
+        }
+        if(inv) m[y3][x3]^=1;
+      }
+    }
+    function pat(arr){
+      var t=arr.join(''), n=0, i14=0;
+      while((i14=t.indexOf('10111010000',i14))>=0){ n++; i14++; }
+      i14=0; while((i14=t.indexOf('00001011101',i14))>=0){ n++; i14++; }
+      return n;
+    }
+    function penalty(){
+      var s=0,x4,y4;
+      for(y4=0;y4<size;y4++){ var run=1; for(x4=1;x4<size;x4++){ if(m[y4][x4]===m[y4][x4-1]) run++; else { if(run>=5) s+=3+(run-5); run=1; } } if(run>=5) s+=3+(run-5); }
+      for(x4=0;x4<size;x4++){ var run2=1; for(y4=1;y4<size;y4++){ if(m[y4][x4]===m[y4-1][x4]) run2++; else { if(run2>=5) s+=3+(run2-5); run2=1; } } if(run2>=5) s+=3+(run2-5); }
+      for(y4=0;y4<size-1;y4++) for(x4=0;x4<size-1;x4++){ var c=m[y4][x4]; if(c===m[y4][x4+1]&&c===m[y4+1][x4]&&c===m[y4+1][x4+1]) s+=3; }
+      for(y4=0;y4<size;y4++) s+=40*pat(m[y4]);
+      for(x4=0;x4<size;x4++){ var col=[]; for(y4=0;y4<size;y4++) col.push(m[y4][x4]); s+=40*pat(col); }
+      var dark=0; for(y4=0;y4<size;y4++) for(x4=0;x4<size;x4++) if(m[y4][x4]) dark++;
+      var ratio=dark*100/(size*size);
+      s+=Math.floor(Math.abs(ratio-50)/5)*10;
+      return s;
+    }
+    var best=-1, bm=0;
+    for(var mask=0;mask<8;mask++){ setFormat(mask); applyMask(mask); var p=penalty(); if(best<0||p<best){ best=p; bm=mask; } }
+    setFormat(bm); applyMask(bm);
+    return { size:size, m:m, mask:bm, ver:v };
+  };
+  window.__kmQRCanvas=function(text,scale,quiet){
+    var q=window.__kmQR(text); if(!q) return null;
+    scale=scale||4; quiet=(quiet==null?4:quiet);
+    var n=q.size+quiet*2, px=n*scale;
+    var cv=document.createElement('canvas'); cv.width=px; cv.height=px;
+    var ctx=cv.getContext('2d');
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,px,px);
+    ctx.fillStyle='#000';
+    for(var y=0;y<q.size;y++) for(var x=0;x<q.size;x++) if(q.m[y][x]) ctx.fillRect((x+quiet)*scale,(y+quiet)*scale,scale,scale);
+    return cv;
+  };
+})();
+
+/* KM_SYNC_V118_START : PCとスマホの間で線を受け渡し・同期する。
+   1) リンク/QR/ファイル/共有 → 設定不要で1回だけ渡す（小さな線向け）
+   2) GitHub同期 → 同じ owner/repo/token を入れた端末どうしで、サーバー上の1ファイルを介して同期
+   保存キー(km_draw_main)は v100 以降ずっと同じ。ここでは中身の追加・置換だけを行う。 */
+(function(){
+  var LS='km_sync_v1', HS='#kmdraw=', GH_PATH='kmdraw/draw.json';
+  var MAX_OK=2500, MAX_WARN=8000;
+  function $(id){ return document.getElementById(id); }
+  function say(m){ var e=$('kmSyncMsg'); if(e) e.textContent=m; }
+  function toast(m){ try{ if(typeof notice==='function') notice(m); }catch(e){} }
+  function opt(){ try{ return JSON.parse(localStorage.getItem(LS)||'{}'); }catch(e){ return {}; } }
+  function setOpt(o){ try{ localStorage.setItem(LS,JSON.stringify(o)); }catch(e){} }
+  function api(){ return window.__kmDrawAPI||null; }
+  function toB64(u8){ var s=''; for(var i=0;i<u8.length;i++) s+=String.fromCharCode(u8[i]);
+    return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+  function fromB64(t){ t=String(t).replace(/-/g,'+').replace(/_/g,'/'); while(t.length%4) t+='=';
+    var b=atob(t), u=new Uint8Array(b.length); for(var i=0;i<b.length;i++) u[i]=b.charCodeAt(i); return u; }
+  function deflateStr(s){
+    if(typeof CompressionStream!=='function'||typeof Response!=='function') return Promise.resolve(null);
+    try{
+      var cs=new CompressionStream('deflate-raw'), w=cs.writable.getWriter();
+      w.write(new TextEncoder().encode(s)); w.close();
+      return new Response(cs.readable).arrayBuffer().then(function(ab){ return toB64(new Uint8Array(ab)); }).catch(function(){ return null; });
+    }catch(e){ return Promise.resolve(null); }
+  }
+  function inflateStr(t){
+    if(typeof DecompressionStream!=='function') return Promise.reject(new Error('この端末は圧縮リンクに対応していません'));
+    var cs=new DecompressionStream('deflate-raw'), w=cs.writable.getWriter();
+    w.write(fromB64(t)); w.close();
+    return new Response(cs.readable).arrayBuffer().then(function(ab){ return new TextDecoder().decode(new Uint8Array(ab)); });
+  }
+  function pack(){ var L=[]; try{ L=api()?api().lines():[]; }catch(e){}
+    return {t:'kumanaku-draw', v:118, at:new Date().toISOString(), n:L.length, lines:L}; }
+  function encode(){ var s=JSON.stringify(pack());
+    return deflateStr(s).then(function(z){
+      if(z!=null && z.length<s.length) return {c:1,d:z};
+      return {c:0,d:toB64(new TextEncoder().encode(s))};
+    }); }
+  function decode(o){ if(!o||!o.d) return Promise.reject(new Error('中身が空です'));
+    if(o.c===1) return inflateStr(o.d);
+    return Promise.resolve(new TextDecoder().decode(fromB64(o.d))); }
+  function applyText(txt,mode){
+    var p=null; try{ p=JSON.parse(txt); }catch(e){ return {ok:false,msg:'データの形式が違います'}; }
+    var L=null;
+    if(p&&p.lines) L=p.lines;
+    else if(Object.prototype.toString.call(p)==='[object Array]') L=p;
+    if(!L||!L.length) return {ok:false,msg:'線が入っていません'};
+    var a=api(); if(!a) return {ok:false,msg:'線の保存領域を開けません'};
+    if(mode==='replace' && a.clear) a.clear();
+    var added=a.merge?a.merge(L):a.add(L);
+    return {ok:true, added:added, total:a.count(), at:(p&&p.at)||''};
+  }
+  function askMode(){
+    var cur=api()?api().count():0;
+    if(cur===0) return 'merge';
+    return confirm('今の線は '+cur+'本あります。\nOK＝追加（今の線を残す）\nキャンセル＝置き換え（今の線を消す）') ? 'merge' : 'replace';
+  }
+  function report(r){
+    if(!r||!r.ok){ say('⚠ '+((r&&r.msg)||'取り込めませんでした')); return r; }
+    say('✔ 取り込み完了：'+r.added+'本を追加（現在 '+r.total+'本）');
+    toast('🔗 線を'+r.added+'本 取り込みました');
+    return r;
+  }
+  window.__kmSync={
+    pack:pack, encode:encode, decode:decode, applyText:applyText, askMode:askMode,
+    buildLink:function(){
+      return encode().then(function(o){
+        var base=location.origin+location.pathname+location.search;
+        var url=base+HS+o.c+'.'+o.d, len=url.length-base.length;
+        if(len>MAX_WARN) return {ok:false,len:len,msg:'大きすぎてリンクにできません（約'+Math.round(len/1024)+'KB）。ファイル保存かサーバー同期を使ってください。'};
+        return {ok:true,url:url,len:len,c:o.c,long:len>MAX_OK,n:(api()?api().count():0)};
+      });
+    },
+    applyLink:function(url,mode){
+      try{
+        var i=String(url).indexOf(HS); if(i<0) return Promise.reject(new Error('リンクの形式が違います'));
+        var body=String(url).slice(i+HS.length), di=body.indexOf('.');
+        if(di<1) return Promise.reject(new Error('リンクの形式が違います'));
+        return decode({c:Number(body.slice(0,di)), d:body.slice(di+1)}).then(function(t){ return applyText(t,mode||'merge'); });
+      }catch(e){ return Promise.reject(e); }
+    },
+    applyFile:function(file,mode){
+      return new Promise(function(res,rej){
+        var r=new FileReader();
+        r.onload=function(){ try{ res(applyText(String(r.result),mode||'merge')); }catch(e){ rej(e); } };
+        r.onerror=function(){ rej(new Error('ファイルを読めませんでした')); };
+        r.readAsText(file);
+      });
+    },
+    download:function(){
+      var blob=new Blob([JSON.stringify(pack())],{type:'application/json'});
+      var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+      a.download='kumanaku_draw_'+new Date().toISOString().slice(0,10)+'.json';
+      document.body.appendChild(a); a.click(); a.remove(); return true;
+    },
+    share:function(url){
+      try{ if(navigator.share) return navigator.share({title:'街道ウォーキングの線',text:'線の受け渡しリンク',url:url}).then(function(){return true;}).catch(function(){return false;}); }catch(e){}
+      return Promise.resolve(false);
+    },
+    qr:function(){ return (typeof window.__kmQRCanvas==='function')?window.__kmQRCanvas:null; },
+    ghCfg:function(){ try{ return (typeof ghCfg==='function')?ghCfg():null; }catch(e){ return null; } },
+    pushGH:function(){
+      var c=this.ghCfg(); if(!c||!c.token) return Promise.resolve({ok:false,msg:'GitHub設定（owner / repo / token）が未入力です。'});
+      var n=pack().n;
+      return ghPut(c, GH_PATH, JSON.stringify(pack()), 'sync: draw '+new Date().toISOString().slice(0,16)+' ('+n+' lines)')
+        .then(function(r){ var o=opt(); o.at=new Date().toISOString(); setOpt(o);
+          return {ok:true,msg:'サーバーへ送信しました（'+n+'本）',commit:(r&&r.commit)||null}; })
+        .catch(function(e){ return {ok:false,msg:'送信に失敗: '+String((e&&e.message)||e)}; });
+    },
+    pullGH:function(mode){
+      var c=this.ghCfg(); if(!c||!c.token) return Promise.resolve({ok:false,msg:'GitHub設定（owner / repo / token）が未入力です。'});
+      return ghGetFile(c, GH_PATH).then(function(f){
+        if(!f||!f.exists) return {ok:false,msg:'サーバーにまだ保存がありません（先に「サーバーへ送る」を実行）'};
+        var t=null; try{ t=unb64utf8(f.base64); }catch(e){ t=null; }
+        if(t==null){ try{ t=atob(f.base64); }catch(e){ t=null; } }
+        if(t==null) return {ok:false,msg:'サーバーの内容を読めませんでした'};
+        var r=applyText(t, mode||'merge'); r.found=true;
+        if(r.ok){ var o=opt(); o.pullAt=new Date().toISOString(); setOpt(o); }
+        return r;
+      }).catch(function(e){ return {ok:false,msg:'受信に失敗: '+String((e&&e.message)||e)}; });
+    },
+    view:function(){ var o=opt(); return {auto:!!o.auto, path:GH_PATH, at:o.at||'', pullAt:o.pullAt||''}; },
+    setAuto:function(v){ var o=opt(); o.auto=!!v; setOpt(o); return o.auto; }
+  };
+  /* ---- 画面（パネル）---- */
+  function panel(){
+    if($('kmSyncPanel')) return;
+    var d=document.createElement('div'); d.id='kmSyncPanel';
+    d.style.cssText='position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2147483001;'
+      +'background:#fff;border:2px solid #2e7d32;border-radius:12px;padding:10px;width:min(94vw,420px);max-height:84vh;overflow:auto;'
+      +'box-shadow:0 6px 24px rgba(0,0,0,.35);font:12px/1.5 system-ui,sans-serif;color:#222';
+    d.innerHTML=''
+      +'<div style="font:800 14px system-ui;margin-bottom:6px">🔗 線の同期・受け渡し</div>'
+      +'<div id="kmSyncMsg" style="min-height:2.6em;background:#f4f8f4;border:1px solid #cde;border-radius:6px;padding:5px;margin-bottom:8px">準備中…</div>'
+      +'<div style="font-weight:800;margin:4px 0">この端末の線を別の端末へ送る</div>'
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
+      +'<button id="kmSyLink" class="kmS">🔗 リンクを作る</button>'
+      +'<button id="kmSyQR" class="kmS">🖼 QR表示</button>'
+      +'<button id="kmSyFile" class="kmS">📤 ファイル保存</button>'
+      +'<button id="kmSyShare" class="kmS">📱 共有</button></div>'
+      +'<div style="margin:8px 0 2px;font-weight:800">受け取る</div>'
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
+      +'<button id="kmSyPaste" class="kmS">📋 貼り付けて取込</button>'
+      +'<input id="kmSyFileIn" type="file" accept=".json" style="display:none">'
+      +'<button id="kmSyOpen" class="kmS">📂 ファイルを選ぶ</button></div>'
+      +'<div style="margin:8px 0 2px;font-weight:800">サーバー同期（GitHubの設定を利用）</div>'
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
+      +'<button id="kmSyPush" class="kmS">☁ サーバーへ送る</button>'
+      +'<button id="kmSyPull" class="kmS">⬇ サーバーから取込</button>'
+      +'<label style="display:flex;align-items:center;gap:4px"><input id="kmSyAuto" type="checkbox"> 起動時に自動で取込</label></div>'
+      +'<div id="kmSyLinkBox" style="margin-top:8px"></div>'
+      +'<div style="margin-top:8px;font-size:11px;color:#666">'
+      +'・リンクは小さな線向け（目安 2.5KB以下）。大きい線はファイルかサーバー同期を使います。<br>'
+      +'・リンクの中身はURLの # 以降に入るためサーバーには送られませんが、リンクを知った人は読めます。<br>'
+      +'・サーバー同期は GitHub 設定（owner/repo/token）を使います。<b>公開リポジトリだと線も公開される</b>ため、非公開リポジトリを推奨します。</div>'
+      +'<div style="margin-top:8px;text-align:right"><button id="kmSyClose" class="kmS">閉じる</button></div>';
+    var st=document.createElement('style');
+    st.textContent='button.kmS{font:700 12px system-ui;padding:6px 9px;border-radius:8px;border:1px solid #2e7d32;background:#f1f8f1;color:#1b5e20}'
+      +'#kmSyLinkBox textarea{width:100%;height:64px;font:11px monospace;box-sizing:border-box}'
+      +'#kmSyQrWrap{text-align:center;margin-top:6px}';
+    d.appendChild(st); document.documentElement.appendChild(d);
+    var o=opt(); if($('kmSyAuto')) $('kmSyAuto').checked=!!o.auto;
+    say('この端末の線：'+((api()?api().count():0))+'本 / 同期ファイル：'+GH_PATH);
+    function bind(id,fn){ var e=$(id); if(e) e.addEventListener('click',function(ev){ try{ ev.preventDefault(); ev.stopPropagation(); }catch(x){} fn(); }); }
+    bind('kmSyClose',function(){ d.remove(); });
+    bind('kmSyFile',function(){ window.__kmSync.download(); say('📤 ファイルを保存しました（'+pack().n+'本）'); });
+    bind('kmSyLink',function(){
+      say('リンクを作成中…');
+      window.__kmSync.buildLink().then(function(r){
+        var box=$('kmSyLinkBox');
+        if(!r.ok){ box.innerHTML=''; say('⚠ '+r.msg); return; }
+        box.innerHTML='<textarea id="kmSyUrl" readonly></textarea>'
+          +'<div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap">'
+          +'<button id="kmSyCopy" class="kmS">📋 コピー</button><button id="kmSyQr2" class="kmS">🖼 QR表示</button></div>'
+          +'<div id="kmSyQrWrap"></div>';
+        $('kmSyUrl').value=r.url;
+        say('✔ リンクを作成（'+r.n+'本 / 約'+Math.round(r.len/1024)+'KB）'+(r.long?'　※長いのでQRは使えません。コピーして送ってください':''));
+        bind('kmSyCopy',function(){ var t=$('kmSyUrl'); t.select();
+          try{ if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(t.value); else document.execCommand('copy'); say('📋 コピーしました'); }catch(e){ say('コピーできません。長押しで選択してください'); } });
+        bind('kmSyQr2',function(){ drawQR(r.url); });
+      });
+    });
+    function drawQR(url){
+      var w=$('kmSyQrWrap'); if(!w) return;
+      var f=window.__kmSync.qr();
+      if(!f){ say('⚠ この端末ではQRを表示できません'); return; }
+      var cv=f(url,4,4);
+      if(!cv){ say('⚠ 大きすぎてQRにできません（目安 270バイトまで）'); return; }
+      w.innerHTML='';
+      cv.style.cssText='max-width:min(80vw,320px);height:auto;border:6px solid #fff;border-radius:6px';
+      w.appendChild(cv);
+      var p=document.createElement('div'); p.style.cssText='font-size:11px;color:#666';
+      p.textContent='スマホのカメラで読み取り → 開いたページで取り込み';
+      w.appendChild(p);
+      say('🖼 QRを表示しました。読み取って開いてください。');
+    }
+    bind('kmSyQR',function(){ say('QR準備中…');
+      window.__kmSync.buildLink().then(function(r){
+        var box=$('kmSyLinkBox');
+        if(!r.ok){ box.innerHTML=''; say('⚠ '+r.msg); return; }
+        box.innerHTML='<textarea id="kmSyUrl" readonly></textarea><div id="kmSyQrWrap"></div>';
+        $('kmSyUrl').value=r.url; drawQR(r.url);
+      });
+    });
+    bind('kmSyShare',function(){ window.__kmSync.buildLink().then(function(r){
+      if(!r.ok){ say('⚠ '+r.msg); return; }
+      window.__kmSync.share(r.url).then(function(ok){ say(ok?'📱 共有しました':'この端末は共有に未対応です。「リンクを作る」でコピーしてください'); });
+    }); });
+    bind('kmSyPaste',function(){
+      var t=prompt('受け取ったリンク（URL）を貼り付けてください'); if(!t) return;
+      var m=window.__kmSync.askMode();
+      window.__kmSync.applyLink(t,m).then(report).catch(function(e){ say('⚠ '+String((e&&e.message)||e)); });
+    });
+    bind('kmSyOpen',function(){ if($('kmSyFileIn')) $('kmSyFileIn').click(); });
+    var fi=$('kmSyFileIn');
+    if(fi) fi.addEventListener('change',function(){
+      var f=this.files&&this.files[0]; if(!f) return;
+      var m=window.__kmSync.askMode();
+      window.__kmSync.applyFile(f,m).then(function(r){ report(r); this.value=''; say($('kmSyncMsg').textContent); },function(e){ say('⚠ '+String((e&&e.message)||e)); });
+      try{ this.value=''; }catch(e){}
+    });
+    bind('kmSyPush',function(){ say('サーバーへ送信中…');
+      window.__kmSync.pushGH().then(function(r){ say((r.ok?'✔ ':'⚠ ')+r.msg); }); });
+    bind('kmSyPull',function(){ say('サーバーから取得中…');
+      window.__kmSync.pullGH('merge').then(function(r){ if(r.ok) report(r); else say('⚠ '+r.msg); }); });
+    var au=$('kmSyAuto');
+    if(au) au.addEventListener('change',function(){ var v=window.__kmSync.setAuto(this.checked);
+      say(v?'✔ 起動時に自動で取り込むようにしました（同じGitHub設定の端末どうしで同期）':'自動取り込みを止めました'); });
+  }
+  /* ---- 右メニューのボタン ---- */
+  function wireBtn(){
+    var b=$('kmSyncBtn');
+    if(b && !b.__kmSyncWired){ b.__kmSyncWired=1; b.addEventListener('click',function(ev){ try{ ev.preventDefault(); }catch(e){} panel(); }); }
+  }
+  try{ var n=0,t=setInterval(function(){ wireBtn(); if($('kmSyncBtn')||++n>60) clearInterval(t); },400); }catch(e){}
+  try{ window.addEventListener('load',function(){ setTimeout(wireBtn,900); }); }catch(e){}
+  /* ---- 起動時：リンク(#kmdraw=...)が付いていれば取り込む ---- */
+  try{
+    if(location.hash.indexOf(HS)===0){
+      var full=location.href;
+      setTimeout(function(){
+        var m=askMode();
+        window.__kmSync.applyLink(full,m).then(function(r){ report(r);
+          if(r&&r.ok){ try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} } },function(e){ say('⚠ '+String((e&&e.message)||e)); });
+      },1500);
+    }
+  }catch(e){}
+  /* ---- 起動時：自動取り込みがONならサーバーから取得 ---- */
+  try{
+    if(opt().auto){
+      setTimeout(function(){
+        window.__kmSync.pullGH('merge').then(function(r){
+          if(r&&r.ok){ say('☁ サーバーから '+r.added+'本を取り込みました（現在 '+r.total+'本）'); toast('☁ 線を'+r.added+'本 同期しました'); }
+        });
+      },3000);
+    }
+  }catch(e){}
+})();
+/* KM_SYNC_V118_END */
+
+</script>
 </html>
