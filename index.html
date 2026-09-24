@@ -1218,7 +1218,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v109</span><span style="font-size:11px;color:#999;margin-left:4px">09/23 01:30</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v110</span><span style="font-size:11px;color:#999;margin-left:4px">09/23 01:30</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -6105,7 +6105,7 @@ setTimeout(hideSplash, 3500);
   var st={mode:'pen',color:COLORS[0],width:3,lines:[],redo:[],delBase:{}};
   var hist=[], map=null, Lg=null, layer=null, live=null, stroke=null, armed=false, erasing=false, raf=false, lastErase=null;
   window.KM_DRAW_STATE=st;
-  window.KM_DRAW_VER='v109';
+  window.KM_DRAW_VER='v110';
 
   function hv(a,b){var R=6371008.8,la1=(a&&a.lat!==undefined?a.lat:a[0])*Math.PI/180,lo1=(a&&a.lng!==undefined?a.lng:a[1])*Math.PI/180,la2=(b&&b.lat!==undefined?b.lat:b[0])*Math.PI/180,lo2=(b&&b.lng!==undefined?b.lng:b[1])*Math.PI/180,
     h=Math.sin((la2-la1)/2)*Math.sin((la2-la1)/2)+Math.cos(la1)*Math.cos(la2)*Math.sin((lo2-lo1)/2)*Math.sin((lo2-lo1)/2);
@@ -6429,7 +6429,7 @@ setTimeout(hideSplash, 3500);
     var d=document.createElement('div'); d.id='kmDrawPanel';
     var sw='';
     for(var i=0;i<COLORS.length;i++) sw+='<span class="sw" data-c="'+COLORS[i]+'" style="background:'+COLORS[i]+'"></span>';
-    d.innerHTML='<div class="hd"><span style="font-weight:800;color:#be123c">✏️ 手描きトレース <span style="font-size:10px;color:#666">v109</span></span>'
+    d.innerHTML='<div class="hd"><span style="font-weight:800;color:#be123c">✏️ 手描きトレース <span style="font-size:10px;color:#666">v110</span></span>'
       +'<span id="kmDvStat">線 0本 / 0点</span><button id="kmDvMin" class="mz" title="最小化">▾</button></div>'
       +'<div class="row"><button id="kmDvPen" class="big on">✏️ ペン</button>'
       +'<button id="kmDvEra" class="big">🧽 消しゴム</button>'
@@ -7035,8 +7035,8 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v109 09/23 22:10';
-  var BTAG='v109';
+  var BUILD='v110 09/24 09:00';
+  var BTAG='v110';
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
     var VK='km_app_ver', prevV=null;
@@ -9498,4 +9498,139 @@ setTimeout(hideSplash, 3500);
   try{ document.addEventListener('touchend',function(){ setTimeout(function(){ try{ wrapAll(); }catch(e){} },150); },true); }catch(e){}
 })();
 /* KM_PERSIST_V109_END */</script>
+<script>/* KM_ORIENT_V110_START : 地図の向き切替（通常→左右反転→上下反転→180°回転）。保存座標は常に通常時と同じ */
+(function(){
+  var KEY='km_orient_v1';
+  var MODES=[
+    {k:'none',label:'通常',     css:'',               ct:'',               fx:false,fy:false},
+    {k:'x',   label:'左右反転', css:'scaleX(-1)',     ct:'scaleX(-1)',     fx:true, fy:false},
+    {k:'y',   label:'上下反転', css:'scaleY(-1)',     ct:'scaleY(-1)',     fx:false,fy:true},
+    {k:'r',   label:'180°回転', css:'rotate(180deg)', ct:'rotate(180deg)', fx:true, fy:true}
+  ];
+  var cur=0, map=null, wired=false, wiredDrag=false;
+  try{ var sv=localStorage.getItem(KEY); for(var i=0;i<MODES.length;i++){ if(MODES[i].k===sv) cur=i; } }catch(e){}
+  function mode(){ return MODES[cur]; }
+  function $(id){ return document.getElementById(id); }
+  function mapEl(){ return (map&&map.getContainer)?map.getContainer():document.getElementById('map'); }
+  function rectOf(){ var c=mapEl(); try{ return c.getBoundingClientRect(); }catch(e){ return {left:0,top:0,width:0,height:0}; } }
+  function evXY(e){
+    var t=(e&&e.touches&&e.touches[0])||(e&&e.changedTouches&&e.changedTouches[0])||null;
+    var x=(e&&e.clientX!=null)?e.clientX:(t&&t.clientX!=null?t.clientX:null);
+    var y=(e&&e.clientY!=null)?e.clientY:(t&&t.clientY!=null?t.clientY:null);
+    return {x:x,y:y};
+  }
+  /* 反転後の見え方から「反転前のコンテナ座標」を求める（保存される座標系は常に通常時と同じ） */
+  function toCP(clientX,clientY,r){
+    r=r||rectOf(); var m=mode();
+    var x=clientX-r.left, y=clientY-r.top;
+    if(m.fx) x=r.width-x;
+    if(m.fy) y=r.height-y;
+    return {x:x,y:y};
+  }
+  /* 指の移動量の逆変換（ドラッグ・ピンチを指の動きに自然に追従させる） */
+  function mirrorClient(clientX,clientY,r){
+    r=r||rectOf(); var m=mode();
+    return { clientX: m.fx ? (2*r.left+r.width-clientX) : clientX,
+             clientY: m.fy ? (2*r.top +r.height-clientY) : clientY };
+  }
+  function apply(){
+    var m=mode(), c=mapEl(); if(!c) return false;
+    try{ c.style.transformOrigin='50% 50%'; c.style.transform=m.css; }catch(e){}
+    var st=$('km-orient-v110-style');
+    if(!st){ try{ st=document.createElement('style'); st.id='km-orient-v110-style'; document.head.appendChild(st); }catch(e){ st=null; } }
+    if(st){ st.textContent = m.ct
+      ? '#map .leaflet-control-zoom,#map .leaflet-control-attribution,#map .leaflet-control-scale,'
+       +'#map .leaflet-popup,#map .leaflet-tooltip{transform:'+m.ct+';transform-origin:50% 50%}'
+      : ''; }
+    try{ localStorage.setItem(KEY,m.k); }catch(e){}
+    return true;
+  }
+  function paint(){
+    var b=$('kmOrientBtn'), mb=$('kmMiOrient'), m=mode();
+    if(b){ b.textContent='\uD83E\uDDED 地図の向き: '+m.label;
+      b.className='kmOri'+(m.k==='none'?'':' on'); }
+    if(mb){ mb.textContent='\uD83E\uDDED'; mb.className='kmMiOri'+(m.k==='none'?'':' on'); }
+  }
+  function setMode(i){ cur=((i%MODES.length)+MODES.length)%MODES.length; apply(); paint(); return mode().k; }
+  function cycle(){ return setMode(cur+1); }
+  function wire(){
+    if(wired) return true;
+    try{
+      /* 画面座標→地図座標の変換に逆変換を組み込む（Leaflet本体・アプリ双方の変換を一括で正す） */
+      var DE=(typeof L!=='undefined')?L.DomEvent:null;
+      if(DE&&DE.getMousePosition&&!DE.__kmOrient){
+        var og=DE.getMousePosition;
+        DE.getMousePosition=function(e,container){
+          try{
+            if(!container||!container.getBoundingClientRect) return og.call(DE,e,container);
+            var m=mode(); if(!m.fx&&!m.fy) return og.call(DE,e,container);
+            var p=evXY(e); if(p.x==null||p.y==null) return og.call(DE,e,container);
+            var r=container.getBoundingClientRect();
+            var q=mirrorClient(p.x,p.y,r);
+            var cl={clientX:q.clientX,clientY:q.clientY};
+            if(e&&e.touches) cl.touches=[{clientX:q.clientX,clientY:q.clientY}];
+            if(e&&e.changedTouches) cl.changedTouches=[{clientX:q.clientX,clientY:q.clientY}];
+            return og.call(DE,cl,container);
+          }catch(x){}
+          return og.call(DE,e,container);
+        };
+        try{ DE.__kmOrient=1; }catch(x){}
+      }
+      wired=true; return true;
+    }catch(e){ return false; }
+  }
+  function wireDrag(){
+    if(wiredDrag) return true;
+    try{
+      var D=(typeof L!=='undefined'&&L.Draggable)?L.Draggable.prototype:null;
+      if(D&&D._onMove&&!D.__kmOrient){
+        var om=D._onMove;
+        D._onMove=function(e){
+          try{ var m=mode();
+            if(m.fx||m.fy){ var p=evXY(e); if(p.x!=null&&p.y!=null){
+              var q=mirrorClient(p.x,p.y);
+              var f={clientX:q.clientX,clientY:q.clientY};
+              if(e&&e.touches) f.touches=[{clientX:q.clientX,clientY:q.clientY}];
+              if(e&&e.changedTouches) f.changedTouches=[{clientX:q.clientX,clientY:q.clientY}];
+              return om.call(this,f); } } }catch(x){}
+          return om.call(this,e);
+        };
+        try{ D.__kmOrient=1; }catch(x){}
+      }
+      wiredDrag=true; return true;
+    }catch(e){ return false; }
+  }
+  function inject(){
+    var p=$('kmDrawPanel'), bar=$('kmMiniBar');
+    if(p&&!$('kmOrientRow')){
+      var st=$('km-orient-v110-style');
+      if(st&&st.textContent.indexOf('kmOri')<0){
+        st.textContent+=(st.textContent?'':'') 
+          +'#kmDrawPanel #kmOrientRow{margin-top:5px;gap:4px}'
+          +'#kmDrawPanel button.kmOri{flex:1;min-height:30px;font:800 11px system-ui,sans-serif;border:2px solid #999;background:#fff;border-radius:8px;color:#333;padding:0 3px}'
+          +'#kmDrawPanel button.kmOri.on{background:#101418;color:#7CFF7C;border-color:#101418}'
+          +'#kmMiniBar button.kmMiOri{min-width:38px}'
+          +'#kmMiniBar button.kmMiOri.on{background:#101418;color:#7CFF7C;border-color:#101418}';
+      }
+      var row=document.createElement('div'); row.id='kmOrientRow'; row.className='row';
+      var b=document.createElement('button'); b.id='kmOrientBtn'; b.className='kmOri';
+      b.onclick=function(ev){ try{ if(ev&&ev.preventDefault)ev.preventDefault(); if(ev&&ev.stopPropagation)ev.stopPropagation(); }catch(e){} cycle(); };
+      row.appendChild(b); p.appendChild(row);
+    }
+    if(bar&&!$('kmMiOrient')){
+      var mb=document.createElement('button'); mb.id='kmMiOrient'; mb.className='kmMiOri'; mb.textContent='\uD83E\uDDED';
+      mb.onclick=function(ev){ try{ if(ev&&ev.preventDefault)ev.preventDefault(); if(ev&&ev.stopPropagation)ev.stopPropagation(); }catch(e){} cycle(); };
+      var op=$('kmMiOpen');
+      if(op&&bar.insertBefore) bar.insertBefore(mb,op); else bar.appendChild(mb);
+    }
+    paint(); return !!(p||bar);
+  }
+  window.__kmOrient={ cycle:cycle, setMode:setMode, mode:function(){return mode().k;}, label:function(){return mode().label;},
+    toCP:toCP, mirrorClient:mirrorClient, apply:apply, wire:wire, wireDrag:wireDrag, inject:inject,
+    modes:MODES.length, key:KEY, fx:function(){return !!mode().fx;}, fy:function(){return !!mode().fy;} };
+  try{ apply(); }catch(e){}
+  try{ var n=0,t=setInterval(function(){ try{ if(!map&&window.map) map=window.map; wire(); wireDrag(); inject(); apply(); }catch(e){} if(++n>120) clearInterval(t); },500); }catch(e){}
+  try{ window.addEventListener('load',function(){ setTimeout(function(){ try{ wire(); wireDrag(); inject(); apply(); }catch(e){} },600); }); }catch(e){}
+})();
+/* KM_ORIENT_V110_END */</script>
 </html>
