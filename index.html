@@ -1276,18 +1276,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   var BK='km_all_backup_v131';
   function R(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
   function J(t){ try{ return JSON.parse(t||'null'); }catch(e){ return null; } }
-  try{
-    var SP=Object.getPrototypeOf(localStorage), SI=SP.setItem;
-    if(!SP.__kmWrapped){ SP.__kmWrapped=1;
-      SP.setItem=function(k,v){ try{
-        if(k==='km_draw_main'||k==='km_draw_main_bak'){
-          var t=String(v);
-          if(t.indexOf('"base":true')>=0){ var j=J(t);
-            if(j&&j.lines&&j.lines.length){ j.lines=j.lines.filter(function(l){ return !(l&&l.base); }); v=JSON.stringify(j); } }
-        }
-      }catch(e){} return SI.call(this,k,v); };
-    }
-  }catch(e){}
+  /* v132: localStorage の書き換えは行わない（起動を壊すため撤去。表示側で除外する） */
   function lines(v){ var j=J(v); if(!j) return [];
     if(j.lines&&j.lines.length) return j.lines;
     if(j.draw&&j.draw.lines&&j.draw.lines.length) return j.draw.lines;
@@ -1325,10 +1314,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
     return c;
   }
   window.__kmPurgeMine=purgeMine; window.__kmHideBase=hide; window.__kmNoBaseSnap=snapAll;
-  try{ setTimeout(function(){ try{snapAll();}catch(e){} hide(); },700);
-       setTimeout(hide,2500); setTimeout(hide,6000); }catch(e){}   /* 起動時は隠すだけ。削除はボタン操作のときだけ */
-  try{ document.addEventListener('DOMContentLoaded',function(){ setTimeout(function(){ try{snapAll();}catch(e){} hide(); },300); }); }catch(e){}
-  try{ document.addEventListener('visibilitychange',function(){ if(!document.hidden) hide(); }); }catch(e){}
+  /* v132: 他の起動処理に影響しないよう、読み込み完了後に実行する（起動時は隠すだけ） */
+  function start(){ try{ snapAll(); }catch(e){} hide(); setTimeout(hide,2500); setTimeout(hide,6000); }
+  try{ if(document.readyState==='complete'){ setTimeout(start,1500); }
+       else { window.addEventListener('load',function(){ setTimeout(start,1500); }); } }catch(e){}
+  try{ document.addEventListener('visibilitychange',function(){ if(!document.hidden){ try{ hide(); }catch(e){} } }); }catch(e){}
 })();</script>
 
 <script>
@@ -1378,7 +1368,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v131</span><span style="font-size:11px;color:#999;margin-left:4px">09/24 22:30</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v132</span><span style="font-size:11px;color:#999;margin-left:4px">09/24 22:30</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -7748,8 +7738,8 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v131 09/25 04:20';
-  var BTAG='v131';
+  var BUILD='v132 09/25 05:10';
+  var BTAG='v132';
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
     var VK='km_app_ver', prevV=null;
@@ -8404,6 +8394,8 @@ setTimeout(hideSplash, 3500);
     var d=document.createElement('div'); d.id='kmFix131';
     d.style.cssText='position:fixed;right:6px;bottom:180px;z-index:2147483000;width:min(52vw,200px)';
     d.appendChild(btn('🗑 旧街道データを消す',function(){
+      var saved=0; try{ saved=window.__kmRecover&&window.__kmRecover.exportAll?window.__kmRecover.exportAll():0; }catch(e){}
+      if(!confirm('先に全候補バックアップ（kumanaku_allbackup_….json）を保存しました（'+saved+'バイト）。\n\n続けて旧街道データを消しますか？')) return;
       var n=window.__kmPurgeMine?window.__kmPurgeMine():0;
       alert('私が入れた旧街道データを消しました（'+n+'件）。\n念のため全データのバックアップは端末内に残しています。');
       try{ if(window.__kmRecover&&window.__kmRecover.list) location.reload(); }catch(e){}
