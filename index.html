@@ -1270,6 +1270,67 @@ svg.leaflet-image-layer.leaflet-interactive path {
 <!-- KM_PERF_V125_END -->
 </head>
 <body>
+<script>/* KM_NOBASE_V131 : 私が入れた旧街道データを表示も保存もしない／端末の線だけを扱う */
+(function(){
+  if(window.__kmNoBase) return; window.__kmNoBase=1;
+  var BK='km_all_backup_v131';
+  function R(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+  function J(t){ try{ return JSON.parse(t||'null'); }catch(e){ return null; } }
+  try{
+    var SP=Object.getPrototypeOf(localStorage), SI=SP.setItem;
+    if(!SP.__kmWrapped){ SP.__kmWrapped=1;
+      SP.setItem=function(k,v){ try{
+        if(k==='km_draw_main'||k==='km_draw_main_bak'){
+          var t=String(v);
+          if(t.indexOf('"base":true')>=0){ var j=J(t);
+            if(j&&j.lines&&j.lines.length){ j.lines=j.lines.filter(function(l){ return !(l&&l.base); }); v=JSON.stringify(j); } }
+        }
+      }catch(e){} return SI.call(this,k,v); };
+    }
+  }catch(e){}
+  function lines(v){ var j=J(v); if(!j) return [];
+    if(j.lines&&j.lines.length) return j.lines;
+    if(j.draw&&j.draw.lines&&j.draw.lines.length) return j.draw.lines;
+    if(Object.prototype.toString.call(j)==='[object Array]') return j; return []; }
+  function isBaseOnly(k){ var L=lines(R(k)); if(!L.length) return false;
+    for(var i=0;i<L.length;i++){ if(!(L[i]&&L[i].base)) return false; } return true; }
+  function snapAll(){
+    if(R(BK)) return 0; var o={}, n=0;
+    try{ for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i);
+      if(k&&k.indexOf('km_')===0&&k!=='km_picked'&&k!=='km_picked_v129'){ o[k]=R(k); n++; } } }catch(e){}
+    if(n){ try{ localStorage.setItem(BK, JSON.stringify({at:new Date().toISOString(), keys:o})); }catch(e){} }
+    return n;
+  }
+  function purgeMine(){
+    snapAll();
+    var ks=[]; try{ for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(k) ks.push(k); } }catch(e){}
+    var rm=[], strip=[], i;
+    for(i=0;i<ks.length;i++){ var k2=ks[i];
+      if(k2.indexOf('km_kaido')===0){ rm.push(k2); continue; }
+      if(k2==='km_draw_main'||k2==='km_draw_main_bak'){ if(isBaseOnly(k2)) rm.push(k2); else strip.push(k2); }
+    }
+    var removed=0;
+    for(i=0;i<rm.length;i++){ try{ localStorage.removeItem(rm[i]); removed++; }catch(e){} }
+    for(i=0;i<strip.length;i++){ var j=J(R(strip[i]));
+      if(j&&j.lines){ var f=j.lines.filter(function(l){ return !(l&&l.base); });
+        if(f.length!==j.lines.length){ j.lines=f; try{ localStorage.setItem(strip[i],JSON.stringify(j)); }catch(e){} } } }
+    try{ localStorage.setItem('km_purge_log_v131','removed='+removed+' '+rm.join(',')+' @'+new Date().toISOString().slice(11,19)); }catch(e){}
+    return removed;
+  }
+  function hide(){
+    var S=window.KM_DRAW_STATE, c=0;
+    if(S&&S.lines&&S.lines.length){ var f=S.lines.filter(function(l){ return !(l&&l.base); });
+      c=S.lines.length-f.length; if(c) S.lines=f; }
+    try{ if(c&&typeof window.kmRedraw==='function') window.kmRedraw(); }catch(e){}
+    return c;
+  }
+  window.__kmPurgeMine=purgeMine; window.__kmHideBase=hide; window.__kmNoBaseSnap=snapAll;
+  try{ setTimeout(function(){ try{snapAll();}catch(e){} hide(); },700);
+       setTimeout(hide,2500); setTimeout(hide,6000); }catch(e){}   /* 起動時は隠すだけ。削除はボタン操作のときだけ */
+  try{ document.addEventListener('DOMContentLoaded',function(){ setTimeout(function(){ try{snapAll();}catch(e){} hide(); },300); }); }catch(e){}
+  try{ document.addEventListener('visibilitychange',function(){ if(!document.hidden) hide(); }); }catch(e){}
+})();</script>
+
 <script>
 (function(){
   function kill(){ try{ var s=document.getElementById('splash');
@@ -1317,7 +1378,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v130</span><span style="font-size:11px;color:#999;margin-left:4px">09/24 22:30</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v131</span><span style="font-size:11px;color:#999;margin-left:4px">09/24 22:30</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -6293,25 +6354,52 @@ setTimeout(hideSplash, 3500);
   snap();
   /* v130: 自動 hideBase は停止（本人の線まで表示から消えていたため）。hideBase は手動のみ。 */
   function msg(t){ try{ var e=document.getElementById('kmRecMsg'); if(e) e.textContent=t; }catch(e){} }
+  function preview(k){
+    try{
+      if(typeof L==='undefined'||!window.map) return 0;
+      if(!window.__kmPrevLayer) window.__kmPrevLayer=L.layerGroup().addTo(window.map);
+      var lay=window.__kmPrevLayer; lay.clearLayers();
+      if(window.__kmPrevKey===k){ window.__kmPrevKey=null; return 0; }
+      window.__kmPrevKey=k;
+      var LS=linesOf(R(k)), n=0, i, j;
+      for(i=0;i<LS.length;i++){ var l=LS[i], q=(l&&(l.pts||l.p))||[]; if(q.length<2) continue;
+        var ll=[]; for(j=0;j<q.length;j++){ ll.push([q[j][0],q[j][1]]); }
+        L.polyline(ll,{color:'#ffffff',weight:7,opacity:0.9}).addTo(lay);
+        L.polyline(ll,{color:'#ff2ea6',weight:3,opacity:1}).addTo(lay);
+        L.circleMarker(ll[0],{radius:4,color:'#000',weight:1,fillColor:'#ffe14d',fillOpacity:1}).addTo(lay);
+        L.circleMarker(ll[ll.length-1],{radius:4,color:'#000',weight:1,fillColor:'#ffe14d',fillOpacity:1}).addTo(lay);
+        n++; }
+      if(n) try{ window.map.fitBounds(lay.getBounds(),{padding:[30,30]}); }catch(e){}
+      return n;
+    }catch(e){ return 0; }
+  }
+  function rmKey(k){ if(!confirm('「'+k+'」を消します。よろしいですか？')) return; try{ localStorage.removeItem(k); }catch(e){} render(); msg('「'+k+'」を消しました'); }
   function render(){
     if(typeof document==='undefined') return;
-    var L=all(), h='', i;
-    if(!L.length){ h='<div style="color:#ffd166">線データが見つかりません。手元のJSONファイルがあれば下の「読込」から。</div>'; }
-    for(i=0;i<L.length;i++){ var s=L[i];
+    var Lst=all(), h='', i;
+    if(!Lst.length){ h='<div style="color:#ffd166">端末に線データが見つかりません。下の「📂 保存ファイルを読込」から、保存しておいたJSONファイル（km_draw_v99.json / kumanaku_walk_….json）を選んでください。</div>'; }
+    for(i=0;i<Lst.length;i++){ var sc=Lst[i], dt='—';
+      try{ var jj=J(R(sc.key))||{}; var v=jj.at||jj.savedAt||jj.date||jj.saved; dt=v?String(v):('v'+(jj.v||'?')); }catch(e){}
       h+='<div style="border:1px solid #2b4a5a;border-radius:8px;padding:6px;margin:5px 0">'
-        +'<div><b>'+s.key+'</b></div>'
-        +'<div>線 '+s.lines+'本 / '+s.pts+'点　'+(s.base?('<span style="color:#ffb36b">旧街道 '+s.base+'本</span> '):'')
-        +'<span style="color:#9fe8c4">手描き '+s.mine+'本</span></div>'
+        +'<div><b>'+sc.key+'</b> <span style="color:#8fd3ff">'+dt+'</span></div>'
+        +'<div>線 '+sc.lines+'本 / '+sc.pts+'点　'+(sc.base?('<span style="color:#ffb36b">私が入れた旧街道 '+sc.base+'本</span> '):'')
+        +'<span style="color:#9fe8c4">自分の線 '+sc.mine+'本</span></div>'
         +'<div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">'
-        +'<button data-r="'+s.key+'" data-b="0">✋ 手描きだけ復元</button>'
-        +'<button data-r="'+s.key+'" data-b="1">🗺 全部復元</button></div></div>'; }
+        +'<button data-p="'+sc.key+'">👁 地図で下見</button>'
+        +'<button data-r="'+sc.key+'" data-b="0">✋ これを復元</button>'
+        +'<button data-x="'+sc.key+'" style="color:#ff9aa2">🗑 この候補を消す</button></div></div>'; }
     try{
       var e=document.getElementById('kmRecList'); if(e){ e.innerHTML=h;
         var bs=e.querySelectorAll('button[data-r]');
-        for(i=0;i<bs.length;i++){ bs[i].onclick=function(){ var k=this.getAttribute('data-r'), ib=this.getAttribute('data-b')==='1';
-          var n=restore(k, ib); msg(n?('「'+k+'」から '+n+'本 復元しました'):'この候補に復元できる線がありません'); render(); }; }
-        var p=picked();
-        if(p.length) msg('選んだ候補: '+p.join(', ')+'　→ 不要な候補は「選んだ線以外を削除」で消せます');
+        for(i=0;i<bs.length;i++){ bs[i].onclick=function(){ var k=this.getAttribute('data-r');
+          var n2=restore(k,false); msg(n2?('「'+k+'」から '+n2+'本 復元しました（保存も完了）'):'この候補に復元できる線がありません'); render(); }; }
+        var ps=e.querySelectorAll('button[data-p]');
+        for(i=0;i<ps.length;i++){ ps[i].onclick=function(){ var k=this.getAttribute('data-p');
+          var r=preview(k); msg(r?('下見中: '+k+'（もう一度押すと消えます）'):'下見を消しました / 表示できません'); }; }
+        var xs=e.querySelectorAll('button[data-x]');
+        for(i=0;i<xs.length;i++){ xs[i].onclick=function(){ rmKey(this.getAttribute('data-x')); }; }
+        var p2=picked();
+        if(p2.length) msg('選んだ候補: '+p2.join(', ')+'　→ 不要な候補は「選んだ線以外を削除」で消せます');
       }
     }catch(x){}
   }
@@ -6320,7 +6408,7 @@ setTimeout(hideSplash, 3500);
     var p=document.getElementById('kmRecPanel');
     if(!p){ p=document.createElement('div'); p.id='kmRecPanel';
       p.style.cssText='position:fixed;left:5px;top:64px;z-index:2147483010;width:min(94vw,430px);max-height:74vh;overflow:auto;background:rgba(10,16,22,.97);color:#eaf7ff;border:2px solid #35d07f;border-radius:12px;padding:10px;font:12px/1.5 system-ui,sans-serif;box-shadow:0 6px 22px rgba(0,0,0,.6)';
-      p.innerHTML='<div style="display:flex;align-items:center;gap:6px"><b style="color:#7CFFB2">🔎 線の復元 v129</b>'
+      p.innerHTML='<div style="display:flex;align-items:center;gap:6px"><b style="color:#7CFFB2">🔎 線の復元 v131</b>'
         +'<button id="kmRecX" style="margin-left:auto;padding:2px 8px">✕</button></div>'
         +'<div style="color:#bcd;margin:4px 0">端末に残っている線データの一覧です。自分が描いた線（点と点を結んだ線）の本数を確認して、その候補を「復元」してください。</div>'
         +'<div id="kmRecList"></div>'
@@ -6483,7 +6571,7 @@ setTimeout(hideSplash, 3500);
     lines:function(){ return mineArr(); },
     adopt:adopt, union:unionMine,
     text:function(){ return JSON.stringify({t:'kumanaku-mine',v:1,at:new Date().toISOString(),n:mineArr().length,lines:mineArr()}); },
-    addText:function(t){ var j=J(t); var L=(j&&j.lines)||(Object.prototype.toString.call(j)==='[object Array]'?j:null);
+    addText:function(t){ var j=J(t); var L=(j&&j.lines)||(j&&j.draw&&j.draw.lines)||(Object.prototype.toString.call(j)==='[object Array]'?j:null);
       if(!L||!L.length) return 0; var before=mineArr().length; putMine(L);
       var S=window.KM_DRAW_STATE; if(S){ S.lines=(S.lines||[]).filter(isBase).concat(mineArr());
         try{ if(window.kmRedraw) window.kmRedraw(); }catch(e){} try{ if(window.kmSaveFlush) window.kmSaveFlush(); }catch(e){} }
@@ -7660,8 +7748,8 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v130 09/25 03:20';
-  var BTAG='v130';
+  var BUILD='v131 09/25 04:20';
+  var BTAG='v131';
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
     var VK='km_app_ver', prevV=null;
@@ -8307,6 +8395,38 @@ setTimeout(hideSplash, 3500);
 })();
 
 </script>
+<script>/* KM_UI_V131 : 旧街道データの削除ボタンと、保存ファイルからの読込ボタン */
+(function(){
+  function btn(t,fn,color){ var b=document.createElement('button'); b.textContent=t;
+    b.style.cssText='display:block;width:100%;margin:4px 0;padding:8px 6px;font:12px/1.2 system-ui,sans-serif;border-radius:10px;border:1px solid #1b3b2a;background:'+(color||'#0e2b1d')+';color:#eaf7ff';
+    b.onclick=fn; return b; }
+  function wrap(){ if(document.getElementById('kmFix131')) return;
+    var d=document.createElement('div'); d.id='kmFix131';
+    d.style.cssText='position:fixed;right:6px;bottom:180px;z-index:2147483000;width:min(52vw,200px)';
+    d.appendChild(btn('🗑 旧街道データを消す',function(){
+      var n=window.__kmPurgeMine?window.__kmPurgeMine():0;
+      alert('私が入れた旧街道データを消しました（'+n+'件）。\n念のため全データのバックアップは端末内に残しています。');
+      try{ if(window.__kmRecover&&window.__kmRecover.list) location.reload(); }catch(e){}
+    },'#3a1116'));
+    d.appendChild(btn('📂 保存ファイルを読込',function(){
+      var f=document.createElement('input'); f.type='file'; f.accept='.json,application/json';
+      f.onchange=function(){ var fl=f.files&&f.files[0]; if(!fl) return;
+        var r=new FileReader(); r.onload=function(){ try{
+          var j=JSON.parse(String(r.result));
+          var Ls=(j&&j.lines)||(j&&j.draw&&j.draw.lines)||(Object.prototype.toString.call(j)==='[object Array]'?j:null);
+          if(!Ls||!Ls.length){ alert('このファイルには線が入っていませんでした。'); return; }
+          var n=window.__kmMineAPI?window.__kmMineAPI.addText(JSON.stringify({lines:Ls})):0;
+          alert(n?('自分の線 '+n+'本 を戻しました。地図を見てください。'):'線を戻せませんでした。');
+          if(n) location.reload();
+        }catch(e){ alert('ファイルを読めませんでした（JSON形式ではありません）。'); } };
+        r.readAsText(fl); };
+      f.click();
+    },'#10263a'));
+    document.body.appendChild(d);
+  }
+  try{ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',wrap); else wrap(); }catch(e){}
+  try{ setTimeout(wrap,1500); }catch(e){}
+})();</script>
 </body>
 <script>
 /* KM_DIAG_V91 : 消しゴムの原因を画面上で見える化 + 最寄り1本の強制削除 */
