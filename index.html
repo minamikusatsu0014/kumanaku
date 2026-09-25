@@ -1182,7 +1182,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   window.__kmDupSkip=0;
   try{
     var _ae=EventTarget.prototype.addEventListener, _re=EventTarget.prototype.removeEventListener;
-    /* v125: 同一性（関数オブジェクトそのもの）でのみ判定する。
+    /* v126: 同一性（関数オブジェクトそのもの）でのみ判定する。
        文字列の見た目で判定すると、Leaflet が bind で生成する別々の
        ハンドラ（同じテンプレート）が同一視され、地図本体の
        ズーム（ホイール）・ピンチ・ドラッグのハンドラが揉け落ちていた。 */
@@ -1238,7 +1238,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     },200);
   })();
 
-  /* (3) ポインタ移動の間引きはハンドラごと（v125の修正を維持） */
+  /* (3) ポインタ移動の間引きはハンドラごと（v126の修正を維持） */
   window.__kmThrMove=function(e,fn){
     if(!fn) return;
     var now=Date.now(), last=0;
@@ -1317,7 +1317,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v125</span><span style="font-size:11px;color:#999;margin-left:4px">09/24 22:30</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v126</span><span style="font-size:11px;color:#999;margin-left:4px">09/24 22:30</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -1484,7 +1484,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </div>
 
 <script>
-/* v125: アプリとしてインストールできるよう Service Worker を登録する。
+/* v126: アプリとしてインストールできるよう Service Worker を登録する。
    sw.js は HTML をネットワーク優先で扱うため、更新が反映されない事故は起きない。 */
 if('serviceWorker' in navigator && location.protocol==='https:'){
   window.addEventListener('load',function(){
@@ -1595,7 +1595,7 @@ const BASE_DEFS = [
    attr:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'+ATTR_KI}
 ];
 const baseLayers = {};
-/* v125: スマホ向けタイル設定（アイドル時のみ更新・余分バッファ抑制・2倍画像を作らない・原寸以上に引き伸ばさない） */
+/* v126: スマホ向けタイル設定（アイドル時のみ更新・余分バッファ抑制・2倍画像を作らない・原寸以上に引き伸ばさない） */
 BASE_DEFS.forEach(function(d){
   var o={
     attribution:d.attr,
@@ -3295,7 +3295,7 @@ document.getElementById('impFile').addEventListener('change',function(){
         trackLine=L.polyline(data.track,{color:'#e53935',weight:3,opacity:.8}).addTo(trackLayer);
         rebuildFreeMarkers(); refreshMemoIcons(); renderPhotoLayer();
         updateStats(); save();
-        /* v125: ファイルに手描きの線が入っていれば、既存の線を消さずに追加で戻す */
+        /* v126: ファイルに手描きの線が入っていれば、既存の線を消さずに追加で戻す */
         var __nd=0;
         try{
           if(d.draw && d.draw.lines && d.draw.lines.length && window.__kmDrawAPI){
@@ -6223,6 +6223,89 @@ setTimeout(hideSplash, 3500);
 
 
 
+<script>/* KM_NEVERWIPE_V126_START : 描いた線を勝手に消させない
+  1) km_draw_main への「0本」書き込みを拒否（明示的な全消去ボタンの時だけ許可）
+  2) 画面側の線が空になっても、保存データがあれば自動で戻す（見張り番）
+  3) 保存データも空なら、バックアップから復元（5分以内の明示的な全消去直後は除く）
+*/
+(function(){
+  var K='km_draw_main', BK='km_draw_main_bak', LEG=/^km_draw_v[0-9]+$/;
+  window.__kmAllowEmptyLines=false;
+  function nOf(s){ try{ var j=JSON.parse(s||'null'); return (j&&j.lines)?j.lines.length:0; }catch(e){ return 0; } }
+  function getK(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+  function parse(k){ try{ return JSON.parse(getK(k)||'null'); }catch(e){ return null; } }
+  function write(k,s){ try{ return Storage.prototype.setItem.call(localStorage,k,s); }catch(e){ return false; } }
+  function nMain(){ return nOf(getK(K)); }
+  try{
+    var proto=Storage.prototype, orig=proto.setItem;
+    proto.setItem=function(k,v){
+      if(k===K && window.__kmAllowEmptyLines!==true){
+        if((nOf(v)|0)===0 && nMain()>0){
+          try{ window.__kmWipeBlocked=(window.__kmWipeBlocked||0)+1; }catch(e){}
+          return;
+        }
+      }
+      return orig.call(this,k,v);
+    };
+  }catch(e){}
+  try{
+    document.addEventListener('click',function(ev){
+      var t=ev.target; if(!t||!t.closest) return;
+      var el=t.closest('#kmDvClr,#kmEdClr'); if(!el) return;
+      /* 2回目のクリック（ラベルが「もう一度で全消去」）＝本人が本当に消す意思表示 */
+      var actual=String(el.textContent||'').indexOf('もう一度')!==-1;
+      window.__kmAllowEmptyLines=true;
+      setTimeout(function(){ window.__kmAllowEmptyLines=false; },2500);
+      if(actual){
+        try{ window.__kmUserCleared=Date.now(); }catch(e){}
+        try{ orig.call(localStorage,'km_clear_at',String(Date.now())); }catch(e){}
+        try{ write(BK,JSON.stringify({v:96,lines:[]})); }catch(e){}
+        try{ for(var i=localStorage.length-1;i>=0;i--){ var k=localStorage.key(i); if(k&&LEG.test(k)){ try{ localStorage.removeItem(k); }catch(e){} } } }catch(e){}
+        /* v126: 「全消去」はここで確実に実行する（押したのに消えない、を防ぐ） */
+        try{
+          var S=window.KM_DRAW_STATE; if(S){ S.lines=[]; try{ S.redo=[]; }catch(e){} }
+          try{ if(typeof window.kmRedraw==='function') window.kmRedraw(); }catch(e){}
+          var b2=document.getElementById('kmDvClr'); if(b2) b2.textContent='🗑 全消去';
+          var h2=document.getElementById('kmDvHint'); if(h2) h2.innerHTML='すべての線を消去しました';
+        }catch(e){}
+      }
+    },true);
+  }catch(e){}
+  function bakLines(){
+    var b=nOf(getK(BK)); if(b>0) return {n:b,j:parse(BK)};
+    try{ for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i);
+      if(k&&LEG.test(k)&&nOf(getK(k))>0) return {n:nOf(getK(k)),j:parse(k)}; } }catch(e){}
+    return {n:0,j:null};
+  }
+  function apply(j){
+    if(!j||!j.lines||!j.lines.length) return 0;
+    if(window.KM_DRAW_STATE){ window.KM_DRAW_STATE.lines=j.lines; if(j.delBase) window.KM_DRAW_STATE.delBase=j.delBase; }
+    try{ if(typeof window.kmRedraw==='function') window.kmRedraw(); }catch(e){}
+    try{ window.__kmHealed=(window.__kmHealed||0)+1; }catch(e){}
+    return j.lines.length;
+  }
+  function watch(){
+    try{
+      /* 本人が「全消去」した後は、自分で線を描き直すまで勝手に戻さない */
+      var __ca=0; try{ __ca=+(getK('km_clear_at')||0)||0; }catch(e){ __ca=0; }
+      if(__ca && !(window.__kmUserCleared && (Date.now()-window.__kmUserCleared)<300000)) return;
+      var st=window.KM_DRAW_STATE, mem=(st&&st.lines)?st.lines.length:0;
+      if(mem>0){ try{ if(getK('km_clear_at')) orig.call(localStorage,'km_clear_at',''); }catch(e){} return; }
+      var nm=nMain();
+      if(nm>0){ apply(parse(K)); return; }
+      var bk=bakLines();
+      if(bk.n>0&&bk.j){ write(K,JSON.stringify(bk.j)); apply(bk.j); }
+    }catch(e){}
+  }
+  try{ setInterval(watch,1500); window.addEventListener('load',function(){ setTimeout(watch,1200); setTimeout(watch,3000); }); }catch(e){}
+  window.__kmRestoreFromBackup=function(){
+    var bk=bakLines();
+    if(!bk.n||!bk.j) return 0;
+    write(K,JSON.stringify(bk.j));
+    return apply(bk.j);
+  };
+})();
+</script>
 <script>/* KM_DRAW_V78 : 手描きトレースUIを作り直し（なぞって描く/消しゴム/戻す/進む/全消去） */
 (function(){
   var LS='km_draw_main';
@@ -6230,8 +6313,8 @@ setTimeout(hideSplash, 3500);
   var st={mode:'pen',color:COLORS[0],width:3,lines:[],redo:[],delBase:{}};
   var hist=[], map=null, Lg=null, layer=null, live=null, stroke=null, armed=false, erasing=false, raf=false, lastErase=null;
   window.KM_DRAW_STATE=st;
-  window.KM_DRAW_VER='v125';
-  /* v125: 右メニューの「読込」など別の処理からも、手描きの線を復元できるようにする。
+  window.KM_DRAW_VER='v126';
+  /* v126: 右メニューの「読込」など別の処理からも、手描きの線を復元できるようにする。
      保存先のキー(km_draw_main)は v100 以降ずっと同じ。ここでは中身の操作だけを公開する。 */
   window.__kmDrawAPI={
     add:function(L){
@@ -6254,7 +6337,7 @@ setTimeout(hideSplash, 3500);
     },
     count:function(){ try{ return st.lines.length; }catch(e){ return 0; } },
     lines:function(){ try{ return st.lines; }catch(e){ return []; } },
-    /* v125: 同期・受け渡し用。merge は重複を除いて追加、clear は全消去 */
+    /* v126: 同期・受け渡し用。merge は重複を除いて追加、clear は全消去 */
     merge:function(L){
       var sig={}, ex=st.lines, i, j;
       for(i=0;i<ex.length;i++){ try{ sig[JSON.stringify([ex[i].color,ex[i].width,ex[i].pts])]=1; }catch(e){} }
@@ -6377,12 +6460,14 @@ setTimeout(hideSplash, 3500);
   try{ ['pointerup','pointercancel','touchend','blur'].forEach(function(ev){
     document.addEventListener(ev,function(){ try{ kmFlush(); }catch(e){} },true); }); }catch(e){}
   /* ===== KM_PERF_V112_END ===== */
-  /* v125: 再描画はスケジューラ経由（地図操作中は後まわし・1フレーム 1回） */
+  /* v126: 再描画はスケジューラ経由（地図操作中は後まわし・1フレーム 1回） */
   function redraw(){
     if(window.__kmRedrawSched) return window.__kmRedrawSched(redrawRaw);
     return redrawRaw();
   }
   function redrawRaw(){
+    if(!map){ try{ map=window.map||null; }catch(e){} }
+    if(!Lg){ try{ Lg=window.L||null; }catch(e){} }
     if(!map||!Lg) return;
     if(layer){ try{ map.removeLayer(layer); }catch(e){} }
     layer=Lg.layerGroup();
@@ -6640,7 +6725,7 @@ setTimeout(hideSplash, 3500);
     var d=document.createElement('div'); d.id='kmDrawPanel';
     var sw='';
     for(var i=0;i<COLORS.length;i++) sw+='<span class="sw" data-c="'+COLORS[i]+'" style="background:'+COLORS[i]+'"></span>';
-    d.innerHTML='<div class="hd"><span style="font-weight:800;color:#be123c">✏️ 手描きトレース <span style="font-size:10px;color:#666">v125</span></span>'
+    d.innerHTML='<div class="hd"><span style="font-weight:800;color:#be123c">✏️ 手描きトレース <span style="font-size:10px;color:#666">v126</span></span>'
       +'<span id="kmDvStat">線 0本 / 0点</span><button id="kmDvMin" class="mz" title="最小化">▾</button></div>'
       +'<div class="row"><button id="kmDvPen" class="big on">✏️ ペン</button>'
       +'<button id="kmDvEra" class="big">🧽 消しゴム</button>'
@@ -6658,7 +6743,7 @@ setTimeout(hideSplash, 3500);
       +'<button id="kmDvE1" class="sm" style="max-width:60px">小</button>'
       +'<button id="kmDvE2" class="sm" style="max-width:60px">中</button>'
       +'<button id="kmDvE3" class="sm" style="max-width:60px">大</button>'
-      +'<button id="kmDvEraBack" class="sm" style="max-width:104px" title="消しゴムで消した記録を取り消して旧街道の線を戻す">🩹 線を戻す</button></div>'
+      +'<button id="kmDvEraBack" class="sm" style="max-width:104px" title="消しゴムで消した記録を取り消して旧街道の線を戻す">🩹 線を戻す</button><button id="kmDvRest" class="sm" style="max-width:104px" title="消えてしまった線をバックアップから戻す">🧯 復元</button></div>'
       +'<div class="hint" id="kmDvHint">現在: <b id="kmDvMode">ペン</b> ／ ペン=指でなぞって線を引く・消しゴム=なぞった範囲だけ消える（線は分割されます）・地図移動=指で地図を動かす</div>';
     document.body.appendChild(d);
     var chip=document.createElement('button'); chip.id='kmDrawMin'; chip.textContent='✏️ 手描きトレース ▴';
@@ -6690,7 +6775,14 @@ setTimeout(hideSplash, 3500);
     pick('kmDvE1',function(){ window.__kmErasePx=14; try{localStorage.setItem('km_erase_px','14');}catch(e){} markE(); });
     pick('kmDvE2',function(){ window.__kmErasePx=22; try{localStorage.setItem('km_erase_px','22');}catch(e){} markE(); });
     pick('kmDvE3',function(){ window.__kmErasePx=34; try{localStorage.setItem('km_erase_px','34');}catch(e){} markE(); });
-    /* v125: 消しゴムの記録を全部取り消して、消えてしまった旧街道の線を戻す */
+    /* v126: 消しゴムの記録を全部取り消して、消えてしまった旧街道の線を戻す */
+    /* v126: 消えてしまった線をバックアップから戻す */
+    pick('kmDvRest',function(){
+      var n=0; try{ n=window.__kmRestoreFromBackup?window.__kmRestoreFromBackup():0; }catch(e){ n=0; }
+      var h=document.getElementById('kmDvHint');
+      if(n){ if(h) h.innerHTML='バックアップから '+n+'本 の線を戻しました'; }
+      else { alert('戻せる線がバックアップに残っていませんでした'); }
+    });
     pick('kmDvEraBack',function(){
       if(!confirm('消しゴムで消した記録をすべて取り消し、旧街道の線を元に戻します。よろしいですか？')) return;
       try{
@@ -7293,8 +7385,8 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v125 09/25 15:10';
-  var BTAG='v125';
+  var BUILD='v126 09/25 18:30';
+  var BTAG='v126';
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
     var VK='km_app_ver', prevV=null;
@@ -7521,7 +7613,7 @@ setTimeout(hideSplash, 3500);
 <script id="kmAutosyncP121">
 (function(){
   var LS='km_draw_main', GH_PATH='kmdraw/draw.json';
-  var QKEY='km_sync_pending_v125', EKEY='km_autosync_on_v125', MKEY='km_sync_meta_v125';
+  var QKEY='km_sync_pending_v126', EKEY='km_autosync_on_v126', MKEY='km_sync_meta_v126';
   var POLL=12000, PULLMS=45000, DEB=3000;
   var dirty=false, debT=0, lastPull=0, lastPush=0, busy=false, lastSig='', started=false;
 
@@ -7589,7 +7681,7 @@ setTimeout(hideSplash, 3500);
     var j=raw(); if(!j.lines||!j.lines.length) return Promise.resolve({ok:false,msg:'送る線がありません'});
     var txt=JSON.stringify({v:121,at:Date.now(),lines:j.lines,delBase:j.delBase||{}});
     try{ localStorage.setItem(QKEY, txt); }catch(e){}
-    return window.ghPut(c, GH_PATH, txt, 'sync lines v125: '+j.lines.length)
+    return window.ghPut(c, GH_PATH, txt, 'sync lines v126: '+j.lines.length)
       .then(function(r){ try{ localStorage.removeItem(QKEY); }catch(e){}
         status('✔ 全端末へ送信（'+j.lines.length+'本）');
         return {ok:true,msg:'送信しました（'+j.lines.length+'本）',res:r}; })
@@ -8411,7 +8503,7 @@ setTimeout(hideSplash, 3500);
 (function(){
   var KEY='km_erase_strokes_v1';
   var ORIG=null, STROKES=[], cur=[], curR=25, EXPECT=-1, lastRender=0;
-  window.kmEraseMaxM=300;   /* v125: 消しゴム半径の上限(m)。縮小表示での誤消去を防ぐ */
+  window.kmEraseMaxM=300;   /* v126: 消しゴム半径の上限(m)。縮小表示での誤消去を防ぐ */
   var R=6371008.8;
   function ok(){ return !!(window.KAIDO_LINES && window.KAIDO_LINES.length); }
   function each(g,f){ if(!g) return; for(var i=0;i<g.length;i++) f(g[i],i); }
@@ -8832,7 +8924,7 @@ setTimeout(hideSplash, 3500);
 (function(){
   var KEY='km_erase_strokes_v1';
   var ORIG=null, BB=[], STROKES=[], cur=[], curR=25, lastRender=0, VER=1, lastRenderVer=-1, EXPECT=-1;
-  window.kmEraseMaxM=300;   /* v125: 消しゴム半径の上限(m) */
+  window.kmEraseMaxM=300;   /* v126: 消しゴム半径の上限(m) */
   var R=6371008.8;
 
   function ok(){ return !!(window.KAIDO_LINES && window.KAIDO_LINES.length); }
@@ -9980,8 +10072,8 @@ setTimeout(hideSplash, 3500);
     }); }catch(e){}
     try{ m.on('moveend',function(){ scheduleCull(); }); }catch(e){}
     try{ m.on('zoomend',function(){ scheduleCull(); }); }catch(e){}
-    try{ if(!$('km-perf-v125-style')){
-      var st=document.createElement('style'); st.id='km-perf-v125-style';
+    try{ if(!$('km-perf-v126-style')){
+      var st=document.createElement('style'); st.id='km-perf-v126-style';
       st.textContent='#map.kmOriOn{will-change:transform}'
         +'#map .leaflet-marker-pane,#map .leaflet-overlay-pane{will-change:auto}';
       document.head.appendChild(st);
@@ -9999,7 +10091,7 @@ setTimeout(hideSplash, 3500);
 })();
 /* KM_PERF_V115_END */
 /* KM_ORIENT_V115_START : 地図の向き切替（通常→左右反転→上下反転→180°回転）。
-   v125 で直したところ:
+   v126 で直したところ:
    1) ドラッグ時、指の現在点だけでなく「開始点」も同じ基準で逆変換する。
       （開始点を変換していなかったため、ドラッグ開始ごとに画面中心からの距離の2倍だけ
         地図が飛び、その補正でズーム扱いになり「地図が小さくなる」症状が出ていた）
@@ -10054,8 +10146,8 @@ setTimeout(hideSplash, 3500);
       if(m.k==='none'){ c.style.willChange='auto'; c.style.backfaceVisibility=''; }
       else{ c.style.willChange='transform'; c.style.backfaceVisibility='hidden'; }
     }catch(e){}
-    var st=$('km-orient-v125-style');
-    if(!st){ try{ st=document.createElement('style'); st.id='km-orient-v125-style'; document.head.appendChild(st); }catch(e){ st=null; } }
+    var st=$('km-orient-v126-style');
+    if(!st){ try{ st=document.createElement('style'); st.id='km-orient-v126-style'; document.head.appendChild(st); }catch(e){ st=null; } }
     if(st){
       st.textContent = m.ct
         ? '#map .leaflet-control-zoom,#map .leaflet-control-attribution,#map .leaflet-control-scale,'
@@ -10162,7 +10254,7 @@ setTimeout(hideSplash, 3500);
   function inject(){
     var p=$('kmDrawPanel'), bar=$('kmMiniBar');
     if(p&&!$('kmOrientRow')){
-      var st=$('km-orient-v125-style');
+      var st=$('km-orient-v126-style');
       if(st&&st.textContent.indexOf('kmOri')<0){
         st.textContent+=(st.textContent?'':'')
           +'#kmDrawPanel #kmOrientRow{margin-top:5px;gap:4px}'
