@@ -1175,41 +1175,90 @@ svg.leaflet-image-layer.leaflet-interactive path {
 })();
 </script>
 <style id="kmSmallHeaderV79">#stats{padding:7px 10px}#stats .appname{font-size:11px}#stats .app-ico{width:11px;height:11px;border-radius:3px;margin-right:3px}#stats .app-t{font-size:11px}#stats .big{font-size:19px;line-height:1.05}#stats .sub{font-size:10px}#stats .sub2{font-size:9.5px;margin-top:1px}#stats .row{font-size:9.5px;margin-top:3px}#stats .row b{font-size:12px}</style><meta http-equiv="Cache-Control" content="no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache">
-<!-- KM_PERF_V120_START -->
-<script id="kmPerfP120">
+<!-- KM_PERF_V123_START -->
+<script id="kmPerfP123">
 (function(){
-  /* ポインター移動の二重処理を 15ms 間隔に間引く（描画の確定は pointerup で実行されるので安全） */
-  window.__kmMoveLockT = 0;
-  /* v122: 間引きは「ハンドラごと」に持つ。全体で一つのロックだと、別モジュールのハンドラが先にロックを取り、残りのハンドラに事件が届かなくなる（線が描けなくなる） */
-  window.__kmThrMove = function(e, fn){
+  /* (1) 同じハンドラの重複登録を防ぐ（再描画ごとに 480 個ずつ増えていた原因） */
+  window.__kmDupSkip=0;
+  try{
+    var _ae=EventTarget.prototype.addEventListener, _re=EventTarget.prototype.removeEventListener;
+    function sigOf(fn){ try{ return fn.__kmSig || (fn.__kmSig=String(fn).slice(0,300)); }catch(e){ return ''; } }
+    function keyOf(t,fn,o){ var cap=(o===true)||(o&&o.capture); return t+'|'+(cap?1:0)+'|'+sigOf(fn); }
+    EventTarget.prototype.addEventListener=function(t,fn,o){
+      try{
+        if(typeof fn==='function' && !(o&&(o.once||o.signal))){
+          if(!this.__kmL){ try{ Object.defineProperty(this,'__kmL',{value:{},enumerable:false}); }catch(e){ this.__kmL={}; } }
+          var k=keyOf(t,fn,o);
+          if(this.__kmL[k]){ window.__kmDupSkip++; return; }
+          this.__kmL[k]=1;
+        }
+      }catch(e){}
+      return _ae.call(this,t,fn,o);
+    };
+    EventTarget.prototype.removeEventListener=function(t,fn,o){
+      try{ if(typeof fn==='function' && this.__kmL){ delete this.__kmL[keyOf(t,fn,o)]; } }catch(e){}
+      return _re.call(this,t,fn,o);
+    };
+  }catch(e){}
+
+  /* (2) 再描画を requestAnimationFrame で 1フレーム 1回にまとめる（モジュールごとのスケジューラ） */
+  window.__kmRedrawRAF=0; window.__kmRedrawPend=false; window.__kmMapBusy=false; window.__kmRedrawRun=0;
+  window.__kmRedrawSched=function(fn){
+    if(typeof fn!=='function') return;
+    if(window.__kmMapBusy){ window.__kmRedrawPend=true; return; }
+    if(window.__kmRedrawRAF) return;
+    window.__kmRedrawRAF=(window.requestAnimationFrame||function(f){ return setTimeout(f,16); })(function(){
+      window.__kmRedrawRAF=0; window.__kmRedrawRun++;
+      try{ fn(); }catch(e){}
+    });
+  };
+  /* 地図操作中は再描画を止め、指を離したら 1 回だけ実行（余分な再提投を削る） */
+  (function(){
+    var n=0,t=setInterval(function(){
+      var m=window.map;
+      if(m&&m.on){
+        try{
+          m.on('movestart',function(){ window.__kmMapBusy=true; });
+          m.on('zoomstart',function(){ window.__kmMapBusy=true; });
+          m.on('moveend',function(){ window.__kmMapBusy=false; if(window.__kmRedrawPend){ window.__kmRedrawPend=false; try{ if(window.kmRedraw) window.__kmRedrawSched(window.kmRedraw); }catch(e){} } });
+          m.on('zoomend',function(){ window.__kmMapBusy=false; if(window.__kmRedrawPend){ window.__kmRedrawPend=false; try{ if(window.kmRedraw) window.__kmRedrawSched(window.kmRedraw); }catch(e){} } });
+          clearInterval(t);
+        }catch(e){}
+      }
+      if(++n>50) clearInterval(t);
+    },200);
+  })();
+
+  /* (3) ポインタ移動の間引きはハンドラごと（v123の修正を維持） */
+  window.__kmThrMove=function(e,fn){
     if(!fn) return;
-    var now = Date.now(), last = 0;
-    try{ last = fn.__kmT || 0; }catch(_){ last = 0; }
-    if(now - last < 12) return;
-    try{ fn.__kmT = now; }catch(_){}
+    var now=Date.now(), last=0;
+    try{ last=fn.__kmT||0; }catch(_){ last=0; }
+    if(now-last<12) return;
+    try{ fn.__kmT=now; }catch(_){}
     try{ fn(e); }catch(_){}
   };
-  /* 新しいビルドを検知したら 1 回だけ自動再読み込み */
+
+  /* (4) 新しいビルドを検知したら 1 回だけ自動再読み込み */
   try{
     if('serviceWorker' in navigator){
       navigator.serviceWorker.addEventListener('message', function(ev){
         try{
-          var d = ev.data || {};
-          if(d.type === 'km-update-ready' && d.version){
-            var key = 'km_updated_' + d.version;
+          var d=ev.data||{};
+          if(d.type==='km-update-ready'&&d.version){
+            var key='km_updated_'+d.version;
             if(sessionStorage.getItem(key)) return;
-            sessionStorage.setItem(key, '1');
-            setTimeout(function(){ try{ location.reload(); }catch(e){} }, 400);
+            sessionStorage.setItem(key,'1');
+            setTimeout(function(){ try{ location.reload(); }catch(e){} },400);
           }
         }catch(e){}
       });
     }
   }catch(e){}
-  /* 保存は以前どおり同期書き込み（遅延は壊したので廃止） */
-  window.__kmFlushSave = function(){};
+  window.__kmFlushSave=function(){};
 })();
 </script>
-<!-- KM_PERF_V120_END -->
+<!-- KM_PERF_V123_END -->
 </head>
 <body>
 <script>
@@ -1259,7 +1308,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v122</span><span style="font-size:11px;color:#999;margin-left:4px">09/24 22:30</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v123</span><span style="font-size:11px;color:#999;margin-left:4px">09/24 22:30</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -1426,7 +1475,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </div>
 
 <script>
-/* v122: アプリとしてインストールできるよう Service Worker を登録する。
+/* v123: アプリとしてインストールできるよう Service Worker を登録する。
    sw.js は HTML をネットワーク優先で扱うため、更新が反映されない事故は起きない。 */
 if('serviceWorker' in navigator && location.protocol==='https:'){
   window.addEventListener('load',function(){
@@ -1537,7 +1586,7 @@ const BASE_DEFS = [
    attr:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'+ATTR_KI}
 ];
 const baseLayers = {};
-/* v122: スマホ向けタイル設定（アイドル時のみ更新・余分バッファ抑制・2倍画像を作らない・原寸以上に引き伸ばさない） */
+/* v123: スマホ向けタイル設定（アイドル時のみ更新・余分バッファ抑制・2倍画像を作らない・原寸以上に引き伸ばさない） */
 BASE_DEFS.forEach(function(d){
   var o={
     attribution:d.attr,
@@ -3237,7 +3286,7 @@ document.getElementById('impFile').addEventListener('change',function(){
         trackLine=L.polyline(data.track,{color:'#e53935',weight:3,opacity:.8}).addTo(trackLayer);
         rebuildFreeMarkers(); refreshMemoIcons(); renderPhotoLayer();
         updateStats(); save();
-        /* v122: ファイルに手描きの線が入っていれば、既存の線を消さずに追加で戻す */
+        /* v123: ファイルに手描きの線が入っていれば、既存の線を消さずに追加で戻す */
         var __nd=0;
         try{
           if(d.draw && d.draw.lines && d.draw.lines.length && window.__kmDrawAPI){
@@ -6172,8 +6221,8 @@ setTimeout(hideSplash, 3500);
   var st={mode:'pen',color:COLORS[0],width:3,lines:[],redo:[],delBase:{}};
   var hist=[], map=null, Lg=null, layer=null, live=null, stroke=null, armed=false, erasing=false, raf=false, lastErase=null;
   window.KM_DRAW_STATE=st;
-  window.KM_DRAW_VER='v122';
-  /* v122: 右メニューの「読込」など別の処理からも、手描きの線を復元できるようにする。
+  window.KM_DRAW_VER='v123';
+  /* v123: 右メニューの「読込」など別の処理からも、手描きの線を復元できるようにする。
      保存先のキー(km_draw_main)は v100 以降ずっと同じ。ここでは中身の操作だけを公開する。 */
   window.__kmDrawAPI={
     add:function(L){
@@ -6196,7 +6245,7 @@ setTimeout(hideSplash, 3500);
     },
     count:function(){ try{ return st.lines.length; }catch(e){ return 0; } },
     lines:function(){ try{ return st.lines; }catch(e){ return []; } },
-    /* v122: 同期・受け渡し用。merge は重複を除いて追加、clear は全消去 */
+    /* v123: 同期・受け渡し用。merge は重複を除いて追加、clear は全消去 */
     merge:function(L){
       var sig={}, ex=st.lines, i, j;
       for(i=0;i<ex.length;i++){ try{ sig[JSON.stringify([ex[i].color,ex[i].width,ex[i].pts])]=1; }catch(e){} }
@@ -6319,7 +6368,12 @@ setTimeout(hideSplash, 3500);
   try{ ['pointerup','pointercancel','touchend','blur'].forEach(function(ev){
     document.addEventListener(ev,function(){ try{ kmFlush(); }catch(e){} },true); }); }catch(e){}
   /* ===== KM_PERF_V112_END ===== */
+  /* v123: 再描画はスケジューラ経由（地図操作中は後まわし・1フレーム 1回） */
   function redraw(){
+    if(window.__kmRedrawSched) return window.__kmRedrawSched(redrawRaw);
+    return redrawRaw();
+  }
+  function redrawRaw(){
     if(!map||!Lg) return;
     if(layer){ try{ map.removeLayer(layer); }catch(e){} }
     layer=Lg.layerGroup();
@@ -6577,7 +6631,7 @@ setTimeout(hideSplash, 3500);
     var d=document.createElement('div'); d.id='kmDrawPanel';
     var sw='';
     for(var i=0;i<COLORS.length;i++) sw+='<span class="sw" data-c="'+COLORS[i]+'" style="background:'+COLORS[i]+'"></span>';
-    d.innerHTML='<div class="hd"><span style="font-weight:800;color:#be123c">✏️ 手描きトレース <span style="font-size:10px;color:#666">v122</span></span>'
+    d.innerHTML='<div class="hd"><span style="font-weight:800;color:#be123c">✏️ 手描きトレース <span style="font-size:10px;color:#666">v123</span></span>'
       +'<span id="kmDvStat">線 0本 / 0点</span><button id="kmDvMin" class="mz" title="最小化">▾</button></div>'
       +'<div class="row"><button id="kmDvPen" class="big on">✏️ ペン</button>'
       +'<button id="kmDvEra" class="big">🧽 消しゴム</button>'
@@ -6627,7 +6681,7 @@ setTimeout(hideSplash, 3500);
     pick('kmDvE1',function(){ window.__kmErasePx=14; try{localStorage.setItem('km_erase_px','14');}catch(e){} markE(); });
     pick('kmDvE2',function(){ window.__kmErasePx=22; try{localStorage.setItem('km_erase_px','22');}catch(e){} markE(); });
     pick('kmDvE3',function(){ window.__kmErasePx=34; try{localStorage.setItem('km_erase_px','34');}catch(e){} markE(); });
-    /* v122: 消しゴムの記録を全部取り消して、消えてしまった旧街道の線を戻す */
+    /* v123: 消しゴムの記録を全部取り消して、消えてしまった旧街道の線を戻す */
     pick('kmDvEraBack',function(){
       if(!confirm('消しゴムで消した記録をすべて取り消し、旧街道の線を元に戻します。よろしいですか？')) return;
       try{
@@ -7230,8 +7284,8 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v122 09/25 00:20';
-  var BTAG='v122';
+  var BUILD='v123 09/25 12:40';
+  var BTAG='v123';
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
     var VK='km_app_ver', prevV=null;
@@ -7458,7 +7512,7 @@ setTimeout(hideSplash, 3500);
 <script id="kmAutosyncP121">
 (function(){
   var LS='km_draw_main', GH_PATH='kmdraw/draw.json';
-  var QKEY='km_sync_pending_v122', EKEY='km_autosync_on_v122', MKEY='km_sync_meta_v122';
+  var QKEY='km_sync_pending_v123', EKEY='km_autosync_on_v123', MKEY='km_sync_meta_v123';
   var POLL=12000, PULLMS=45000, DEB=3000;
   var dirty=false, debT=0, lastPull=0, lastPush=0, busy=false, lastSig='', started=false;
 
@@ -7526,7 +7580,7 @@ setTimeout(hideSplash, 3500);
     var j=raw(); if(!j.lines||!j.lines.length) return Promise.resolve({ok:false,msg:'送る線がありません'});
     var txt=JSON.stringify({v:121,at:Date.now(),lines:j.lines,delBase:j.delBase||{}});
     try{ localStorage.setItem(QKEY, txt); }catch(e){}
-    return window.ghPut(c, GH_PATH, txt, 'sync lines v122: '+j.lines.length)
+    return window.ghPut(c, GH_PATH, txt, 'sync lines v123: '+j.lines.length)
       .then(function(r){ try{ localStorage.removeItem(QKEY); }catch(e){}
         status('✔ 全端末へ送信（'+j.lines.length+'本）');
         return {ok:true,msg:'送信しました（'+j.lines.length+'本）',res:r}; })
@@ -8348,7 +8402,7 @@ setTimeout(hideSplash, 3500);
 (function(){
   var KEY='km_erase_strokes_v1';
   var ORIG=null, STROKES=[], cur=[], curR=25, EXPECT=-1, lastRender=0;
-  window.kmEraseMaxM=300;   /* v122: 消しゴム半径の上限(m)。縮小表示での誤消去を防ぐ */
+  window.kmEraseMaxM=300;   /* v123: 消しゴム半径の上限(m)。縮小表示での誤消去を防ぐ */
   var R=6371008.8;
   function ok(){ return !!(window.KAIDO_LINES && window.KAIDO_LINES.length); }
   function each(g,f){ if(!g) return; for(var i=0;i<g.length;i++) f(g[i],i); }
@@ -8769,7 +8823,7 @@ setTimeout(hideSplash, 3500);
 (function(){
   var KEY='km_erase_strokes_v1';
   var ORIG=null, BB=[], STROKES=[], cur=[], curR=25, lastRender=0, VER=1, lastRenderVer=-1, EXPECT=-1;
-  window.kmEraseMaxM=300;   /* v122: 消しゴム半径の上限(m) */
+  window.kmEraseMaxM=300;   /* v123: 消しゴム半径の上限(m) */
   var R=6371008.8;
 
   function ok(){ return !!(window.KAIDO_LINES && window.KAIDO_LINES.length); }
@@ -9917,8 +9971,8 @@ setTimeout(hideSplash, 3500);
     }); }catch(e){}
     try{ m.on('moveend',function(){ scheduleCull(); }); }catch(e){}
     try{ m.on('zoomend',function(){ scheduleCull(); }); }catch(e){}
-    try{ if(!$('km-perf-v122-style')){
-      var st=document.createElement('style'); st.id='km-perf-v122-style';
+    try{ if(!$('km-perf-v123-style')){
+      var st=document.createElement('style'); st.id='km-perf-v123-style';
       st.textContent='#map.kmOriOn{will-change:transform}'
         +'#map .leaflet-marker-pane,#map .leaflet-overlay-pane{will-change:auto}';
       document.head.appendChild(st);
@@ -9936,7 +9990,7 @@ setTimeout(hideSplash, 3500);
 })();
 /* KM_PERF_V115_END */
 /* KM_ORIENT_V115_START : 地図の向き切替（通常→左右反転→上下反転→180°回転）。
-   v122 で直したところ:
+   v123 で直したところ:
    1) ドラッグ時、指の現在点だけでなく「開始点」も同じ基準で逆変換する。
       （開始点を変換していなかったため、ドラッグ開始ごとに画面中心からの距離の2倍だけ
         地図が飛び、その補正でズーム扱いになり「地図が小さくなる」症状が出ていた）
@@ -9991,8 +10045,8 @@ setTimeout(hideSplash, 3500);
       if(m.k==='none'){ c.style.willChange='auto'; c.style.backfaceVisibility=''; }
       else{ c.style.willChange='transform'; c.style.backfaceVisibility='hidden'; }
     }catch(e){}
-    var st=$('km-orient-v122-style');
-    if(!st){ try{ st=document.createElement('style'); st.id='km-orient-v122-style'; document.head.appendChild(st); }catch(e){ st=null; } }
+    var st=$('km-orient-v123-style');
+    if(!st){ try{ st=document.createElement('style'); st.id='km-orient-v123-style'; document.head.appendChild(st); }catch(e){ st=null; } }
     if(st){
       st.textContent = m.ct
         ? '#map .leaflet-control-zoom,#map .leaflet-control-attribution,#map .leaflet-control-scale,'
@@ -10099,7 +10153,7 @@ setTimeout(hideSplash, 3500);
   function inject(){
     var p=$('kmDrawPanel'), bar=$('kmMiniBar');
     if(p&&!$('kmOrientRow')){
-      var st=$('km-orient-v122-style');
+      var st=$('km-orient-v123-style');
       if(st&&st.textContent.indexOf('kmOri')<0){
         st.textContent+=(st.textContent?'':'')
           +'#kmDrawPanel #kmOrientRow{margin-top:5px;gap:4px}'

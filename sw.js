@@ -1,6 +1,6 @@
-/* 街道ウォーキング Service Worker v122 */
-var CACHE='kumanaku-v122';
-var TILE='kumanaku-tiles-v122';
+/* 街道ウォーキング Service Worker v123 */
+var CACHE='kumanaku-v123';
+var TILE='kumanaku-tiles-v123';
 var TILE_CAP=260;
 var CORE=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png'];
 var TILE_HOSTS=['cyberjapandata.gsi.go.jp','tile.openstreetmap.org','maps.gsi.go.jp'];
