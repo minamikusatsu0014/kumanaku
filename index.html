@@ -1268,6 +1268,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 })();
 </script>
 <!-- KM_PERF_V125_END -->
+<style id="km149css">[data-kmoff="1"]{display:none !important;visibility:hidden !important;}</style>
 </head>
 <body>
 <script id="km_el_v142">
@@ -8215,8 +8216,8 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v148 09/27 02:20';
-  var BTAG='v148';
+  var BUILD='v149 09/28 03:20';
+  var BTAG='v149';
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
     var VK='km_app_ver', prevV=null;
@@ -12491,6 +12492,169 @@ function boot(){ apply(); addBtn2(); label(); }
   }catch(e){}
 })();
 /* KM_SYNC_V118_END */
+
+</script>
+
+
+
+
+
+
+
+
+
+
+<script>
+
+/* ===== v149 panel control (km149) ===== */
+(function(){
+  var OPENERS={
+    drawPanel:['drawBtn'], kmDrawPanel:['drawBtn'],
+    kmPosFixPanel:['kmPosFixBtn'], kaidoModal:['kaidoBtn'],
+    memoModal:['memoListBtn','memoBtn'], memoAddModal:['memoBtn'],
+    photoModal:['photoBtn'], photoView:['photoBtn'], nakaModal:['nakaListBtn'],
+    installModal:[], kmStack145:[], kmGeomPanel:[], kmEdPanel:[], kmTracePanel:[]
+  };
+  var LABEL={drawPanel:'手描きトレース枠', kmDrawPanel:'手描きトレース', kmPosFixPanel:'位置修正モード',
+    kaidoModal:'旧街道', memoModal:'メモ一覧', memoAddModal:'メモ追加', photoModal:'写真',
+    photoView:'写真拡大', nakaModal:'宿場一覧', installModal:'インストール案内', kmStack145:'情報カード',
+    kmGeomPanel:'地形パネル', kmEdPanel:'編集パネル', kmTracePanel:'トレースパネル'};
+  var IDS=[], SKIP={kmRescueBtn:1,kmRescuePanel:1,kmRescueRows:1,kmRescueX:1};
+
+  function vis(el){ if(!el) return false;
+    try{ if(el.getAttribute('data-kmoff')==='1') return false;
+      var s=getComputedStyle(el);
+      if(s.display==='none'||s.visibility==='hidden'||parseFloat(s.opacity||'1')===0) return false;
+      var r=el.getBoundingClientRect(); return r.width>1 && r.height>1; }catch(e){ return false; } }
+  window.__kmPanelVis=vis;
+  function uncover(el){ var e=el.parentElement;
+    while(e&&e!==document.body){ try{ if(getComputedStyle(e).display==='none') e.style.display='block'; }catch(x){} e=e.parentElement; } }
+
+  function attachClose(id){
+    var el=document.getElementById(id); if(!el||SKIP[id]) return false;
+    if(document.getElementById('kmPClose_'+id)) return true;
+    if(getComputedStyle(el).position==='static'){ try{ el.style.position='relative'; }catch(e){} }
+    var b=document.createElement('button');
+    b.type='button'; b.id='kmPClose_'+id; b.setAttribute('aria-label','閉じる'); b.setAttribute('title','閉じる');
+    b.textContent='✕';
+    b.style.cssText='position:absolute;top:4px;right:4px;width:38px;height:38px;min-width:38px;'
+      +'border-radius:50%;background:#d32f2f;color:#fff;border:2px solid #fff;font-size:19px;line-height:1;'
+      +'padding:0;cursor:pointer;touch-action:manipulation;z-index:2147483300;box-shadow:0 2px 7px rgba(0,0,0,.5)';
+    var h=function(ev){ if(ev){ ev.preventDefault(); ev.stopPropagation(); } window.__kmPanelHide(id); };
+    b.addEventListener('click',h,true); b.addEventListener('touchend',h,true); b.onclick=h;
+    try{ el.appendChild(b); return true; }catch(e){ return false; }
+  }
+  function register(id){
+    var el=document.getElementById(id); if(!el||SKIP[id]) return;
+    if(IDS.indexOf(id)<0) IDS.push(id);
+    attachClose(id);
+    if(!el.__kmBd){ el.__kmBd=1;
+      el.onclick=function(ev){ if(ev.target===el) window.__kmPanelHide(id); }; }
+  }
+  window.__kmPanelHide=function(id){
+    var el=document.getElementById(id); if(!el) return false;
+    if(id.indexOf('kmPosFix')>=0 && window.__kmPosFixSetMode){ try{ window.__kmPosFixSetMode(false); }catch(e){} }
+    el.setAttribute('data-kmoff','1');                /* CSS !important で確実に隠す */
+    try{ el.style.display='none'; el.style.visibility='hidden'; }catch(e){}
+    return true;
+  };
+  window.__kmPanelShow=function(id){
+    var el=document.getElementById(id);
+    if(!el){ var l0=OPENERS[id]||[];
+      for(var q=0;q<l0.length;q++){ var t=document.getElementById(l0[q]); if(t){ try{ t.click(); }catch(e){} } }
+      el=document.getElementById(id); if(!el) return false; }
+    el.removeAttribute('data-kmoff');
+    try{ el.style.visibility='visible'; if(getComputedStyle(el).display==='none') el.style.display='block'; }catch(e){}
+    if(!vis(el)){ var l1=OPENERS[id]||[];
+      for(var i=0;i<l1.length;i++){ var b=document.getElementById(l1[i]); if(!b) continue;
+        try{ b.click(); }catch(e){}
+        el.removeAttribute('data-kmoff');
+        attachClose(id);
+        if(vis(document.getElementById(id))) break; } }
+    if(!vis(document.getElementById(id))){ uncover(el);
+      try{ if(getComputedStyle(el).display==='none') el.style.display='block'; }catch(e){} }
+    attachClose(id);
+    [60,200,500,1000,1800,2800,4000].forEach(function(ms){ setTimeout(function(){
+      var e2=document.getElementById(id); if(!e2) return;
+      if(e2.getAttribute('data-kmoff')==='1') return;
+      if(!vis(e2)){ uncover(e2);
+        try{ if(getComputedStyle(e2).display==='none') e2.style.display='block'; }catch(e){} }
+      attachClose(id);
+    }, ms); });
+    return vis(document.getElementById(id));
+  };
+  window.__kmPanelRestore=window.__kmPanelShow;
+
+  function sweep(){
+    var all=document.body.getElementsByTagName('*');
+    for(var i=0;i<all.length;i++){
+      var el=all[i]; if(!el.id||SKIP[el.id]) continue;
+      if(/^kmPClose_/.test(el.id)) continue;
+      if(Object.prototype.hasOwnProperty.call(OPENERS,el.id) || /(Modal|Panel|Stack)$/.test(el.id)) register(el.id);
+    }
+    return IDS;
+  }
+  window.__kmRescueScan=sweep;
+  window.__kmRescueList=function(){ return IDS.slice(); };
+  document.addEventListener('click',function(ev){
+    var t=ev.target; if(!t) return;
+    if(t.id&&t.id.indexOf('kmPClose_')===0) return;
+    var txt=(t.textContent||'').trim();
+    var cls=(typeof t.className==='string')?t.className:'';
+    if(!/^(✕|×|✖|❌|✗|閉じる|close)$/.test(txt) && !/\b(close|modal-close|btn-close)\b/.test(cls)) return;
+    var e=t, hit=null;
+    while(e&&e!==document.body){ if(e.id&&IDS.indexOf(e.id)>=0){ hit=e; break; } e=e.parentElement; }
+    if(hit) window.__kmPanelHide(hit.id);
+  },true);
+  document.addEventListener('keydown',function(e){
+    if(e.key!=='Escape'&&e.keyCode!==27) return;
+    IDS.forEach(function(id){ var el=document.getElementById(id); if(vis(el)) window.__kmPanelHide(id); });
+    var rp=document.getElementById('kmRescuePanel'); if(rp) rp.style.display='none';
+  });
+
+  var rb=document.createElement('button');
+  rb.type='button'; rb.id='kmRescueBtn'; rb.textContent='🧰'; rb.title='パネル管理';
+  rb.style.cssText='position:fixed;left:0;top:42%;z-index:6002;width:48px;height:52px;font-size:23px;padding:0;'
+    +'border:1px solid #1565c0;border-left:0;border-radius:0 12px 12px 0;background:#e3f2fd;color:#0d47a1;'
+    +'box-shadow:0 1px 6px rgba(0,0,0,.34);touch-action:manipulation';
+  document.body.appendChild(rb);
+  var rp=document.createElement('div'); rp.id='kmRescuePanel';
+  rp.style.cssText='position:fixed;left:50%;top:7%;transform:translateX(-50%);z-index:6003;display:none;'
+    +'background:#fff;border:1px solid #90a4ae;border-radius:12px;padding:10px;width:min(94vw,380px);'
+    +'max-height:80vh;overflow:auto;font-size:12px;box-shadow:0 4px 18px rgba(0,0,0,.38)';
+  rp.innerHTML='<div style="font-weight:bold;margin-bottom:6px">🧰 パネル管理</div>'
+    +'<div style="color:#555;line-height:1.5;margin-bottom:8px">閉じてしまった画面は「表示」で必ず戻せます。緑になったら復帰成功です。</div>'
+    +'<div id="kmRescueRows"></div>'
+    +'<div style="text-align:right;margin-top:8px"><button type="button" id="kmRescueX">✕</button></div>';
+  document.body.appendChild(rp);
+  var rows=document.getElementById('kmRescueRows');
+  function build(){
+    sweep(); rows.innerHTML='';
+    IDS.forEach(function(id){
+      if(!document.getElementById(id)) return;
+      var row=document.createElement('div');
+      row.style.cssText='display:flex;gap:6px;align-items:center;padding:5px 0;border-top:1px solid #eee';
+      row.innerHTML='<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
+        +(LABEL[id]||id)+'<br><span style="color:#777;font-size:11px">'+id+'</span></span>';
+      var s=document.createElement('button'); s.type='button'; s.id='kmPShow_'+id; s.textContent='表示';
+      var hb=document.createElement('button'); hb.type='button'; hb.id='kmPHide_'+id; hb.textContent='閉じる';
+      s.onclick=function(){ var el=document.getElementById('kmRescuePanel');
+        if(el) el.style.display='none';                       /* 管理画面も閉じて対象を見せる */
+        var ok=window.__kmPanelShow(id);
+        if(el) setTimeout(function(){ el.style.display='block';
+          var r=document.getElementById('kmPShow_'+id); if(r) r.style.background=ok?'#a5d6a7':''; },900); };
+      hb.onclick=function(){ window.__kmPanelHide(id); s.style.background=''; };
+      row.appendChild(s); row.appendChild(hb); rows.appendChild(row);
+    });
+    if(!rows.children.length) rows.innerHTML='<div style="color:#888">no panels</div>';
+  }
+  window.__kmRescueBuild=build;
+  rb.onclick=function(){ build(); rp.style.display = rp.style.display==='none'?'block':'none'; };
+  document.getElementById('kmRescueX').onclick=function(){ rp.style.display='none'; };
+  sweep();
+  setTimeout(sweep,800); setTimeout(sweep,2000); setTimeout(sweep,5000);
+  setInterval(sweep,3000);
+})();
 
 </script>
 </html>
