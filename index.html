@@ -7904,8 +7904,8 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v139 09/26 07:40';
-  var BTAG='v139';
+  var BUILD='v141 09/26 07:40';
+  var BTAG='v141';
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
     var VK='km_app_ver', prevV=null;
@@ -8881,7 +8881,56 @@ else window.addEventListener('load',function(){ setTimeout(boot,1100); });
  window.__kmDock139={ build:build, keep:keep, open:function(){var g=$('km139grp'); if(g) g.style.display='flex'; push();} };
 })();
 </script>
+
+<script id="km_slim_v140">
+/* KM_SLIM_V140 : 使わないボタンを隠す（DOMは残すのでJSは壊れない） */
+(function(){
+ var KEY='km_slim_v140';
+ var HIDE=['addBtn','kmSyncBtn','impBtn','clearBtn','nakaBtn','gridBtn','kojikuBtn'];
+ function $(i){return document.getElementById(i);}
+ function on(){ try{ return localStorage.getItem(KEY)!=='0'; }catch(e){ return true; } }
+ function apply(){
+   var s=on(), i;
+   for(i=0;i<HIDE.length;i++){ var e=$(HIDE[i]); if(!e) continue;
+     if(s){ e.style.setProperty('display','none','important'); } else { e.style.removeProperty('display'); } }
+   var b=$('km140s'); if(b) b.innerHTML = s?'\uD83E\uDDE9<br><span>全部表示</span>':'\uD83E\uDDE9<br><span>簡素化</span>';
+ }
+ function tog(){ try{ localStorage.setItem(KEY, on()?'0':'1'); }catch(e){} apply(); }
+ function addBtn2(){
+   var g=$('km139grp'); if(!g||$('km140s')) return;
+   var b=document.createElement('button'); b.id='km140s'; b.title='使わないボタンの 表示 / 非表示';
+   b.style.cssText='min-width:60px;padding:5px 7px;border:0;border-radius:11px;background:#5b3fa8;color:#fff;font:800 10px/1.15 system-ui,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.55)';
+   b.onclick=function(ev){ try{ev.preventDefault();ev.stopPropagation();}catch(x){} tog(); };
+   g.appendChild(b);
+ }
+ function label(){ var c=$('cpBtn'); if(c) c.textContent='\u26E9 \u540D\u6240\u30FB\u53F2\u8DE1\u30FB\u5893'; }
+function boot(){ apply(); addBtn2(); label(); }
+ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+ [500,1500,3000].forEach(function(t){ setTimeout(boot,t); });
+ setInterval(apply,1200);
+ window.__kmSlim140={hide:HIDE, on:on, toggle:tog, apply:apply};
+})();
+</script>
+
+<script id="km_poi_v141">
+/* KM_POI_V141 : 名所・史跡・墓レイヤを初回だけ自動表示（以後はボタンで切替） */
+(function(){
+ var ONCE='km_poi_v141_on';
+ function $(i){return document.getElementById(i);}
+ function label(){ var c=$('cpBtn'); if(c) c.textContent='⛩ 名所・史跡・墓'; }
+ function getL(){ try{ return window.cpLayer; }catch(e){ return null; } }
+ function getM(){ try{ return window.map; }catch(e){ return null; } }
+ function show(){ try{ var mp=getM(), ly=getL(); if(mp&&ly&&typeof mp.addLayer==='function'&&!mp.hasLayer(ly)) mp.addLayer(ly); }catch(e){} }
+ function once(){ var d=false; try{ d=localStorage.getItem(ONCE)==='1'; }catch(e){} if(d) return; show(); try{ localStorage.setItem(ONCE,'1'); }catch(e){} }
+ function boot(){ label(); once(); }
+ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+ [700,2000,4000].forEach(function(t){ setTimeout(boot,t); });
+ window.__kmPoi141={label:label, show:show, once:once};
+})();
+</script>
 </body>
+
+
 
 <script>
 /* KM_DIAG_V91 : 消しゴムの原因を画面上で見える化 + 最寄り1本の強制削除 */
