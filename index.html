@@ -8224,7 +8224,7 @@ setTimeout(hideSplash, 3500);
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
   var BUILD='v153 09/26 19:20';
-  var BTAG='v151';
+  var BTAG=(function(m){ return m?m[0]:'v153'; })(/v([0-9]+)/.exec(BUILD||'v153'));
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
     var VK='km_app_ver', prevV=null;
