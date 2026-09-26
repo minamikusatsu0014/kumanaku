@@ -7906,8 +7906,8 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v144 09/26 07:40';
-  var BTAG='v144';
+  var BUILD='v145 09/26 07:40';
+  var BTAG='v145';
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
     var VK='km_app_ver', prevV=null;
@@ -9033,7 +9033,82 @@ function boot(){ apply(); addBtn2(); label(); }
    set:function(v){ try{ localStorage.setItem(OFF, v?'1':'0'); }catch(e){} sync(); }};
 })();
 </script>
+
+<script id="km_layout_v145">
+/* KM_LAYOUT_V145 : 右下の重なりを構造で解消
+   - 手描きトレース／常設アイコン列／最小化バーを1つの縦積みコンテナ(S-1)に収容
+   - 各要素の position:fixed / bottom 指定を無効化（static に固定）
+   - 名所メモ(ポップアップ)を最前面へ。表示中は右下列を薄くする */
+(function(){
+ var STACK='kmStack145', DOCK='km139dock', PANEL='kmDrawPanel', MINI='kmDrawMin', BOT=72;
+ function $(i){return document.getElementById(i);}
+ function hard(el,pos){
+   try{
+     el.style.setProperty('position','static','important');
+     el.style.setProperty('top','auto','important');
+     el.style.setProperty('bottom','auto','important');
+     el.style.setProperty('left','auto','important');
+     el.style.setProperty('right','auto','important');
+     el.style.setProperty('margin','0','important');
+     el.style.setProperty('max-width','100%','important');
+     el.style.setProperty('pointer-events','auto','important');
+     if(pos) el.style.setProperty('display',pos,'important');
+   }catch(e){}
+ }
+ function make(){ if($(STACK)) return $(STACK);
+   var w=document.createElement('div'); w.id=STACK;
+   w.setAttribute('style','position:fixed!important;right:6px!important;left:auto!important;top:auto!important;'+
+     'bottom:calc(env(safe-area-inset-bottom,0px) + '+BOT+'px)!important;display:flex!important;flex-direction:column!important;'+
+     'align-items:flex-end!important;gap:8px!important;z-index:2147483050!important;pointer-events:none!important;'+
+     'max-width:min(94vw,360px)!important;margin:0!important;');
+   document.body.appendChild(w); return w;
+ }
+ function build(){
+   var d=$(DOCK); if(!d) return;
+   var w=make();
+   var p=$(PANEL)||$(MINI);
+   if(p && p.parentNode!==w){ w.appendChild(p); }
+   if(d && d.parentNode!==w){ w.appendChild(d); }
+   var m=$(MINI); if(m && m!==p && m.parentNode!==w){ w.appendChild(m); }
+   hard(p,'block');
+   hard(d,'flex');
+   try{ d.style.setProperty('flex-direction','row','important');
+        d.style.setProperty('flex-wrap','nowrap','important');
+        d.style.setProperty('gap','6px','important');
+        d.style.setProperty('align-items','center','important'); }catch(e){}
+   var m2=$(MINI); if(m2&&m2!==p) hard(m2,'');
+ }
+ function popupCss(){ if($('km_popup_v145')) return;
+   var s=document.createElement('style'); s.id='km_popup_v145';
+   s.textContent='.leaflet-popup-pane{z-index:2147483620 !important}.leaflet-popup{z-index:2147483620 !important}';
+   document.head.appendChild(s);
+ }
+ function pad(){ try{ if(window.L&&L.Popup&&L.Popup.prototype){ var o=L.Popup.prototype.options||{};
+   o.autoPanPaddingTopLeft=[14,150]; o.autoPanPaddingBottomRight=[14,300]; L.Popup.prototype.options=o; } }catch(e){} }
+ function dim(on){ var d=$(DOCK); if(!d) return;
+   try{ d.style.setProperty('opacity', on?'0.12':'','important');
+        d.style.setProperty('pointer-events', on?'none':'','important'); }catch(e){} }
+ function watch(){ try{ var M=window.map; if(!M||M.__v145) return; M.__v145=1;
+   M.on('popupopen',function(){ dim(true); build(); });
+   M.on('popupclose',function(){ setTimeout(function(){ dim(false); build(); },60); });
+ }catch(e){} }
+ /* 位置を「動かさず」構造だけ保つ軽量ガード（最初の30秒のみ・変更時以外は何もしない） */
+ function guard(){
+   build();
+   var p=$(PANEL)||$(MINI), d=$(DOCK);
+   [p,d].forEach(function(e){ if(e && getComputedStyle(e).position!=='static'){ hard(e); build(); } });
+ }
+ function boot(){ popupCss(); pad(); watch(); build(); }
+ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+ [300,900,1800,3200,3700,4600,6200,8000].forEach(function(t){ setTimeout(boot,t); });
+ var n=0, iv=setInterval(function(){ guard(); if(++n>43){ clearInterval(iv); } },700);
+ window.addEventListener('orientationchange',function(){ setTimeout(build,300); });
+ window.addEventListener('resize',function(){ setTimeout(build,200); });
+ window.__kmLayout145={build:build, dim:dim, pad:pad, stack:function(){return $(STACK)}};
+})();
+</script>
 </body>
+
 
 
 
