@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>線データ救出 v1</title>
+<style>
+body{font-family:sans-serif;margin:6px;background:#0d1117;color:#eee;font-size:13px}
+h1{font-size:15px;margin:2px 0 6px}
+.box{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:8px;margin:8px 0}
+.big{font-size:15px;font-weight:bold;margin:3px 0}
+.g{color:#3fb950}.r{color:#f85149}.o{color:#d29922}.b{color:#58a6ff}.m{color:#8b949e}
+button{width:100%;padding:12px;font-size:15px;margin:6px 0;background:#238636;color:#fff;border:0;border-radius:8px}
+button.b{background:#1f6feb}button.rr{background:#8b2c2c}button.o{background:#9e6a03}
+.small{font-size:11px;color:#8b949e}
+input[type=file]{width:100%;font-size:12px;background:#21262d;color:#eee;padding:8px;border-radius:6px;border:1px solid #30363d}
+pre{white-space:pre-wrap;font-size:11px;background:#000;padding:6px;max-height:28vh;overflow:auto;border-radius:6px}
+</style>
+</head>
+<body>
+<h1>線データ救出 v1</h1>
+<div class="small">★ https://minamikusatsu0014.github.io/kumanaku/fix2.html で開いてください（線を描いたのと同じURL）。</div>
+
+<div class="box">
+  <div class="big">手順0：まず安全のため全部バックアップ</div>
+  <button id="bak">0. いまの全データをバックアップ</button>
+  <div class="small">押すと端末内の全キーを <b>km_all_backup_fix</b> に退避します。失敗したらここから戻せます。</div>
+</div>
+
+<div class="box">
+  <div class="big">手順1：端末の線データを書き出す</div>
+  <button id="exp" class="b">1. 線データをJSONで書き出す</button>
+  <div class="small">km_draw_main（線14本／11846点）など線を持つキーを1つのJSONにまとめて保存します。<b>このファイルをAI Driveに置いて私に渡してください</b>。中身を解析して、あなたの線かどうか確定します。</div>
+</div>
+
+<div class="box">
+  <div class="big o">手順2：旧街道フラグを外す（試行）</div>
+  <button id="unflag" class="o">2. 「旧街道」印を外して自分の線にする</button>
+  <div class="small">いま地図に出ている14本は、アプリ内部で「旧街道」印（base）が付いたままなので「自分の線 0本」と数えられ、復元対象から外されています。印だけを外して自分の線に戻します。うまくいかない場合は手順0のバックアップから戻せます。</div>
+</div>
+
+<button id="undo" class="rr">↩ 手順0のバックアップに戻す</button>
+
+<div class="box">
+  <div class="big">手順3：ダウンロードのJSONを調べて入れる</div>
+  <div class="small">「ファイルを選択」で、ダウンロード内の km_draw_v99…json / kumanaku_walk…json をまとめて選んでください。線の本数・点数を数えて表示します（まだアプリのデータは書き換えません）。</div>
+  <input type="file" id="f" multiple accept=".json,application/json">
+  <div id="fout"></div>
+  <div class="big">手順4：そのファイルを自分の線として入れる</div>
+  <input type="file" id="f2" accept=".json,application/json">
+  <div class="small">手順3でいちばん本数の多いファイルを選び、下のボタンを押すと、自分の線として端末に入れて地図に描きます（旧街道印は付けません）。</div>
+  <button id="imp" class="b">4. 選んだファイルを自分の線として入れる</button>
+</div>
+
+<pre id="log"></pre>
+<script>
+var LOG=[],KEY='km_all_backup_fix',MINE='km_draw_main';
+function log(s){LOG.push(s);document.getElementById('log').textContent=LOG.join('\n');}
+function esc(s){return String(s).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+
+/* 形を保ったまま base 印を外す */
+function unflag(o){
+  var n=0;
+  (function w(x,d){
+    if(!x||typeof x!=='object'||d>16)return;
+    if(Array.isArray(x)){for(var i=0;i<x.length;i++)w(x[i],d+1);return;}
+    if(Array.isArray(x.lines)){
+      for(var j=0;j<x.lines.length;j++){
+        var L=x.lines[j];if(!L||typeof L!=='object')continue;
+        if(L.base===true||L.base===1){delete L.base;n++;}
+        if(L.kaido===true)delete L.kaido;
+        if(!L.color)L.color='#e0245e';
+        if(!L.width)L.width=3;
+        L.mine=true;
+      }
+    }
+    for(var k in x)if(k!=='lines')w(x[k],d+1);
+  })(o,0);
+  return n;
+}
+/* 点の並びを数える */
+function scan(o){
+  var r={paths:0,pts:0,minLat:99,maxLat:-99,minLng:999,maxLng:-999};
+  function isA(a){return Array.isArray(a)&&a.length>=2&&typeof a[0]==='number'&&typeof a[1]==='number'&&a[0]>=20&&a[0]<=48&&a[1]>=120&&a[1]<=151;}
+  function isO(a){return a&&typeof a==='object'&&!Array.isArray(a)&&typeof a.lat==='number'&&typeof a.lng==='number'&&a.lat>=20&&a.lat<=48&&a.lng>=120&&a.lng<=151;}
+  function take(a){
+    r.paths++;r.pts+=a.length;
+    for(var i=0;i<a.length;i++){var p=a[i],la=Array.isArray(p)?p[0]:p.lat,ln=Array.isArray(p)?p[1]:p.lng;
+      if(typeof la==='number'&&la>20){r.minLat=Math.min(r.minLat,la);r.maxLat=Math.max(r.maxLat,la);}
+      if(typeof ln==='number'&&ln>100){r.minLng=Math.min(r.minLng,ln);r.maxLng=Math.max(r.maxLng,ln);}}
+  }
+  (function w(x,d){
+    if(!x||typeof x!=='object'||d>14)return;
+    if(Array.isArray(x)){
+      if(x.length>=2&&x.length<=200000){var n=0;for(var i=0;i<x.length;i++)if(isA(x[i])||isO(x[i]))n++;
+        if(n>=Math.max(2,Math.ceil(x.length*0.7))){take(x);return;}}
+      for(var j=0;j<x.length;j++)w(x[j],d+1);return;
+    }
+    for(var k in x)w(x[k],d+1);
+  })(o,0);
+  return r;
+}
+/* 点の並びを [{pts:[...]}] 形式に集める */
+function collectLines(o){
+  var out=[];
+  function isA(a){return Array.isArray(a)&&a.length>=2&&typeof a[0]==='number'&&typeof a[1]==='number'&&a[0]>=20&&a[0]<=48&&a[1]>=120&&a[1]<=151;}
+  function isO(a){return a&&typeof a==='object'&&!Array.isArray(a)&&typeof a.lat==='number'&&typeof a.lng==='number'&&a.lat>=20&&a.lat<=48&&a.lng>=120&&a.lng<=151;}
+  function norm(a){var p=[];for(var i=0;i<a.length;i++){var q=a[i];
+    if(Array.isArray(q))p.push([Number(q[0]),Number(q[1])]);
+    else p.push([Number(q.lat),Number(q.lng)]);}return p;}
+  (function w(x,d){
+    if(!x||typeof x!=='object'||d>14)return;
+    if(Array.isArray(x)){
+      if(x.length>=2&&x.length<=200000){var n=0;for(var i=0;i<x.length;i++)if(isA(x[i])||isO(x[i]))n++;
+        if(n>=Math.max(2,Math.ceil(x.length*0.7))){out.push({pts:norm(x)});return;}}
+      for(var j=0;j<x.length;j++)w(x[j],d+1);return;
+    }
+    for(var k in x)w(x[k],d+1);
+  })(o,0);
+  return out;
+}
+function download(obj,name){
+  var b=new Blob([JSON.stringify(obj)],{type:'application/json'});
+  var u=URL.createObjectURL(b),a=document.createElement('a');
+  a.href=u;a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(u);a.remove();},2500);
+  return name;
+}
+
+/* 0. バックアップ */
+document.getElementById('bak').onclick=function(){
+  var all={};
+  for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);all[k]=localStorage.getItem(k);}
+  try{localStorage.setItem(KEY,JSON.stringify({at:Date.now(),items:all}));
+    alert('バックアップしました（'+localStorage.length+'キー）。\nキー名：'+KEY);
+    log('バックアップ完了：'+localStorage.length+'キー');
+  }catch(e){alert('バックアップに失敗：'+e);}
+};
+
+/* 1. 書き出し */
+document.getElementById('exp').onclick=function(){
+  var all={};
+  for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);all[k]=localStorage.getItem(k);}
+  var n=download({app:'kumanaku-mine-export',version:1,at:new Date().toISOString(),localStorage:all},'line_data_'+Date.now()+'.json');
+  alert('書き出しました：'+n+'\nこのファイルを私に渡してください。');
+  log('書き出し：'+n);
+};
+
+/* 2. フラグを外す */
+document.getElementById('unflag').onclick=function(){
+  var v=localStorage.getItem(MINE);
+  if(!v){alert(MINE+' がありません。');return;}
+  var o;try{o=JSON.parse(v);}catch(e){alert('データを読めません：'+e);return;}
+  var all={};
+  for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);all[k]=localStorage.getItem(k);}
+  try{localStorage.setItem(KEY,JSON.stringify({at:Date.now(),items:all}));}catch(e){}
+  var n=unflag(o);
+  localStorage.setItem(MINE,JSON.stringify(o));
+  var s=scan(o);
+  alert('旧街道印を '+n+'本から外しました。\n点の並び：'+s.paths+'本／'+s.pts+'点\n\nページを再読み込みします。');
+  location.href=location.pathname+'?fixed=1';
+};
+
+/* 戻す */
+document.getElementById('undo').onclick=function(){
+  var b=localStorage.getItem(KEY);
+  if(!b){alert('バックアップがありません。');return;}
+  var o=JSON.parse(b),n=0;
+  for(var k in o.items){localStorage.setItem(k,o.items[k]);n++;}
+  alert('バックアップに戻しました（'+n+'キー）。再読み込みします。');
+  location.href=location.pathname+'?undo=1';
+};
+
+/* 3. 調べる */
+function readFile(file,cb){
+  var r=new FileReader();
+  r.onload=function(){var o=null,err='';try{o=JSON.parse(r.result);}catch(e){err=String(e);}
+    cb(o,err,String(r.result).length);};
+  r.readAsText(file);
+}
+var best=null,bestPts=-1;
+document.getElementById('f').onchange=function(ev){
+  var fs=ev.target.files,out=document.getElementById('fout');out.innerHTML='';best=null;bestPts=-1;
+  for(var i=0;i<fs.length;i++)(function(file){
+    var d=document.createElement('div');d.className='box';
+    d.innerHTML='<b>'+esc(file.name)+'</b><div class="small">読み込み中…</div>';out.appendChild(d);
+    readFile(file,function(o,err,len){
+      if(!o){d.innerHTML='<b>'+esc(file.name)+'</b><div class="r">JSONとして読めません '+esc(err)+'</div>';return;}
+      var s=scan(o);
+      var isMine=(o&&o.app==='kumanaku-mine')||(o&&o.sources&&Object.keys(o.sources||{}));
+      var j='';
+      if(s.paths>=60&&s.paths<=90)j+='★本数が72本に近い ';
+      if(s.pts>=11000&&s.pts<=15000)j+='★点数が13361点に近い';
+      d.innerHTML='<b>'+esc(file.name)+'</b><div class="small">'+file.size+' バイト</div>'+
+        '<div class="big">点の並び：'+s.paths+'本 / '+s.pts+'点</div>'+
+        (s.paths?'<div class="small">範囲：緯度 '+s.minLat.toFixed(3)+'〜'+s.maxLat.toFixed(3)+' / 経度 '+s.minLng.toFixed(3)+'〜'+s.maxLng.toFixed(3)+'</div>':'<div class="o">線の座標なし</div>')+
+        (isMine?'<div class="small b">端末から書き出したファイルの形式です</div>':'')+
+        (j?'<div class="big g">'+j+'</div>':'');
+      log(file.name+' → '+s.paths+'本/'+s.pts+'点 '+(j||''));
+      if(s.pts>bestPts){bestPts=s.pts;best={name:file.name,f:file,paths:s.paths,pts:s.pts};}
+    });
+  })(fs[i]);
+};
+
+/* 4. 自分の線として入れる */
+document.getElementById('imp').onclick=function(){
+  var f=document.getElementById('f2').files[0];
+  if(!f){alert('ファイルを選んでください。');return;}
+  readFile(f,function(o,err){
+    if(!o){alert('JSONとして読めません：'+err);return;}
+    var cand=collectLines(o);
+    if(!cand.length){alert('このファイルに線の座標が見つかりませんでした。別のファイルを試してください。');return;}
+    var all={};
+    for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);all[k]=localStorage.getItem(k);}
+    try{localStorage.setItem(KEY,JSON.stringify({at:Date.now(),items:all}));}catch(e){}
+    /* 既存データの形に合わせて足す */
+    var cur={lines:[]};
+    var ex=localStorage.getItem(MINE);
+    if(ex){try{var p=JSON.parse(ex);if(p&&Array.isArray(p.lines))cur=p;}catch(e){}}
+    var added=0;
+    for(var j=0;j<cand.length;j++){
+      cur.lines.push({pts:cand[j].pts,color:'#e0245e',width:3,mine:true});
+      added++;
+    }
+    var n=unflag(cur);
+    try{localStorage.setItem(MINE,JSON.stringify(cur));}catch(e){alert('保存できません（容量不足）：'+e);return;}
+    alert('自分の線として '+added+'本 入りました（旧街道印を外した数：'+n+'）。\n再読み込みします。');
+    location.href=location.pathname+'?imported=1';
+  });
+};
+
+log('準備完了。手順0 → 1 → 2 の順に押してください。');
+</script>
+</body>
+</html>
