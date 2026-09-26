@@ -1360,6 +1360,7 @@ window.kmEl=function(id){ var e=document.getElementById(id); if(e) return e;
       if(!el||el.nodeType!==1||!el.id) return false;
       if(!/^km/.test(el.id)) return false;
       if(/Fix|Bar|Chip|Min|Log/i.test(el.id)) return false;
+      if(el.id==='kmPosFixPanel'){ try{ el.style.setProperty('display','none','important'); }catch(x){} try{ if(window.__kmPosFixIsOpen&&window.__kmPosFixIsOpen()){} }catch(x){} return false; }
       if(/Panel|Modal|Diag/i.test(el.id)) return true;
       var cs=getComputedStyle(el);
       if(cs.position==='fixed' && parseInt(cs.zIndex||'0',10)>=2147483000 && el.getBoundingClientRect().width>=260) return true;
@@ -1376,6 +1377,8 @@ window.kmEl=function(id){ var e=document.getElementById(id); if(e) return e;
   window.__kmClosePanels=closeAll;
   /* 1) キャプチャ段階で「閉じる」系の押下を拾って強制クローズ */
   function isCloseBtn(t){
+    try{ var _b=t&&t.closest?t.closest('button,a,[role=button]'):null; if(_b&&/^pnl/.test(_b.id||'')) return false; }catch(e){}
+    try{ if(t&&t.closest&&t.closest('.leaflet-popup,.leaflet-control,.leaflet-popup-close-button,.leaflet-container,.leaflet-pane,#kmPosFixPanel,#kmPosFixBtn')) return false; }catch(e){}
     try{ var b=t&&t.closest?t.closest('button,a,[role=button],div'):null;
       for(var i=0;i<4&&b;i++){ var s=(b.textContent||'').trim();
         if(/閉じる/.test(s)&&s.length<=8) return true;
@@ -3500,7 +3503,8 @@ try{window.cpLayer=cpLayer;window.cpMarkers=cpMarkers;window.CHECKPOINTS=CHECKPO
 (function(){
   var KEY='km_pos_fix_v1';
   function loadOV(){ try{ return JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){ return {}; } }
-  function saveOV(o){ try{ localStorage.setItem(KEY, JSON.stringify(o)); }catch(e){} }
+  function saveOV(o){ try{ var j=JSON.stringify(o); localStorage.setItem(KEY,j); localStorage.setItem(KEY+'_bak',j); }catch(e){} }
+  try{ if(!localStorage.getItem(KEY)){ var _bk=localStorage.getItem(KEY+'_bak'); if(_bk) localStorage.setItem(KEY,_bk); } }catch(e){}
   var OV=loadOV();
   function applyOV(){
     var n=0;
@@ -3526,7 +3530,7 @@ try{window.cpLayer=cpLayer;window.cpMarkers=cpMarkers;window.CHECKPOINTS=CHECKPO
   document.body.appendChild(b);
   var panel=document.createElement('div');
   panel.id='kmPosFixPanel';
-  panel.style.cssText='position:fixed;right:8px;top:35%;transform:translateY(-50%);z-index:6001;display:none;background:#fff;border:1px solid #bbb;border-radius:10px;padding:10px;font-size:12px;width:min(88vw,300px);box-shadow:0 3px 12px rgba(0,0,0,.32)';
+  panel.style.cssText='position:fixed;right:46px;top:35%;transform:translateY(-50%);z-index:6001;display:none;background:#fff;border:1px solid #bbb;border-radius:10px;padding:10px;font-size:12px;width:min(88vw,300px);box-shadow:0 3px 12px rgba(0,0,0,.32)';
   panel.innerHTML='<div style="font-weight:bold;margin-bottom:4px">\uD83D\uDD27 位置修正モード</div>'
    +'<div style="color:#444;line-height:1.5;margin-bottom:6px">① 下のボタンでON<br>② ずれているマーカーを長押ししてドラッグ<br>③ 位置は自動保存されます</div>'
    +'<div id="kmPosFixMsg" style="color:#a15c00;background:#fff8e1;border-radius:6px;padding:4px;margin-bottom:6px">補正 0 件</div>'
@@ -3561,8 +3565,12 @@ try{window.cpLayer=cpLayer;window.cpMarkers=cpMarkers;window.CHECKPOINTS=CHECKPO
       }catch(e){}
     });
   });
-  b.onclick=function(){ panel.style.display = panel.style.display==='none' ? 'block' : 'none'; };
-  document.getElementById('kmPosFixClose').onclick=function(){ panel.style.display='none'; };
+  function posOpen(){ try{ panel.style.removeProperty('display'); panel.style.setProperty('display','block','important'); }catch(e){ panel.style.display='block'; } }
+  function posClose(){ try{ panel.style.setProperty('display','none','important'); }catch(e){ panel.style.display='none'; } }
+  window.__kmOpenPosFix=posOpen; window.__kmClosePosFix=posClose;
+  window.__kmPosFixIsOpen=function(){ try{ return getComputedStyle(panel).display!=='none'; }catch(e){ return false; } };
+  b.onclick=function(ev){ try{ev.preventDefault();ev.stopPropagation();}catch(e){} if(window.__kmPosFixIsOpen()) posClose(); else posOpen(); };
+  document.getElementById('kmPosFixClose').onclick=function(ev){ try{ev.preventDefault();ev.stopPropagation();}catch(e){} posClose(); };
   document.getElementById('kmPosFixMode').onclick=function(){ setMode(!on); };
   document.getElementById('kmPosFixExp').onclick=function(){
     refresh();
@@ -8215,8 +8223,8 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v150 09/26 13:10';
-  var BTAG='v150';
+  var BUILD='v153 09/26 19:20';
+  var BTAG='v151';
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
     var VK='km_app_ver', prevV=null;
@@ -9553,6 +9561,61 @@ function boot(){ apply(); addBtn2(); label(); }
    max:function(){return maxW();},min:MIN};
 })();
 </script>
+
+<script>/* KM_FIX_V152 : ①位置修正パネルの開閉を確実化 ②史跡情報(Leafletポップアップ)の✕を生かす ③補正座標の再適用 */
+(function(){
+  if(window.__km152) return; window.__km152=1;
+  /* ③ 補正座標を「描き直しの後でも」必ず再適用 */
+  function reapply(){ try{ if(window.__kmPosFixIsOpen&&window.__kmPosFixIsOpen()) return; if(typeof window.kmPosFixApply==='function') window.kmPosFixApply(); }catch(e){} }
+  function hook(){ try{ if(window.map&&!window.__km152z){ window.__km152z=1; window.map.on('zoomend',reapply); window.map.on('moveend',reapply); } }catch(e){} }
+  hook(); setInterval(function(){ hook(); reapply(); }, 2000);
+  /* ② Leaflet ポップアップの✕は、他の全画面クローズ処理より先に「素通し」させる */
+  /* ① 位置修正の開閉：click 捕捉で伝播を止め、この1か所だけでトグルする（二重トグル防止） */
+  document.addEventListener('click',function(ev){
+    var t=ev.target; if(!t||!t.closest) return;
+    var pb=t.closest('#kmPosFixBtn'), pc=t.closest('#kmPosFixClose');
+    if(!pb&&!pc) return;
+    try{ ev.preventDefault(); ev.stopImmediatePropagation(); }catch(e){}
+    try{ if(pb){ if(window.__kmPosFixIsOpen()) window.__kmClosePosFix(); else window.__kmOpenPosFix(); }
+         else { window.__kmClosePosFix&&window.__kmClosePosFix(); } }catch(e){}
+  },true);
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){ try{ if(window.map) window.map.closePopup(); }catch(x){} }
+  },true);
+})();</script>
+
+<script>/* KM_FIX_V153 : 1.c パネル一覧と下部「手描き」は必ず本物の手描きトレースを開く（旧画面を出さない） */
+(function(){
+  if(window.__km153) return; window.__km153=1;
+  function forceShow(){ try{ var el=document.getElementById('kmDrawPanel'); if(!el) return;
+    var e=el.parentElement; while(e&&e!==document.body){ try{ if(getComputedStyle(e).display==='none') e.style.setProperty('display','block','important'); }catch(x){} e=e.parentElement; }
+    try{ el.style.removeProperty('visibility'); el.style.setProperty('display','block','important'); }catch(x){} }catch(e){} }
+  function realOpen(){
+    try{
+      var dp=document.getElementById('drawPanel'); if(dp) dp.style.display='none';   /* 旧画面は必ず伏せる */
+      var el=document.getElementById('kmDrawPanel');
+      var on=false; try{ var c=getComputedStyle(el); on=!!(el&&c.display!=='none'&&c.visibility!=='hidden'&&el.getBoundingClientRect().width>1); }catch(e){}
+      if(on){ window.__pnlHide&&window.__pnlHide('kmDrawPanel'); return; }
+      try{ if(window.__pnlClearLock) window.__pnlClearLock('kmDrawPanel'); }catch(e){}
+      window.__pnlShow&&window.__pnlShow('kmDrawPanel'); forceShow();
+      [120,400,900,1600].forEach(function(ms){ setTimeout(forceShow, ms); });
+    }catch(e){}
+  }
+  document.addEventListener('pointerdown',function(ev){
+    var t=ev.target; if(!t||!t.closest) return;
+    var b=t.closest('button,a,[role=button],div'); if(!b) return;
+    if(/^pnl/.test(b.id||'')) return;                       /* 自前UIは対象外 */
+    var tx=(b.textContent||'').trim();
+    if(b.id==='drawBtn' || /^手描き$/.test(tx) || /^手描きトレース$/.test(tx)){
+      try{ ev.stopImmediatePropagation(); }catch(e){}
+      realOpen();
+    }
+  },true);
+  /* パネル一覧から紛らわしい「旧・別画面」行を隠す */
+  setInterval(function(){
+    var r=document.getElementById('pnlShow_drawPanel'); if(r&&r.parentElement) r.parentElement.style.display='none';
+  },700);
+})();</script>
 </body>
 
 
@@ -12504,251 +12567,8 @@ function boot(){ apply(); addBtn2(); label(); }
 
 
 
-<script>
 
-/* ===== v150 panel control (pointer hotspot) ===== */
-(function(){
-  var OPENERS={
-    drawPanel:['drawBtn'], kmDrawPanel:['drawBtn'],
-    kmPosFixPanel:['kmPosFixBtn'], kaidoModal:['kaidoBtn'],
-    memoModal:['memoListBtn','memoBtn'], memoAddModal:['memoBtn'],
-    photoModal:['photoBtn'], photoView:['photoBtn'], nakaModal:['nakaListBtn'],
-    installModal:[]
-  };
-  var OPENTEXT={
-    kmPosFixPanel:['位置修正'], drawPanel:['手描き'], kmDrawPanel:['手描き'],
-    kaidoModal:['街道一覧','旧街道'], memoModal:['メモ一覧'], memoAddModal:['メモ追加'],
-    photoModal:['写真'], nakaModal:['宿場'], installModal:['インストール']
-  };
-  var APPCLOSE={
-    kmPosFixPanel:['kmPosFixClose'], kaidoModal:['kaidoClose'],
-    memoModal:['memoModalClose'], memoAddModal:['memoModalClose'],
-    photoModal:['photoModalClose'], photoView:['photoViewClose'],
-    nakaModal:['nakaClose'], drawPanel:['dpClose'], kmDrawPanel:['dpClose'],
-    kmGeomPanel:['kmGeomClose']
-  };
-  var PAIRS={drawPanel:['drawPanel','kmDrawPanel'], kmDrawPanel:['drawPanel','kmDrawPanel']};
-  var LABEL={drawPanel:'手描きトレース枠', kmDrawPanel:'手描きトレース', kmPosFixPanel:'位置修正モード',
-    kaidoModal:'旧街道', memoModal:'メモ一覧', memoAddModal:'メモ追加', photoModal:'写真', photoView:'写真拡大',
-    nakaModal:'宿場一覧', installModal:'インストール案内', kmStack145:'情報カード',
-    kmGeomPanel:'地形パネル', kmEdPanel:'編集パネル', kmTracePanel:'トレースパネル'};
-  var IDS=[], CLOSED={}, Z=2147483000;
-  var SKIP={pnlBtn:1,pnlPanel:1,pnlRows:1,pnlX:1,pnlStat:1,kmStack145:1};
 
-  function vis(el){ if(!el) return false;
-    try{ var s=getComputedStyle(el);
-      if(s.display==='none'||s.visibility==='hidden'||parseFloat(s.opacity||'1')===0) return false;
-      var r=el.getBoundingClientRect(); return r.width>1 && r.height>1; }catch(e){ return false; } }
-  window.__pnlVis=vis;
-  function uncover(el){ var e=el.parentElement;
-    while(e&&e!==document.body){ try{ if(getComputedStyle(e).display==='none') e.style.display='block'; }catch(x){} e=e.parentElement; } }
-  function forceHide(id){ var el=document.getElementById(id); if(!el) return;
-    try{ el.style.setProperty('display','none','important');
-         el.style.setProperty('visibility','hidden','important'); }catch(e){} }
-  function forceShow(id){ var el=document.getElementById(id); if(!el) return;
-    uncover(el);
-    try{ el.style.setProperty('display', el.classList.contains('modal')?'flex':'block','important');
-         el.style.setProperty('visibility','visible','important');
-         el.style.setProperty('z-index', Z+'','important'); }catch(e){} }
-  function removeClosed(id){ delete CLOSED[id]; var el=document.getElementById(id);
-    if(el){ try{ el.style.removeProperty('visibility'); }catch(e){} } }
-  function cleanOpener(el){ if(!el) return false;
-    try{ var r=el.getBoundingClientRect(); if(r.width<8||r.height<8) return false;
-      var t=document.elementFromPoint(r.left+r.width/2, r.top+r.height/2);
-      return !!(t && (t===el || el.contains(t))); }catch(e){ return false; } }
-  function findOpenerByText(id){
-    var wr=OPENTEXT[id]||[]; if(!wr.length) return null;
-    var all=document.body.getElementsByTagName('*');
-    for(var i=0;i<all.length;i++){
-      var el=all[i]; var tx=el.textContent||''; if(!tx) continue;
-      var hit=false; for(var k=0;k<wr.length;k++){ if(tx.indexOf(wr[k])>=0){ hit=true; break; } }
-      if(!hit) continue;
-      if(el.children.length>0) continue;
-      var e=el, d=0;
-      while(e && e!==document.body && d<5){
-        if(cleanOpener(e) && (e.tagName==='BUTTON'||e.tagName==='A'||e.onclick||e.getAttribute('role')==='button'
-           || getComputedStyle(e).cursor==='pointer')) return e;
-        e=e.parentElement; d++;
-      }
-    }
-    return null;
-  }
-  function openOnce(id){
-    var el=document.getElementById(id);
-    if(el && vis(el)) return true;
-    removeClosed(id);
-    var o=findOpenerByText(id);
-    if(o){ try{ o.click(); }catch(e){}
-      el=document.getElementById(id); if(el && vis(el)) return true; }
-    var l=OPENERS[id]||[];
-    for(var i=0;i<l.length;i++){ var b=document.getElementById(l[i]);
-      if(b && cleanOpener(b)){ try{ b.click(); }catch(e){}
-        if(el && vis(el)) return true; } }
-    if(id==='kmPosFixPanel' && typeof window.__kmPosFixSetMode==='function'){ try{ window.__kmPosFixSetMode(true); }catch(e){} }
-    el=document.getElementById(id); if(el && vis(el)) return true;
-    forceShow(id);
-    el=document.getElementById(id);
-    return !!(el && vis(el));
-  }
-  function closeOne(id){
-    var el=document.getElementById(id); if(!el) return;
-    CLOSED[id]=1;
-    var l=APPCLOSE[id]||[];
-    for(var i=0;i<l.length;i++){ var b=document.getElementById(l[i]);
-      if(b && vis(b)){ try{ b.click(); }catch(e){} break; } }
-    if(id==='kmPosFixPanel' && typeof window.__kmPosFixSetMode==='function'){ try{ window.__kmPosFixSetMode(false); }catch(e){} }
-    forceHide(id);
-    setTimeout(function(){ if(CLOSED[id]) forceHide(id); },90);
-    setTimeout(function(){ if(CLOSED[id]) forceHide(id); },350);
-  }
-  window.__pnlShow=function(id){
-    var list=PAIRS[id]||[id], ok=false, i;
-    for(i=0;i<list.length;i++) if(openOnce(list[i])) ok=true;
-    if(!ok){
-      setTimeout(function(){ for(var j=0;j<list.length;j++) openOnce(list[j]); },450);
-      setTimeout(function(){ for(var j=0;j<list.length;j++) openOnce(list[j]); },1200);
-    }
-    return ok || vis(document.getElementById(id));
-  };
-  window.__pnlHide=function(id){ var list=PAIRS[id]||[id];
-    for(var i=0;i<list.length;i++) closeOne(list[i]); return true; };
-  window.__pnlList=function(){ return IDS.slice(); };
 
-  function attachClose(id){
-    var el=document.getElementById(id); if(!el||SKIP[id]) return false;
-    if(document.getElementById('pnlClose_'+id)) return true;
-    if(getComputedStyle(el).position==='static'){ try{ el.style.position='relative'; }catch(e){} }
-    var b=document.createElement('button');
-    b.type='button'; b.id='pnlClose_'+id; b.setAttribute('aria-label','閉じる'); b.setAttribute('title','閉じる');
-    b.textContent='✕';
-    b.style.cssText='position:absolute;top:4px;right:4px;width:40px;height:40px;min-width:40px;'
-      +'border-radius:50%;background:#d32f2f;color:#fff;border:2px solid #fff;font-size:20px;line-height:1;'
-      +'padding:0;cursor:pointer;touch-action:manipulation;z-index:'+Z+';box-shadow:0 2px 7px rgba(0,0,0,.5)';
-    try{ el.appendChild(b); return true; }catch(e){ return false; }
-  }
-  function register(id){
-    var el=document.getElementById(id); if(!el||SKIP[id]) return;
-    if(IDS.indexOf(id)<0) IDS.push(id);
-    attachClose(id);
-  }
-  function sweep(){
-    var all=document.body.getElementsByTagName('*');
-    for(var i=0;i<all.length;i++){
-      var el=all[i]; if(!el.id||SKIP[el.id]) continue;
-      if(/^pnl/.test(el.id)) continue;
-      if(Object.prototype.hasOwnProperty.call(OPENERS,el.id)
-         || Object.prototype.hasOwnProperty.call(APPCLOSE,el.id)
-         || /(Modal|Panel|Stack)$/.test(el.id)) register(el.id);
-    }
-    return IDS;
-  }
-  window.__pnlScan=sweep;
-
-  /* ---- パネル管理 UI ---- */
-  function createBag(){
-    var rb=document.createElement('button');
-    rb.type='button'; rb.id='pnlBtn'; rb.textContent='🧰 パネル';
-    rb.style.cssText='position:fixed;left:0;top:40%;z-index:'+(Z-2)+';font-size:13px;font-weight:bold;'
-      +'padding:10px 8px;border:1px solid #1565c0;border-left:0;border-radius:0 10px 10px 0;'
-      +'background:#e3f2fd;color:#0d47a1;box-shadow:0 1px 6px rgba(0,0,0,.34);touch-action:manipulation';
-    document.body.appendChild(rb);
-  }
-  function createManager(){
-    var rp=document.createElement('div'); rp.id='pnlPanel';
-    rp.style.cssText='position:fixed;left:50%;top:8%;transform:translateX(-50%);z-index:'+(Z-1)+';display:none;'
-      +'background:#fff;border:1px solid #90a4ae;border-radius:12px;padding:10px;width:min(94vw,390px);'
-      +'max-height:78vh;overflow:auto;font-size:12px;box-shadow:0 4px 18px rgba(0,0,0,.38)';
-    rp.innerHTML='<div style="font-weight:bold;margin-bottom:6px">🧰 パネル管理</div>'
-      +'<div id="pnlStat" style="color:#555;line-height:1.5;margin-bottom:8px">閉じてしまった画面は「表示」で戻せます。緑＝復帰成功。</div>'
-      +'<div id="pnlQuick" style="display:flex;gap:6px;margin-bottom:8px"></div>'
-      +'<div id="pnlRows"></div>'
-      +'<div style="text-align:right;margin-top:8px"><button type="button" id="pnlX">✕</button></div>';
-    document.body.appendChild(rp);
-  }
-  function buildUI(){
-    if(!document.getElementById('pnlBtn')) createBag();
-    if(!document.getElementById('pnlPanel')) createManager();
-    var rb=document.getElementById('pnlBtn'); if(rb && rb.parentElement!==document.body) document.body.appendChild(rb);
-    var q=document.getElementById('pnlQuick');
-    if(q && !q.children.length){
-      ['kmPosFixPanel','drawPanel'].forEach(function(pid){
-        var b=document.createElement('button'); b.type='button'; b.id='pnlQuick_'+pid;
-        b.textContent='表示: '+(LABEL[pid]||pid);
-        b.style.cssText='flex:1;padding:8px 6px;font-size:12px;touch-action:manipulation';
-        q.appendChild(b);
-      });
-    }
-    sweep();
-    var rows=document.getElementById('pnlRows'); if(!rows) return;
-    rows.innerHTML='';
-    IDS.forEach(function(id){
-      if(!document.getElementById(id)) return;
-      var row=document.createElement('div');
-      row.style.cssText='display:flex;gap:6px;align-items:center;padding:5px 0;border-top:1px solid #eee';
-      row.innerHTML='<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
-        +(LABEL[id]||id)+'<br><span style="color:#777;font-size:11px">'+id+'</span></span>';
-      var s=document.createElement('button'); s.type='button'; s.id='pnlShow_'+id; s.textContent='表示';
-      var h=document.createElement('button'); h.type='button'; h.id='pnlHide_'+id; h.textContent='閉じる';
-      row.appendChild(s); row.appendChild(h); rows.appendChild(row);
-    });
-    if(!rows.children.length) rows.innerHTML='<div style="color:#888">no panels</div>';
-  }
-  window.__pnlBuild=buildUI;
-
-  /* ---- 座標ヒットで操作（要素の上に何か被っていても必ず反応させる） ---- */
-  function inR(el,x,y){ if(!el) return false;
-    try{ if(getComputedStyle(el).display==='none') return false;
-      var r=el.getBoundingClientRect();
-      if(r.width<2||r.height<2) return false;
-      return x>=r.left-4 && x<=r.right+4 && y>=r.top-4 && y<=r.bottom+4; }catch(e){ return false; } }
-  var lastFire=0;
-  function hotAction(x,y){
-    var now=Date.now();
-    var list=document.querySelectorAll('[id^="pnlClose_"],[id^="pnlShow_"],[id^="pnlHide_"],[id^="pnlQuick_"],#pnlBtn,#pnlX');
-    for(var i=0;i<list.length;i++){
-      var el=list[i]; if(!inR(el,x,y)) continue;
-      var id=el.id;
-      if(id.indexOf('pnlClose_')===0){ window.__pnlHide(id.slice(9)); return true; }
-      if(id.indexOf('pnlShow_')===0 || id.indexOf('pnlQuick_')===0){
-        var pid=id.replace(/^pnl(Show|Quick)_/,'');
-        var ok=window.__pnlShow(pid);
-        if(id.indexOf('pnlShow_')===0) el.style.background = ok?'#a5d6a7':'#ffcdd2';
-        var st=document.getElementById('pnlStat');
-        if(st) st.textContent=(ok?'✅ 復帰OK: ':'⚠️ 復帰未確認: ')+(LABEL[pid]||pid);
-        var mgr=document.getElementById('pnlPanel');
-        if(ok && mgr) setTimeout(function(){ mgr.style.display='none'; },1200);
-        return true;
-      }
-      if(id.indexOf('pnlHide_')===0){ window.__pnlHide(id.slice(8)); return true; }
-      if(id==='pnlBtn'){ var m=document.getElementById('pnlPanel'); if(!m) return false;
-        if(getComputedStyle(m).display==='none'){ buildUI(); m.style.display='block'; } else { m.style.display='none'; }
-        return true; }
-      if(id==='pnlX'){ var m2=document.getElementById('pnlPanel'); if(m2) m2.style.display='none'; return true; }
-    }
-    return false;
-  }
-  function onDown(ev){
-    var now=Date.now(); if(now-lastFire<380) return;
-    if(hotAction(ev.clientX, ev.clientY)){ lastFire=now;
-      ev.preventDefault(); ev.stopPropagation();
-      if(ev.stopImmediatePropagation) ev.stopImmediatePropagation(); }
-  }
-  document.addEventListener('pointerdown', onDown, true);
-  document.addEventListener('touchstart', function(ev){ var t=ev.touches&&ev.touches[0]; if(t) onDown({clientX:t.clientX,clientY:t.clientY,preventDefault:function(){ev.preventDefault();},stopPropagation:function(){ev.stopPropagation();}}); }, true);
-  document.addEventListener('keydown', function(e){
-    if(e.key!=='Escape'&&e.keyCode!==27) return;
-    IDS.forEach(function(id){ var el=document.getElementById(id); if(vis(el)) window.__pnlHide(id); });
-    var m=document.getElementById('pnlPanel'); if(m) m.style.display='none';
-  });
-
-  /* ---- 閉じた状態を保持し、UIが消されたら復元する監視 ---- */
-  setInterval(function(){
-    for(var id in CLOSED){ if(!CLOSED[id]) continue;
-      var el=document.getElementById(id); if(el && vis(el)) forceHide(id); }
-  }, 150);
-  setInterval(function(){ buildUI(); }, 1200);
-  buildUI();
-})();
-
-</script>
+<script src="km151.js"></script>
 </html>
