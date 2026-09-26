@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>保存データ調査 v1</title>
+<style>
+body{font-family:sans-serif;margin:8px;background:#111;color:#eee}
+h1{font-size:15px;margin:4px 0}
+h2{font-size:14px;margin:14px 0 4px;color:#8fd}
+table{border-collapse:collapse;width:100%;font-size:11px}
+td,th{border:1px solid #444;padding:3px;word-break:break-all;vertical-align:top}
+tr.hit{background:#1d4d2b}
+tr.hit2{background:#5a3a00}
+button{width:100%;padding:14px;font-size:15px;margin:8px 0;background:#0a7;color:#fff;border:0;border-radius:8px}
+button.b{background:#26c}
+pre{white-space:pre-wrap;font-size:11px;background:#000;padding:6px;max-height:35vh;overflow:auto;border-radius:6px}
+.small{font-size:11px;color:#aab}
+</style>
+</head>
+<body>
+<h1>保存データ調査 v1</h1>
+<div class="small">このページは、線を描いたときと同じ URL（https://minamikusatsu0014.github.io/kumanaku/recover.html）で開いてください。別のサイトで開くと保存領域が別物になり、何も見つかりません。</div>
+<div id="out">調査中…</div>
+<button id="dl">1. 全データを1つのJSONで保存</button>
+<button id="dl2" class="b">2. 見つかった「自分の線」だけをJSONで保存</button>
+<pre id="log"></pre>
+<script>
+var LOG=[],ALL={ls:{},lines:{}};
+function log(s){LOG.push(s);document.getElementById('log').textContent=LOG.join('\n');}
+function bytes(s){return s?s.length:0;}
+function analyze(o){
+  var r={lines:0,mine:0,base:0,pts:0,keys:0};
+  (function walk(o){
+    if(!o||typeof o!=='object')return;
+    if(Array.isArray(o)){for(var i=0;i<o.length;i++)walk(o[i]);return;}
+    if(Array.isArray(o.lines)){
+      r.lines+=o.lines.length;
+      for(var j=0;j<o.lines.length;j++){
+        var L=o.lines[j];
+        if(!L)continue;
+        if(L.base===true||L.base===1)r.base++;else r.mine++;
+        if(Array.isArray(L.pts))r.pts+=L.pts.length;
+      }
+    }
+    if(Array.isArray(o.pts))r.pts+=o.pts.length;
+    for(var k in o){if(k!=='lines'&&k!=='pts')walk(o[k]);}
+  })(o);
+  return r;
+}
+function esc(s){return String(s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+
+var rows='',hits=[];
+for(var i=0;i<localStorage.length;i++){
+  var k=localStorage.key(i),v=localStorage.getItem(k);
+  ALL.ls[k]=v;
+  var par=null,a=null;
+  try{par=JSON.parse(v);}catch(e){}
+  if(par&&typeof par==='object')a=analyze(par);
+  var cls='',note='';
+  if(a&&a.lines>0){
+    note='線 '+a.lines+'本／手描き '+a.mine+'本／旧街道 '+a.base+'本';
+    if(a.mine>0){cls='hit';hits.push({key:k,data:par,mine:a.mine});}
+    else cls='hit2';
+  }
+  rows+='<tr class="'+cls+'"><td>'+esc(k)+'</td><td>'+bytes(v)+'</td><td>'+esc(note||'(線データなし)')+'</td></tr>';
+}
+document.getElementById('out').innerHTML=
+ '<h2>localStorage（'+localStorage.length+'件）</h2>'+
+ '<table><tr><th>キー</th><th>バイト</th><th>線の本数</th></tr>'+rows+'</table>';
+
+log('localStorage キー数: '+localStorage.length);
+for(var n=0;n<hits.length;n++)log('★ 自分の線あり: '+hits[n].key+' → '+hits[n].mine+'本');
+
+if(!hits.length)log('★ localStorage に「自分の線」はありませんでした。');
+
+// IndexedDB
+if(window.indexedDB&&indexedDB.databases){
+  indexedDB.databases().then(function(dbs){
+    log('IndexedDB データベース: '+dbs.length+'件');
+    var chain=Promise.resolve();
+    dbs.forEach(function(d){
+      chain=chain.then(function(){
+        return new Promise(function(res){
+          var q=indexedDB.open(d.name);
+          q.onerror=function(){log('IDB '+d.name+': 開けません');res();};
+          q.onsuccess=function(){
+            var db=q.result,names=Array.prototype.slice.call(db.objectStoreNames);
+            log('IDB '+d.name+' ストア: '+(names.join(', ')||'なし'));
+            var c2=Promise.resolve();
+            names.forEach(function(sn){
+              c2=c2.then(function(){
+                return new Promise(function(r2){
+                  try{
+                    var t=db.transaction(sn,'readonly'),s=t.objectStore(sn),c=s.count();
+                    c.onsuccess=function(){log('   - '+sn+': '+c.result+'件');r2();};
+                    c.onerror=function(){log('   - '+sn+': 件数不明');r2();};
+                  }catch(e){log('   - '+sn+': エラー');r2();}
+                });
+              });
+            });
+            c2.then(function(){db.close();res();});
+          };
+        });
+      });
+    });
+    return chain;
+  }).catch(function(e){log('IndexedDB 調査失敗: '+e);});
+}else{
+  log('IndexedDB.databases() 非対応のブラウザです。');
+}
+
+function save(obj,name){
+  var b=new Blob([JSON.stringify(obj)],{type:'application/json'});
+  var u=URL.createObjectURL(b),a=document.createElement('a');
+  a.href=u;a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(u);a.remove();},2000);
+}
+document.getElementById('dl').onclick=function(){
+  save({app:'kumanaku-recover',version:1,at:new Date().toISOString(),localStorage:ALL.ls},'recover_all_'+Date.now()+'.json');
+  log('全データを保存しました（'+localStorage.length+'キー）。');
+};
+document.getElementById('dl2').onclick=function(){
+  if(!hits.length){alert('「自分の線」が見つかっていません。');return;}
+  var o={app:'kumanaku-mine',version:1,at:new Date().toISOString(),sources:{}};
+  for(var n=0;n<hits.length;n++)o.sources[hits[n].key]=hits[n].data;
+  save(o,'mine_lines_'+Date.now()+'.json');
+  log('自分の線を保存しました（'+hits.length+'キー）。');
+};
+</script>
+</body>
+</html>
