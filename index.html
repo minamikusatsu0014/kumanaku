@@ -1268,7 +1268,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
 })();
 </script>
 <!-- KM_PERF_V125_END -->
-<style id="km149css">[data-kmoff="1"]{display:none !important;visibility:hidden !important;}</style>
 </head>
 <body>
 <script id="km_el_v142">
@@ -8216,8 +8215,8 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v149 09/28 03:20';
-  var BTAG='v149';
+  var BUILD='v150 09/26 13:10';
+  var BTAG='v150';
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
     var VK='km_app_ver', prevV=null;
@@ -12504,156 +12503,251 @@ function boot(){ apply(); addBtn2(); label(); }
 
 
 
+
 <script>
 
-/* ===== v149 panel control (km149) ===== */
+/* ===== v150 panel control (pointer hotspot) ===== */
 (function(){
   var OPENERS={
     drawPanel:['drawBtn'], kmDrawPanel:['drawBtn'],
     kmPosFixPanel:['kmPosFixBtn'], kaidoModal:['kaidoBtn'],
     memoModal:['memoListBtn','memoBtn'], memoAddModal:['memoBtn'],
     photoModal:['photoBtn'], photoView:['photoBtn'], nakaModal:['nakaListBtn'],
-    installModal:[], kmStack145:[], kmGeomPanel:[], kmEdPanel:[], kmTracePanel:[]
+    installModal:[]
   };
+  var OPENTEXT={
+    kmPosFixPanel:['位置修正'], drawPanel:['手描き'], kmDrawPanel:['手描き'],
+    kaidoModal:['街道一覧','旧街道'], memoModal:['メモ一覧'], memoAddModal:['メモ追加'],
+    photoModal:['写真'], nakaModal:['宿場'], installModal:['インストール']
+  };
+  var APPCLOSE={
+    kmPosFixPanel:['kmPosFixClose'], kaidoModal:['kaidoClose'],
+    memoModal:['memoModalClose'], memoAddModal:['memoModalClose'],
+    photoModal:['photoModalClose'], photoView:['photoViewClose'],
+    nakaModal:['nakaClose'], drawPanel:['dpClose'], kmDrawPanel:['dpClose'],
+    kmGeomPanel:['kmGeomClose']
+  };
+  var PAIRS={drawPanel:['drawPanel','kmDrawPanel'], kmDrawPanel:['drawPanel','kmDrawPanel']};
   var LABEL={drawPanel:'手描きトレース枠', kmDrawPanel:'手描きトレース', kmPosFixPanel:'位置修正モード',
-    kaidoModal:'旧街道', memoModal:'メモ一覧', memoAddModal:'メモ追加', photoModal:'写真',
-    photoView:'写真拡大', nakaModal:'宿場一覧', installModal:'インストール案内', kmStack145:'情報カード',
+    kaidoModal:'旧街道', memoModal:'メモ一覧', memoAddModal:'メモ追加', photoModal:'写真', photoView:'写真拡大',
+    nakaModal:'宿場一覧', installModal:'インストール案内', kmStack145:'情報カード',
     kmGeomPanel:'地形パネル', kmEdPanel:'編集パネル', kmTracePanel:'トレースパネル'};
-  var IDS=[], SKIP={kmRescueBtn:1,kmRescuePanel:1,kmRescueRows:1,kmRescueX:1};
+  var IDS=[], CLOSED={}, Z=2147483000;
+  var SKIP={pnlBtn:1,pnlPanel:1,pnlRows:1,pnlX:1,pnlStat:1,kmStack145:1};
 
   function vis(el){ if(!el) return false;
-    try{ if(el.getAttribute('data-kmoff')==='1') return false;
-      var s=getComputedStyle(el);
+    try{ var s=getComputedStyle(el);
       if(s.display==='none'||s.visibility==='hidden'||parseFloat(s.opacity||'1')===0) return false;
       var r=el.getBoundingClientRect(); return r.width>1 && r.height>1; }catch(e){ return false; } }
-  window.__kmPanelVis=vis;
+  window.__pnlVis=vis;
   function uncover(el){ var e=el.parentElement;
     while(e&&e!==document.body){ try{ if(getComputedStyle(e).display==='none') e.style.display='block'; }catch(x){} e=e.parentElement; } }
+  function forceHide(id){ var el=document.getElementById(id); if(!el) return;
+    try{ el.style.setProperty('display','none','important');
+         el.style.setProperty('visibility','hidden','important'); }catch(e){} }
+  function forceShow(id){ var el=document.getElementById(id); if(!el) return;
+    uncover(el);
+    try{ el.style.setProperty('display', el.classList.contains('modal')?'flex':'block','important');
+         el.style.setProperty('visibility','visible','important');
+         el.style.setProperty('z-index', Z+'','important'); }catch(e){} }
+  function removeClosed(id){ delete CLOSED[id]; var el=document.getElementById(id);
+    if(el){ try{ el.style.removeProperty('visibility'); }catch(e){} } }
+  function cleanOpener(el){ if(!el) return false;
+    try{ var r=el.getBoundingClientRect(); if(r.width<8||r.height<8) return false;
+      var t=document.elementFromPoint(r.left+r.width/2, r.top+r.height/2);
+      return !!(t && (t===el || el.contains(t))); }catch(e){ return false; } }
+  function findOpenerByText(id){
+    var wr=OPENTEXT[id]||[]; if(!wr.length) return null;
+    var all=document.body.getElementsByTagName('*');
+    for(var i=0;i<all.length;i++){
+      var el=all[i]; var tx=el.textContent||''; if(!tx) continue;
+      var hit=false; for(var k=0;k<wr.length;k++){ if(tx.indexOf(wr[k])>=0){ hit=true; break; } }
+      if(!hit) continue;
+      if(el.children.length>0) continue;
+      var e=el, d=0;
+      while(e && e!==document.body && d<5){
+        if(cleanOpener(e) && (e.tagName==='BUTTON'||e.tagName==='A'||e.onclick||e.getAttribute('role')==='button'
+           || getComputedStyle(e).cursor==='pointer')) return e;
+        e=e.parentElement; d++;
+      }
+    }
+    return null;
+  }
+  function openOnce(id){
+    var el=document.getElementById(id);
+    if(el && vis(el)) return true;
+    removeClosed(id);
+    var o=findOpenerByText(id);
+    if(o){ try{ o.click(); }catch(e){}
+      el=document.getElementById(id); if(el && vis(el)) return true; }
+    var l=OPENERS[id]||[];
+    for(var i=0;i<l.length;i++){ var b=document.getElementById(l[i]);
+      if(b && cleanOpener(b)){ try{ b.click(); }catch(e){}
+        if(el && vis(el)) return true; } }
+    if(id==='kmPosFixPanel' && typeof window.__kmPosFixSetMode==='function'){ try{ window.__kmPosFixSetMode(true); }catch(e){} }
+    el=document.getElementById(id); if(el && vis(el)) return true;
+    forceShow(id);
+    el=document.getElementById(id);
+    return !!(el && vis(el));
+  }
+  function closeOne(id){
+    var el=document.getElementById(id); if(!el) return;
+    CLOSED[id]=1;
+    var l=APPCLOSE[id]||[];
+    for(var i=0;i<l.length;i++){ var b=document.getElementById(l[i]);
+      if(b && vis(b)){ try{ b.click(); }catch(e){} break; } }
+    if(id==='kmPosFixPanel' && typeof window.__kmPosFixSetMode==='function'){ try{ window.__kmPosFixSetMode(false); }catch(e){} }
+    forceHide(id);
+    setTimeout(function(){ if(CLOSED[id]) forceHide(id); },90);
+    setTimeout(function(){ if(CLOSED[id]) forceHide(id); },350);
+  }
+  window.__pnlShow=function(id){
+    var list=PAIRS[id]||[id], ok=false, i;
+    for(i=0;i<list.length;i++) if(openOnce(list[i])) ok=true;
+    if(!ok){
+      setTimeout(function(){ for(var j=0;j<list.length;j++) openOnce(list[j]); },450);
+      setTimeout(function(){ for(var j=0;j<list.length;j++) openOnce(list[j]); },1200);
+    }
+    return ok || vis(document.getElementById(id));
+  };
+  window.__pnlHide=function(id){ var list=PAIRS[id]||[id];
+    for(var i=0;i<list.length;i++) closeOne(list[i]); return true; };
+  window.__pnlList=function(){ return IDS.slice(); };
 
   function attachClose(id){
     var el=document.getElementById(id); if(!el||SKIP[id]) return false;
-    if(document.getElementById('kmPClose_'+id)) return true;
+    if(document.getElementById('pnlClose_'+id)) return true;
     if(getComputedStyle(el).position==='static'){ try{ el.style.position='relative'; }catch(e){} }
     var b=document.createElement('button');
-    b.type='button'; b.id='kmPClose_'+id; b.setAttribute('aria-label','閉じる'); b.setAttribute('title','閉じる');
+    b.type='button'; b.id='pnlClose_'+id; b.setAttribute('aria-label','閉じる'); b.setAttribute('title','閉じる');
     b.textContent='✕';
-    b.style.cssText='position:absolute;top:4px;right:4px;width:38px;height:38px;min-width:38px;'
-      +'border-radius:50%;background:#d32f2f;color:#fff;border:2px solid #fff;font-size:19px;line-height:1;'
-      +'padding:0;cursor:pointer;touch-action:manipulation;z-index:2147483300;box-shadow:0 2px 7px rgba(0,0,0,.5)';
-    var h=function(ev){ if(ev){ ev.preventDefault(); ev.stopPropagation(); } window.__kmPanelHide(id); };
-    b.addEventListener('click',h,true); b.addEventListener('touchend',h,true); b.onclick=h;
+    b.style.cssText='position:absolute;top:4px;right:4px;width:40px;height:40px;min-width:40px;'
+      +'border-radius:50%;background:#d32f2f;color:#fff;border:2px solid #fff;font-size:20px;line-height:1;'
+      +'padding:0;cursor:pointer;touch-action:manipulation;z-index:'+Z+';box-shadow:0 2px 7px rgba(0,0,0,.5)';
     try{ el.appendChild(b); return true; }catch(e){ return false; }
   }
   function register(id){
     var el=document.getElementById(id); if(!el||SKIP[id]) return;
     if(IDS.indexOf(id)<0) IDS.push(id);
     attachClose(id);
-    if(!el.__kmBd){ el.__kmBd=1;
-      el.onclick=function(ev){ if(ev.target===el) window.__kmPanelHide(id); }; }
   }
-  window.__kmPanelHide=function(id){
-    var el=document.getElementById(id); if(!el) return false;
-    if(id.indexOf('kmPosFix')>=0 && window.__kmPosFixSetMode){ try{ window.__kmPosFixSetMode(false); }catch(e){} }
-    el.setAttribute('data-kmoff','1');                /* CSS !important で確実に隠す */
-    try{ el.style.display='none'; el.style.visibility='hidden'; }catch(e){}
-    return true;
-  };
-  window.__kmPanelShow=function(id){
-    var el=document.getElementById(id);
-    if(!el){ var l0=OPENERS[id]||[];
-      for(var q=0;q<l0.length;q++){ var t=document.getElementById(l0[q]); if(t){ try{ t.click(); }catch(e){} } }
-      el=document.getElementById(id); if(!el) return false; }
-    el.removeAttribute('data-kmoff');
-    try{ el.style.visibility='visible'; if(getComputedStyle(el).display==='none') el.style.display='block'; }catch(e){}
-    if(!vis(el)){ var l1=OPENERS[id]||[];
-      for(var i=0;i<l1.length;i++){ var b=document.getElementById(l1[i]); if(!b) continue;
-        try{ b.click(); }catch(e){}
-        el.removeAttribute('data-kmoff');
-        attachClose(id);
-        if(vis(document.getElementById(id))) break; } }
-    if(!vis(document.getElementById(id))){ uncover(el);
-      try{ if(getComputedStyle(el).display==='none') el.style.display='block'; }catch(e){} }
-    attachClose(id);
-    [60,200,500,1000,1800,2800,4000].forEach(function(ms){ setTimeout(function(){
-      var e2=document.getElementById(id); if(!e2) return;
-      if(e2.getAttribute('data-kmoff')==='1') return;
-      if(!vis(e2)){ uncover(e2);
-        try{ if(getComputedStyle(e2).display==='none') e2.style.display='block'; }catch(e){} }
-      attachClose(id);
-    }, ms); });
-    return vis(document.getElementById(id));
-  };
-  window.__kmPanelRestore=window.__kmPanelShow;
-
   function sweep(){
     var all=document.body.getElementsByTagName('*');
     for(var i=0;i<all.length;i++){
       var el=all[i]; if(!el.id||SKIP[el.id]) continue;
-      if(/^kmPClose_/.test(el.id)) continue;
-      if(Object.prototype.hasOwnProperty.call(OPENERS,el.id) || /(Modal|Panel|Stack)$/.test(el.id)) register(el.id);
+      if(/^pnl/.test(el.id)) continue;
+      if(Object.prototype.hasOwnProperty.call(OPENERS,el.id)
+         || Object.prototype.hasOwnProperty.call(APPCLOSE,el.id)
+         || /(Modal|Panel|Stack)$/.test(el.id)) register(el.id);
     }
     return IDS;
   }
-  window.__kmRescueScan=sweep;
-  window.__kmRescueList=function(){ return IDS.slice(); };
-  document.addEventListener('click',function(ev){
-    var t=ev.target; if(!t) return;
-    if(t.id&&t.id.indexOf('kmPClose_')===0) return;
-    var txt=(t.textContent||'').trim();
-    var cls=(typeof t.className==='string')?t.className:'';
-    if(!/^(✕|×|✖|❌|✗|閉じる|close)$/.test(txt) && !/\b(close|modal-close|btn-close)\b/.test(cls)) return;
-    var e=t, hit=null;
-    while(e&&e!==document.body){ if(e.id&&IDS.indexOf(e.id)>=0){ hit=e; break; } e=e.parentElement; }
-    if(hit) window.__kmPanelHide(hit.id);
-  },true);
-  document.addEventListener('keydown',function(e){
-    if(e.key!=='Escape'&&e.keyCode!==27) return;
-    IDS.forEach(function(id){ var el=document.getElementById(id); if(vis(el)) window.__kmPanelHide(id); });
-    var rp=document.getElementById('kmRescuePanel'); if(rp) rp.style.display='none';
-  });
+  window.__pnlScan=sweep;
 
-  var rb=document.createElement('button');
-  rb.type='button'; rb.id='kmRescueBtn'; rb.textContent='🧰'; rb.title='パネル管理';
-  rb.style.cssText='position:fixed;left:0;top:42%;z-index:6002;width:48px;height:52px;font-size:23px;padding:0;'
-    +'border:1px solid #1565c0;border-left:0;border-radius:0 12px 12px 0;background:#e3f2fd;color:#0d47a1;'
-    +'box-shadow:0 1px 6px rgba(0,0,0,.34);touch-action:manipulation';
-  document.body.appendChild(rb);
-  var rp=document.createElement('div'); rp.id='kmRescuePanel';
-  rp.style.cssText='position:fixed;left:50%;top:7%;transform:translateX(-50%);z-index:6003;display:none;'
-    +'background:#fff;border:1px solid #90a4ae;border-radius:12px;padding:10px;width:min(94vw,380px);'
-    +'max-height:80vh;overflow:auto;font-size:12px;box-shadow:0 4px 18px rgba(0,0,0,.38)';
-  rp.innerHTML='<div style="font-weight:bold;margin-bottom:6px">🧰 パネル管理</div>'
-    +'<div style="color:#555;line-height:1.5;margin-bottom:8px">閉じてしまった画面は「表示」で必ず戻せます。緑になったら復帰成功です。</div>'
-    +'<div id="kmRescueRows"></div>'
-    +'<div style="text-align:right;margin-top:8px"><button type="button" id="kmRescueX">✕</button></div>';
-  document.body.appendChild(rp);
-  var rows=document.getElementById('kmRescueRows');
-  function build(){
-    sweep(); rows.innerHTML='';
+  /* ---- パネル管理 UI ---- */
+  function createBag(){
+    var rb=document.createElement('button');
+    rb.type='button'; rb.id='pnlBtn'; rb.textContent='🧰 パネル';
+    rb.style.cssText='position:fixed;left:0;top:40%;z-index:'+(Z-2)+';font-size:13px;font-weight:bold;'
+      +'padding:10px 8px;border:1px solid #1565c0;border-left:0;border-radius:0 10px 10px 0;'
+      +'background:#e3f2fd;color:#0d47a1;box-shadow:0 1px 6px rgba(0,0,0,.34);touch-action:manipulation';
+    document.body.appendChild(rb);
+  }
+  function createManager(){
+    var rp=document.createElement('div'); rp.id='pnlPanel';
+    rp.style.cssText='position:fixed;left:50%;top:8%;transform:translateX(-50%);z-index:'+(Z-1)+';display:none;'
+      +'background:#fff;border:1px solid #90a4ae;border-radius:12px;padding:10px;width:min(94vw,390px);'
+      +'max-height:78vh;overflow:auto;font-size:12px;box-shadow:0 4px 18px rgba(0,0,0,.38)';
+    rp.innerHTML='<div style="font-weight:bold;margin-bottom:6px">🧰 パネル管理</div>'
+      +'<div id="pnlStat" style="color:#555;line-height:1.5;margin-bottom:8px">閉じてしまった画面は「表示」で戻せます。緑＝復帰成功。</div>'
+      +'<div id="pnlQuick" style="display:flex;gap:6px;margin-bottom:8px"></div>'
+      +'<div id="pnlRows"></div>'
+      +'<div style="text-align:right;margin-top:8px"><button type="button" id="pnlX">✕</button></div>';
+    document.body.appendChild(rp);
+  }
+  function buildUI(){
+    if(!document.getElementById('pnlBtn')) createBag();
+    if(!document.getElementById('pnlPanel')) createManager();
+    var rb=document.getElementById('pnlBtn'); if(rb && rb.parentElement!==document.body) document.body.appendChild(rb);
+    var q=document.getElementById('pnlQuick');
+    if(q && !q.children.length){
+      ['kmPosFixPanel','drawPanel'].forEach(function(pid){
+        var b=document.createElement('button'); b.type='button'; b.id='pnlQuick_'+pid;
+        b.textContent='表示: '+(LABEL[pid]||pid);
+        b.style.cssText='flex:1;padding:8px 6px;font-size:12px;touch-action:manipulation';
+        q.appendChild(b);
+      });
+    }
+    sweep();
+    var rows=document.getElementById('pnlRows'); if(!rows) return;
+    rows.innerHTML='';
     IDS.forEach(function(id){
       if(!document.getElementById(id)) return;
       var row=document.createElement('div');
       row.style.cssText='display:flex;gap:6px;align-items:center;padding:5px 0;border-top:1px solid #eee';
       row.innerHTML='<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
         +(LABEL[id]||id)+'<br><span style="color:#777;font-size:11px">'+id+'</span></span>';
-      var s=document.createElement('button'); s.type='button'; s.id='kmPShow_'+id; s.textContent='表示';
-      var hb=document.createElement('button'); hb.type='button'; hb.id='kmPHide_'+id; hb.textContent='閉じる';
-      s.onclick=function(){ var el=document.getElementById('kmRescuePanel');
-        if(el) el.style.display='none';                       /* 管理画面も閉じて対象を見せる */
-        var ok=window.__kmPanelShow(id);
-        if(el) setTimeout(function(){ el.style.display='block';
-          var r=document.getElementById('kmPShow_'+id); if(r) r.style.background=ok?'#a5d6a7':''; },900); };
-      hb.onclick=function(){ window.__kmPanelHide(id); s.style.background=''; };
-      row.appendChild(s); row.appendChild(hb); rows.appendChild(row);
+      var s=document.createElement('button'); s.type='button'; s.id='pnlShow_'+id; s.textContent='表示';
+      var h=document.createElement('button'); h.type='button'; h.id='pnlHide_'+id; h.textContent='閉じる';
+      row.appendChild(s); row.appendChild(h); rows.appendChild(row);
     });
     if(!rows.children.length) rows.innerHTML='<div style="color:#888">no panels</div>';
   }
-  window.__kmRescueBuild=build;
-  rb.onclick=function(){ build(); rp.style.display = rp.style.display==='none'?'block':'none'; };
-  document.getElementById('kmRescueX').onclick=function(){ rp.style.display='none'; };
-  sweep();
-  setTimeout(sweep,800); setTimeout(sweep,2000); setTimeout(sweep,5000);
-  setInterval(sweep,3000);
+  window.__pnlBuild=buildUI;
+
+  /* ---- 座標ヒットで操作（要素の上に何か被っていても必ず反応させる） ---- */
+  function inR(el,x,y){ if(!el) return false;
+    try{ if(getComputedStyle(el).display==='none') return false;
+      var r=el.getBoundingClientRect();
+      if(r.width<2||r.height<2) return false;
+      return x>=r.left-4 && x<=r.right+4 && y>=r.top-4 && y<=r.bottom+4; }catch(e){ return false; } }
+  var lastFire=0;
+  function hotAction(x,y){
+    var now=Date.now();
+    var list=document.querySelectorAll('[id^="pnlClose_"],[id^="pnlShow_"],[id^="pnlHide_"],[id^="pnlQuick_"],#pnlBtn,#pnlX');
+    for(var i=0;i<list.length;i++){
+      var el=list[i]; if(!inR(el,x,y)) continue;
+      var id=el.id;
+      if(id.indexOf('pnlClose_')===0){ window.__pnlHide(id.slice(9)); return true; }
+      if(id.indexOf('pnlShow_')===0 || id.indexOf('pnlQuick_')===0){
+        var pid=id.replace(/^pnl(Show|Quick)_/,'');
+        var ok=window.__pnlShow(pid);
+        if(id.indexOf('pnlShow_')===0) el.style.background = ok?'#a5d6a7':'#ffcdd2';
+        var st=document.getElementById('pnlStat');
+        if(st) st.textContent=(ok?'✅ 復帰OK: ':'⚠️ 復帰未確認: ')+(LABEL[pid]||pid);
+        var mgr=document.getElementById('pnlPanel');
+        if(ok && mgr) setTimeout(function(){ mgr.style.display='none'; },1200);
+        return true;
+      }
+      if(id.indexOf('pnlHide_')===0){ window.__pnlHide(id.slice(8)); return true; }
+      if(id==='pnlBtn'){ var m=document.getElementById('pnlPanel'); if(!m) return false;
+        if(getComputedStyle(m).display==='none'){ buildUI(); m.style.display='block'; } else { m.style.display='none'; }
+        return true; }
+      if(id==='pnlX'){ var m2=document.getElementById('pnlPanel'); if(m2) m2.style.display='none'; return true; }
+    }
+    return false;
+  }
+  function onDown(ev){
+    var now=Date.now(); if(now-lastFire<380) return;
+    if(hotAction(ev.clientX, ev.clientY)){ lastFire=now;
+      ev.preventDefault(); ev.stopPropagation();
+      if(ev.stopImmediatePropagation) ev.stopImmediatePropagation(); }
+  }
+  document.addEventListener('pointerdown', onDown, true);
+  document.addEventListener('touchstart', function(ev){ var t=ev.touches&&ev.touches[0]; if(t) onDown({clientX:t.clientX,clientY:t.clientY,preventDefault:function(){ev.preventDefault();},stopPropagation:function(){ev.stopPropagation();}}); }, true);
+  document.addEventListener('keydown', function(e){
+    if(e.key!=='Escape'&&e.keyCode!==27) return;
+    IDS.forEach(function(id){ var el=document.getElementById(id); if(vis(el)) window.__pnlHide(id); });
+    var m=document.getElementById('pnlPanel'); if(m) m.style.display='none';
+  });
+
+  /* ---- 閉じた状態を保持し、UIが消されたら復元する監視 ---- */
+  setInterval(function(){
+    for(var id in CLOSED){ if(!CLOSED[id]) continue;
+      var el=document.getElementById(id); if(el && vis(el)) forceHide(id); }
+  }, 150);
+  setInterval(function(){ buildUI(); }, 1200);
+  buildUI();
 })();
 
 </script>
