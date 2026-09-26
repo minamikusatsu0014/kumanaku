@@ -8223,7 +8223,7 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v155 09/27 11:30';
+  var BUILD='v156 09/27 15:20';
   var BTAG=(function(m){ return m?m[0]:'v153'; })(/v([0-9]+)/.exec(BUILD||'v153'));
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
@@ -9601,14 +9601,14 @@ function boot(){ apply(); addBtn2(); label(); }
       [120,400,900,1600].forEach(function(ms){ setTimeout(forceShow, ms); });
     }catch(e){}
   }
-  document.addEventListener('pointerdown',function(ev){
+  /* v156: 手描きの開閉は KM_AUTH_V156 に一本化 */
+  /* v156: 「手描き」ボタンの本来のclickハンドラを止める（1タップ=1開閉にする） */
+  document.addEventListener('click',function(ev){
     var t=ev.target; if(!t||!t.closest) return;
     var b=t.closest('button,a,[role=button],div'); if(!b) return;
-    if(/^pnl/.test(b.id||'')) return;                       /* 自前UIは対象外 */
-    var tx=(b.textContent||'').trim();
-    if(b.id==='drawBtn' || /^手描き$/.test(tx) || /^手描きトレース$/.test(tx)){
-      try{ ev.stopImmediatePropagation(); }catch(e){}
-      realOpen();
+    var id=b.id||''; var tx=(b.textContent||'').trim();
+    if(id==='drawBtn' || id==='pnlChip_kmDrawPanel' || /^手描き$/.test(tx) || /^手描きトレース$/.test(tx) || /^手描きトレース ▴$/.test(tx)){
+      try{ ev.preventDefault(); ev.stopImmediatePropagation(); }catch(e){}
     }
   },true);
   /* パネル一覧から紛らわしい「旧・別画面」行を隠す */
