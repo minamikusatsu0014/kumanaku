@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>線データ救出 v3（容量不足対策）</title>
+<style>
+body{font-family:sans-serif;margin:6px;background:#0d1117;color:#eee;font-size:13px}
+h1{font-size:15px;margin:2px 0 6px}
+.box{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:8px;margin:8px 0}
+.big{font-size:15px;font-weight:bold;margin:3px 0}
+.g{color:#3fb950}.r{color:#f85149}.o{color:#d29922}.b{color:#58a6ff}.m{color:#8b949e}
+table{border-collapse:collapse;width:100%;font-size:11px}
+td,th{border:1px solid #30363d;padding:3px;word-break:break-all;text-align:left}
+tr.del{background:#3d1f1f}
+button{width:100%;padding:13px;font-size:15px;margin:6px 0;background:#238636;color:#fff;border:0;border-radius:8px}
+button.b{background:#1f6feb}button.o{background:#9e6a03}button.rr{background:#8b2c2c}
+.small{font-size:11px;color:#8b949e}
+input[type=file]{width:100%;font-size:12px;background:#21262d;color:#eee;padding:8px;border-radius:6px;border:1px solid #30363d}
+pre{white-space:pre-wrap;font-size:11px;background:#000;padding:6px;max-height:26vh;overflow:auto;border-radius:6px}
+</style>
+</head>
+<body>
+<h1>線データ救出 v3（容量不足対策）</h1>
+<div class="small">★ https://minamikusatsu0014.github.io/kumanaku/fix3.html で開いてください（線を描いたのと同じURL）。</div>
+
+<div class="box">
+  <div class="big">いまの保存領域の使用量</div>
+  <div id="usage">計測中…</div>
+</div>
+
+<div class="box">
+  <div class="big r">手順A：空き容量を作る（不要な大きいデータを削除）</div>
+  <div class="small">保存領域がいっぱい（約3,266,042文字）で、新しい線を書けません。すでに全部バックアップ済みの重複データを消して空きを作ります。<b>削除前に必ず全データをJSONで保存します。</b></div>
+  <button id="clean" class="rr">A. 全データを保存してから不要分を削除</button>
+  <div id="clout"></div>
+</div>
+
+<div class="box">
+  <div class="big b">手順B：ダウンロードのJSONから線を入れる</div>
+  <input type="file" id="f" accept=".json,application/json">
+  <div id="fout"></div>
+  <button id="imp" class="b">B. このファイルを「自分の線」として入れる</button>
+  <div class="small">旧街道印（base）は付けません。今の14本（旧街道）は入れ替えます。失敗時は元の状態のまま残ります。</div>
+</div>
+
+<button id="exp">🧾 いまの全データをJSONで保存</button>
+<pre id="log"></pre>
+<script>
+var LOG=[];
+function log(s){LOG.push(s);document.getElementById('log').textContent=LOG.join('\n');}
+function esc(s){return String(s).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+function total(){var t=0;for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);t+=k.length+(localStorage.getItem(k)||'').length;}return t;}
+var DEL=['km_all_backup_fix','kyoto_kumanaku_v1','km_draw_main_bak','km_erase_strokes_v1_bak','km_all_backup_v131','km_all_backup_v129','km_kaido_override_v1_bak'];
+function showUsage(){
+  var rows='',t=0;
+  var list=[];
+  for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);list.push([k,localStorage.getItem(k)||'']);}
+  list.sort(function(a,b){return b[1].length-a[1].length;});
+  for(var j=0;j<list.length;j++){
+    var k=list[j][0],v=list[j][1];t+=k.length+v.length;
+    var d=DEL.indexOf(k)>=0;
+    rows+='<tr'+(d?' class="del"':'')+'><td>'+esc(k)+'</td><td>'+v.length+'</td><td>'+(d?'削除対象':'-')+'</td></tr>';
+  }
+  document.getElementById('usage').innerHTML='<div class="big">合計 '+t.toLocaleString()+' 文字／'+localStorage.length+'キー</div>'+
+    '<div class="small">上の目安（Chromeの上限は約 5,242,880 文字）。赤字が削除対象の重複データです。</div>'+
+    '<table><tr><th>キー</th><th>文字</th><th></th></tr>'+rows+'</table>';
+  return t;
+}
+showUsage();
+
+function download(obj,name){
+  var b=new Blob([JSON.stringify(obj)],{type:'application/json'});
+  var u=URL.createObjectURL(b),a=document.createElement('a');
+  a.href=u;a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(u);a.remove();},3000);return name;
+}
+function exportAll(){
+  var all={};
+  for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);all[k]=localStorage.getItem(k);}
+  return download({app:'kumanaku-mine-export',version:3,at:new Date().toISOString(),localStorage:all},'line_data_'+Date.now()+'.json');
+}
+
+document.getElementById('exp').onclick=function(){alert('保存しました：'+exportAll());log('書き出し完了');};
+
+/* A. 掃除 */
+document.getElementById('clean').onclick=function(){
+  var before=total(),n=exportAll();
+  var msg='削除する項目：\n'+DEL.join('\n')+'\n\nいま合計 '+before.toLocaleString()+' 文字\n';
+  if(!confirm(msg+'\n全データは '+n+' に保存済みです。削除しますか？'))return;
+  var cnt=0,bytes=0;
+  for(var i=0;i<DEL.length;i++){
+    var k=DEL[i],v=localStorage.getItem(k);
+    if(v!==null){localStorage.removeItem(k);cnt++;bytes+=k.length+v.length;log('削除: '+k+'(+'+v.length+')');}
+  }
+  var after=total();
+  showUsage();
+  document.getElementById('clout').innerHTML='<div class="big g">削除しました：'+cnt+'件／'+bytes.toLocaleString()+' 文字を解放</div>'+
+    '<div class="small">合計：'+before.toLocaleString()+' → <b>'+after.toLocaleString()+'</b> 文字　空き：'+Math.max(0,5242880-after).toLocaleString()+' 文字</div>';
+  alert('空きを作りました。\n合計 '+after.toLocaleString()+' 文字\n続けて手順Bを実行してください。');
+};
+
+/* 点の並びを集める */
+function collectLines(o){
+  var out=[];
+  function isA(a){return Array.isArray(a)&&a.length>=2&&typeof a[0]==='number'&&typeof a[1]==='number'&&a[0]>=20&&a[0]<=48&&a[1]>=120&&a[1]<=151;}
+  function isO(a){return a&&typeof a==='object'&&!Array.isArray(a)&&typeof a.lat==='number'&&typeof a.lng==='number'&&a.lat>=20&&a.lat<=48&&a.lng>=120&&a.lng<=151;}
+  function norm(a){var p=[];for(var i=0;i<a.length;i++){var q=a[i];
+    if(Array.isArray(q))p.push([Math.round(Number(q[0])*1e5)/1e5,Math.round(Number(q[1])*1e5)/1e5]);
+    else p.push([Math.round(Number(q.lat)*1e5)/1e5,Math.round(Number(q.lng)*1e5)/1e5]);}return p;}
+  (function w(x,d){
+    if(!x||typeof x!=='object'||d>14)return;
+    if(Array.isArray(x)){
+      if(x.length>=2&&x.length<=200000){var n=0;for(var i=0;i<x.length;i++)if(isA(x[i])||isO(x[i]))n++;
+        if(n>=Math.max(2,Math.ceil(x.length*0.7))){out.push(norm(x));return;}}
+      for(var j=0;j<x.length;j++)w(x[j],d+1);return;
+    }
+    for(var k in x)w(x[k],d+1);
+  })(o,0);
+  return out;
+}
+function scan(o){
+  var r={paths:0,pts:0,minLat:99,maxLat:-99,minLng:999,maxLng:-999};
+  var c=collectLines(o);
+  r.paths=c.length;
+  for(var i=0;i<c.length;i++){r.pts+=c[i].length;
+    for(var j=0;j<c[i].length;j++){var p=c[i][j];
+      r.minLat=Math.min(r.minLat,p[0]);r.maxLat=Math.max(r.maxLat,p[0]);
+      r.minLng=Math.min(r.minLng,p[1]);r.maxLng=Math.max(r.maxLng,p[1]);}}
+  return r;
+}
+
+var curFile=null;
+document.getElementById('f').onchange=function(ev){
+  curFile=ev.target.files[0];
+  var d=document.getElementById('fout');
+  if(!curFile){d.innerHTML='';return;}
+  var r=new FileReader();
+  d.innerHTML='<div class="small">読み込み中…</div>';
+  r.onload=function(){
+    var o=null,err='';try{o=JSON.parse(r.result);}catch(e){err=String(e);}
+    if(!o){d.innerHTML='<div class="r">JSONとして読めません：'+esc(err)+'</div>';return;}
+    var s=scan(o);
+    d.innerHTML='<div class="big">'+esc(curFile.name)+'（'+curFile.size+' バイト）</div>'+
+      '<div class="big">点の並び：'+s.paths+'本 / '+s.pts+'点</div>'+
+      '<div class="small">範囲：緯度 '+s.minLat.toFixed(3)+'〜'+s.maxLat.toFixed(3)+' / 経度 '+s.minLng.toFixed(3)+'〜'+s.maxLng.toFixed(3)+'</div>'+
+      (s.paths>=60&&s.paths<=90?'<div class="big g">★本数が72本に近い</div>':'')+
+      (s.pts>=11000&&s.pts<=15000?'<div class="big g">★点数が13361点に近い</div>':'');
+    log(curFile.name+' → '+s.paths+'本/'+s.pts+'点');
+  };
+  r.readAsText(curFile);
+};
+
+/* B. 入れる */
+document.getElementById('imp').onclick=function(){
+  if(!curFile){alert('ファイルを選んでください。');return;}
+  var r=new FileReader();
+  r.onload=function(){
+    var o=null,err='';try{o=JSON.parse(r.result);}catch(e){err=String(e);}
+    if(!o){alert('JSONとして読めません：'+err);return;}
+    var lines=collectLines(o);
+    if(!lines.length){alert('線の座標が見つかりませんでした。別のファイルを試してください。');return;}
+    var obj={v:96,lines:[],color:'#e0245e',width:3,src:curFile.name,at:Date.now()};
+    for(var i=0;i<lines.length;i++)obj.lines.push({pts:lines[i],color:'#e0245e',width:3,mine:true});
+    var payload=JSON.stringify(obj);
+    var before=total();
+    if(confirm('入れる線：'+lines.length+'本\n保存する文字数：約'+payload.length.toLocaleString()+'\n現在の合計：'+before.toLocaleString()+'文字\n\n入れますか？')){
+      try{
+        localStorage.setItem('km_draw_main',payload);
+      }catch(e){
+        alert('保存できません（容量不足）：'+e+'\n手順Aの「不要分を削除」を先に実行してください。');
+        log('保存失敗（容量不足）：'+e);return;
+      }
+      showUsage();
+      alert('自分の線として '+lines.length+'本 入りました。\n再読み込みします。');
+      location.href=location.pathname+'?mine=1';
+    }
+  };
+  r.readAsText(curFile);
+};
+
+log('準備完了。手順A → 手順B の順に実行してください。');
+</script>
+</body>
+</html>
