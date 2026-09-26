@@ -1270,6 +1270,96 @@ svg.leaflet-image-layer.leaflet-interactive path {
 <!-- KM_PERF_V125_END -->
 </head>
 <body>
+<script>/* KM_PANELCLOSE_V133 : パネルを確実に閉じる（✕ボタン／閉じる／Esc／取込後の自動クローズ） */
+(function(){
+  if(window.__kmPC) return; window.__kmPC=1;
+  function closable(el){
+    try{
+      if(!el||el.nodeType!==1||!el.id) return false;
+      if(!/^km/.test(el.id)) return false;
+      if(/Fix|Bar|Chip|Min|Log/i.test(el.id)) return false;
+      if(/Panel|Modal|Diag/i.test(el.id)) return true;
+      var cs=getComputedStyle(el);
+      if(cs.position==='fixed' && parseInt(cs.zIndex||'0',10)>=2147483000 && el.getBoundingClientRect().width>=260) return true;
+      return false;
+    }catch(e){ return false; }
+  }
+  function closeAll(){
+    var n=0, i, k;
+    for(i=0;i<document.documentElement.children.length;i++){ var e=document.documentElement.children[i]; if(closable(e)){ try{e.remove(); n++;}catch(x){} } }
+    for(i=0;i<document.body.children.length;i++){ var e2=document.body.children[i]; if(closable(e2)){ try{e2.remove(); n++;}catch(x){} } }
+    try{ var g=document.getElementById('kmPcHint'); if(g) g.textContent='閉じました：'+n+'枚（地図を確認できます）'; }catch(e){}
+    return n;
+  }
+  window.__kmClosePanels=closeAll;
+  /* 1) キャプチャ段階で「閉じる」系の押下を拾って強制クローズ */
+  function isCloseBtn(t){
+    try{ var b=t&&t.closest?t.closest('button,a,[role=button],div'):null;
+      for(var i=0;i<4&&b;i++){ var s=(b.textContent||'').trim();
+        if(/閉じる/.test(s)&&s.length<=8) return true;
+        if(/^(✕|×|✖)(閉じる)?$/.test(s)) return true;
+        var id=b.id||''; if(/Close|close/.test(id)) return true;
+        b=b.parentElement&&b.parentElement.closest?b.parentElement.closest('button,a,[role=button]'):null; }
+    }catch(e){}
+    return false;
+  }
+  ['pointerdown','click'].forEach(function(t){
+    try{ document.addEventListener(t,function(ev){
+      try{ if(isCloseBtn(ev.target)){ ev.preventDefault(); ev.stopPropagation(); closeAll(); } }catch(e){}
+    },true); }catch(e){}
+  });
+  try{ window.addEventListener('keydown',function(ev){ if(ev.key==='Escape') closeAll(); },true); }catch(e){}
+  /* 2) どのパネルにも必ず✕を付ける */
+  function ensureX(root){
+    try{
+      var list=[]; if(root&&root.nodeType===1) list.push(root);
+      try{ list=list.concat(Array.prototype.slice.call(document.querySelectorAll('div[id^=km]'))); }catch(e){}
+      for(var i=0;i<list.length;i++){ var el=list[i];
+        if(!closable(el)||el.__kmX) continue; el.__kmX=1;
+        var b=document.createElement('button'); b.textContent='✕'; b.title='閉じる';
+        b.style.cssText='position:absolute;right:6px;top:4px;z-index:9;width:30px;height:30px;border-radius:8px;border:1px solid #999;background:#fff;color:#333;font:700 15px/1 system-ui';
+        b.onclick=function(ev){ try{ev.preventDefault();ev.stopPropagation();}catch(e){} closeAll(); };
+        if(getComputedStyle(el).position==='static') el.style.position='relative';
+        el.appendChild(b);
+      }
+    }catch(e){}
+  }
+  /* 3) 取込・復元が成功したら自動で閉じる */
+  function watchText(){
+    try{
+      var mo=new MutationObserver(function(muts){
+        for(var i=0;i<muts.length;i++){
+          var t=(muts[i].target&&(muts[i].target.textContent||''))||'';
+          if(/取り込み完了|読み込みました|復元しました|取り込みが完了/.test(t)){
+            try{ if(!window.__kmAutoClosed){ window.__kmAutoClosed=1; setTimeout(function(){ closeAll(); },1400); } }catch(e){}
+          }
+        }
+      });
+      if(document.body) mo.observe(document.body,{subtree:true,childList:true,characterData:true});
+    }catch(e){}
+  }
+  function ui(){
+    try{
+      if(document.getElementById('kmPcBar')) return;
+      var d=document.createElement('div'); d.id='kmPcBar';
+      d.style.cssText='position:fixed;right:6px;top:56px;z-index:2147483020;display:flex;gap:6px;align-items:center';
+      var b=document.createElement('button'); b.textContent='✕ 閉じる';
+      b.style.cssText='padding:7px 10px;border-radius:10px;border:2px solid #fff;background:#111;color:#fff;font:800 12px system-ui;box-shadow:0 2px 8px rgba(0,0,0,.4)';
+      b.onclick=function(ev){ try{ev.preventDefault();ev.stopPropagation();}catch(e){} closeAll(); };
+      d.appendChild(b); document.body.appendChild(d);
+      var h=document.createElement('div'); h.id='kmPcHint';
+      h.style.cssText='position:fixed;right:6px;top:96px;z-index:2147483019;background:rgba(0,0,0,.75);color:#fff;font:11px/1.3 system-ui;padding:4px 6px;border-radius:8px;display:none';
+      document.body.appendChild(h);
+      var old=closeAll;
+      window.__kmClosePanels=function(){ var n=old(); try{ h.style.display='block'; }catch(e){} return n; };
+      b.onclick=function(ev){ try{ev.preventDefault();ev.stopPropagation();}catch(e){} window.__kmClosePanels(); };
+    }catch(e){}
+  }
+  try{ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){ ui(); watchText(); ensureX(); });
+       else { ui(); watchText(); ensureX(); } }catch(e){}
+  try{ setInterval(function(){ ensureX(); },1500); }catch(e){}
+})();</script>
+
 <script>/* KM_NOBASE_V131 : 私が入れた旧街道データを表示も保存もしない／端末の線だけを扱う */
 (function(){
   if(window.__kmNoBase) return; window.__kmNoBase=1;
@@ -1368,7 +1458,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v132</span><span style="font-size:11px;color:#999;margin-left:4px">09/24 22:30</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">v133</span><span style="font-size:11px;color:#999;margin-left:4px">09/24 22:30</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -7738,8 +7828,8 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v132 09/25 05:10';
-  var BTAG='v132';
+  var BUILD='v133 09/25 06:05';
+  var BTAG='v133';
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
     var VK='km_app_ver', prevV=null;
