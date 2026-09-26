@@ -50,13 +50,10 @@
     var d=BY[pid], el=document.getElementById(pid), via='';
     if(el && vis(el)){ if(LOCK[pid]) delete LOCK[pid]; return {ok:true, via:'already', id:pid}; }
     if(d && d.chipish){
-      delete LOCK[pid]; SHOWLOCK[pid]=Date.now()+6000;
+      delete LOCK[pid];
       if(el){ uncover(el); try{ el.style.removeProperty('visibility');
         el.style.setProperty('display','block','important'); }catch(e){} }
-      [60,200,500,1000,1800].forEach(function(ms){ setTimeout(function(){
-        var e2=document.getElementById(pid); if(!e2||vis(e2)) return;
-        uncover(e2); try{ e2.style.removeProperty('visibility');
-          e2.style.setProperty('display','block','important'); }catch(e){} }, ms); });
+      /* v154: 自動での開き直しを停止（画面が勝手に出る原因） */
       el=document.getElementById(pid);
       return {ok:!!(el&&vis(el)), via:'chip-force', id:pid};
     }
@@ -72,10 +69,7 @@
     el=document.getElementById(pid);
     if(el){ uncover(el); try{ el.style.removeProperty('display'); el.style.removeProperty('visibility');
       if(getComputedStyle(el).display==='none') el.style.display=(el.classList.contains('modal')?'flex':'block'); }catch(e){} }
-    [80,260,600,1200,2000,3000].forEach(function(ms){ setTimeout(function(){
-      var e2=document.getElementById(pid); if(!e2||vis(e2)) return;
-      uncover(e2); try{ e2.style.removeProperty('display');
-        if(getComputedStyle(e2).display==='none') e2.style.display='block'; }catch(e){} }, ms); });
+    /* v154: 自動での開き直しを停止 */
     return {ok:!!(el&&vis(el)), via:'forced', id:pid};
   }
   var LOCK={}, SHOWLOCK={};
@@ -146,6 +140,7 @@
     if(text!=null) e.textContent=text; return e; }
   function ensureUI(){
     var rb=document.getElementById('pnlBtn');
+    /* v154: 1秒ごとに作り直していたのをやめ、欠けている時だけ作る */
     if(!rb){ rb=el('button','position:fixed;left:0;top:40%;z-index:'+(Z-2)+';font-size:13px;font-weight:bold;'
       +'padding:10px 8px;border:1px solid #1565c0;border-left:0;border-radius:0 10px 10px 0;'
       +'background:#e3f2fd;color:#0d47a1;box-shadow:0 1px 6px rgba(0,0,0,.34);touch-action:manipulation',
@@ -175,7 +170,9 @@
         b.type='button'; b.id='pnlQuick_'+pid; qq.appendChild(b); });
     }
     var rows=document.getElementById('pnlRows');
-    if(rows){
+    var _pp=document.getElementById('pnlPanel');
+    var _open=false; try{ _open=!!(_pp&&getComputedStyle(_pp).display!=='none'); }catch(e){}
+    if(rows && !_open){
       rows.innerHTML='';
       for(var i=0;i<REG.length;i++){
         var r=REG[i], live=!!document.getElementById(r.id);
@@ -245,12 +242,7 @@
       e=document.getElementById(k);
       if(e&&vis(e)){ try{ e.style.setProperty('display','none','important'); }catch(x){} }
     }
-    for(k in SHOWLOCK){
-      if(SHOWLOCK[k]<now){ delete SHOWLOCK[k]; continue; }
-      e=document.getElementById(k); if(!e) continue;
-      if(!vis(e)){ uncover(e); try{ e.style.removeProperty('visibility');
-        e.style.setProperty('display','block','important'); }catch(x){} }
-    }
+    /* v154: SHOWLOCK による強制再表示ループを停止（120msごとに画面を書き換えていた） */
   },120);
 setInterval(function(){ ensureUI(); syncPanels(); },1000); ensureUI(); syncPanels();
 })();

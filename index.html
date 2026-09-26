@@ -8223,7 +8223,7 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v153 09/26 19:20';
+  var BUILD='v154 09/27 10:40';
   var BTAG=(function(m){ return m?m[0]:'v153'; })(/v([0-9]+)/.exec(BUILD||'v153'));
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
@@ -9568,7 +9568,7 @@ function boot(){ apply(); addBtn2(); label(); }
   /* ③ 補正座標を「描き直しの後でも」必ず再適用 */
   function reapply(){ try{ if(window.__kmPosFixIsOpen&&window.__kmPosFixIsOpen()) return; if(typeof window.kmPosFixApply==='function') window.kmPosFixApply(); }catch(e){} }
   function hook(){ try{ if(window.map&&!window.__km152z){ window.__km152z=1; window.map.on('zoomend',reapply); window.map.on('moveend',reapply); } }catch(e){} }
-  hook(); setInterval(function(){ hook(); reapply(); }, 2000);
+  hook(); setInterval(function(){ hook(); if(!document.hidden) reapply(); }, 8000);
   /* ② Leaflet ポップアップの✕は、他の全画面クローズ処理より先に「素通し」させる */
   /* ① 位置修正の開閉：click 捕捉で伝播を止め、この1か所だけでトグルする（二重トグル防止） */
   document.addEventListener('click',function(ev){
@@ -9614,7 +9614,52 @@ function boot(){ apply(); addBtn2(); label(); }
   /* パネル一覧から紛らわしい「旧・別画面」行を隠す */
   setInterval(function(){
     var r=document.getElementById('pnlShow_drawPanel'); if(r&&r.parentElement) r.parentElement.style.display='none';
-  },700);
+    var dp=document.getElementById('drawPanel');
+    if(dp){ try{ var c=getComputedStyle(dp); if(c.display!=='none'&&dp.getBoundingClientRect().width>1){ dp.style.setProperty('display','none','important'); } }catch(e){} }
+  },1500);
+})();</script>
+
+<script>/* KM_LOCKCLOSE_V154 : 一度閉じた画面が「勝手に再表示」されるのを確実に止める */
+(function(){
+  if(window.__kmLockClose) return; window.__kmLockClose=1;
+  var WATCH=['kmDrawPanel','drawPanel','kmPosFixPanel','kmGeomPanel','kmEdPanel','kaidoModal','memoModal','memoAddModal','photoModal','nakaModal','installModal'];
+  var CLOSED={};
+  var CLOSER={'kmPosFixClose':'kmPosFixPanel','kmDvMin':'kmDrawPanel','dpClose':'drawPanel','kaidoClose':'kaidoModal',
+              'memoModalClose':'memoModal','photoModalClose':'photoModal','nakaClose':'nakaModal','kmGeomClose':'kmGeomPanel','kmEdX':'kmEdPanel'};
+  /* 閉じる操作を検知して「閉じた」印を付ける */
+  document.addEventListener('click',function(ev){
+    var t=ev.target; if(!t||!t.closest) return;
+    var b=t.closest('button,a,[role=button],span,div'); if(!b) return;
+    var id=b.id||'';
+    if(id.indexOf('pnlClose_')===0){ CLOSED[id.slice(9)]=Date.now(); return; }
+    if(id.indexOf('pnlHide_')===0){ CLOSED[id.slice(8)]=Date.now(); return; }
+    if(CLOSER[id]){ CLOSED[CLOSER[id]]=Date.now(); return; }
+    var tx=(b.textContent||'').trim();
+    if(/^(✕|×|✖|閉じる)$/.test(tx)){
+      var p=b.parentElement, d=0;
+      while(p&&p!==document.body&&d<6){ if(p.id&&WATCH.indexOf(p.id)>=0){ CLOSED[p.id]=Date.now(); break; } p=p.parentElement; d++; }
+    }
+  },true);
+  /* 自分で「開く」操作をした時だけ印を解除する */
+  document.addEventListener('click',function(ev){
+    var t=ev.target; if(!t||!t.closest) return;
+    var b=t.closest('button,a,[role=button],div'); if(!b) return;
+    var id=b.id||'';
+    if(id.indexOf('pnlShow_')===0){ delete CLOSED[id.slice(8)]; return; }
+    if(id.indexOf('pnlQuick_')===0){ delete CLOSED[id.slice(10)]; return; }
+    if(id==='pnlChip_kmDrawPanel'||id==='drawBtn'){ delete CLOSED['kmDrawPanel']; delete CLOSED['drawPanel']; return; }
+    if(id==='kmPosFixBtn'){ delete CLOSED['kmPosFixPanel']; return; }
+  },true);
+  /* 閉じた印がある間は、誰が表示しようとしても伏せ続ける */
+  setInterval(function(){
+    var now=Date.now();
+    for(var i=0;i<WATCH.length;i++){ var pid=WATCH[i]; if(!CLOSED[pid]) continue;
+      if(now-CLOSED[pid]>8000){ delete CLOSED[pid]; continue; }   /* 8秒でロック解除＝押せば必ず戻せる */
+      var el=document.getElementById(pid); if(!el) continue;
+      try{ if(getComputedStyle(el).display!=='none') el.style.setProperty('display','none','important'); }catch(e){}
+    }
+  },400);
+  window.__kmClosedFlags=CLOSED;
 })();</script>
 </body>
 
