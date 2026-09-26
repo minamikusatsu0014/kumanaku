@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>保存データ調査 v2</title>
+<style>
+body{font-family:sans-serif;margin:6px;background:#0d1117;color:#eee;font-size:13px}
+h1{font-size:15px;margin:2px 0 6px}
+.box{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:8px;margin:8px 0}
+.big{font-size:16px;font-weight:bold;margin:3px 0}
+.g{color:#3fb950}.r{color:#f85149}.o{color:#d29922}.b{color:#58a6ff}.m{color:#8b949e}
+table{border-collapse:collapse;width:100%;font-size:11px;margin-top:4px}
+td,th{border:1px solid #30363d;padding:3px;word-break:break-all;vertical-align:top;text-align:left}
+tr.hit{background:#0f3d21}
+tr.hit2{background:#3d2e0f}
+pre{white-space:pre-wrap;font-size:11px;background:#000;padding:6px;max-height:30vh;overflow:auto;border-radius:6px}
+button{width:100%;padding:12px;font-size:15px;margin:6px 0;background:#238636;color:#fff;border:0;border-radius:8px}
+button.b{background:#1f6feb}
+.small{font-size:11px;color:#8b949e}
+input[type=file]{width:100%;font-size:12px;background:#21262d;color:#eee;padding:8px;border-radius:6px;border:1px solid #30363d}
+</style>
+</head>
+<body>
+<h1>保存データ調査 v2</h1>
+<div class="small">★ 必ず https://minamikusatsu0014.github.io/kumanaku/ と同じURL（recover2.html）で開いてください。</div>
+<div id="sum" class="box">調査中…</div>
+<div id="tbl"></div>
+
+<div class="box">
+  <div class="big">📂 ダウンロードのJSONを調べる</div>
+  <div class="small">「ファイルを選択」に、ダウンロード内の km_draw_v99…json / kumanaku_walk…json をまとめて選んでください。中身の線の本数・点の数を数えます（アプリのデータは書き換えません）。</div>
+  <input type="file" id="f" multiple accept=".json,application/json">
+  <div id="fout"></div>
+</div>
+
+<button id="dl">1. 端末の全データを1つのJSONで保存</button>
+<pre id="log"></pre>
+
+<script>
+var LOG=[];function log(s){LOG.push(s);var e=document.getElementById('log');if(e)e.textContent=LOG.join('\n');}
+
+function scanPoints(o,maxd){
+  maxd=maxd||14;
+  var res={paths:0,pts:0,pick:{},minLat:99,maxLat:-99,minLng:999,maxLng:-999};
+  function isArr(a){return Array.isArray(a)&&a.length>=2&&typeof a[0]==='number'&&typeof a[1]==='number'&&a[0]>=20&&a[0]<=48&&a[1]>=120&&a[1]<=151;}
+  function isObj(a){return a&&typeof a==='object'&&!Array.isArray(a)&&typeof a.lat==='number'&&typeof a.lng==='number'&&a.lat>=20&&a.lat<=48&&a.lng>=120&&a.lng<=151;}
+  function take(a){
+    res.paths++;res.pts+=a.length;
+    for(var i=0;i<a.length;i++){
+      var p=a[i],la=Array.isArray(p)?p[0]:p.lat,ln=Array.isArray(p)?p[1]:p.lng;
+      if(typeof la==='number'&&la>20){res.minLat=Math.min(res.minLat,la);res.maxLat=Math.max(res.maxLat,la);}
+      if(typeof ln==='number'&&ln>100){res.minLng=Math.min(res.minLng,ln);res.maxLng=Math.max(res.maxLng,ln);}
+    }
+    res.pick=res.pick;
+  }
+  (function walk(x,d){
+    if(!x||typeof x!=='object'||d>maxd)return;
+    if(Array.isArray(x)){
+      if(x.length>=2&&x.length<=200000){
+        var n=0;
+        for(var i=0;i<x.length;i++){if(isArr(x[i])||isObj(x[i]))n++;}
+        if(n>=Math.max(2,Math.ceil(x.length*0.7))){take(x);return;}
+      }
+      for(var j=0;j<x.length;j++)walk(x[j],d+1);
+      return;
+    }
+    for(var k in x)walk(x[k],d+1);
+  })(o,0);
+  return res;
+}
+function esc(s){return String(s).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+
+var hits=[],rows='',n=0;
+for(var i=0;i<localStorage.length;i++){
+  var k=localStorage.key(i),v=localStorage.getItem(k);
+  var par=null;try{par=JSON.parse(v);}catch(e){}
+  var s=par?scanPoints(par):{paths:0,pts:0};
+  var cls=s.paths>0?'hit2':'';
+  // 手描き判定: base フラグの無い線があるか
+  var mine=0,base=0;
+  (function look(x,d){
+    if(!x||typeof x!=='object'||d>14)return;
+    if(Array.isArray(x)){for(var j=0;j<x.length;j++)look(x[j],d+1);return;}
+    if(Array.isArray(x.lines)){
+      for(var j=0;j<x.lines.length;j++){
+        var L=x.lines[j];if(!L)continue;
+        if(L.base===true||L.base===1)base++;else mine++;
+      }
+    }
+    for(var kk in x)if(kk!=='lines')look(x[kk],d+1);
+  })(par,0);
+  if(mine>0)cls='hit';
+  var note=s.paths>0?('点の並び '+s.paths+'本 / '+s.pts+'点'):
+    (v.length>200?'（数値の並びなし）':'');
+  if(mine>0)note='★自分の線 '+mine+'本（旧街道 '+base+'本）';
+  rows+='<tr class="'+cls+'"><td>'+esc(k)+'</td><td>'+v.length+'</td><td>'+esc(note)+'</td></tr>';
+  if(mine>0)hits.push({key:k,n:mine});
+  n++;
+}
+var html='<div class="big">1) 端末の保存領域</div>';
+html+='<div class="big">localStorage：'+n+'件</div>';
+if(hits.length){
+  html+='<div class="big g">★ 自分の線が見つかりました</div>';
+  for(var h=0;h<hits.length;h++)html+='<div class="g">'+esc(hits[h].key)+' → '+hits[h].n+'本</div>';
+}else{
+  html+='<div class="big r">✕ localStorage に「自分の線（base印なし）」はありません</div>';
+}
+html+='<div class="big m">2) IndexedDB を調査中…</div>';
+document.getElementById('sum').innerHTML=html;
+document.getElementById('tbl').innerHTML='<div class="box"><table><tr><th>キー</th><th>バイト</th><th>内容</th></tr>'+rows+'</table></div>';
+
+log('localStorage キー数: '+n);
+if(!hits.length)log('★ 自分の線は localStorage にありません。');
+else for(var h2=0;h2<hits.length;h2++)log('★ '+hits[h2].key+' → '+hits[h2].n+'本');
+
+var idbDiv=document.createElement('div');
+(function(){
+  if(!(window.indexedDB&&indexedDB.databases)){log('IndexedDB.databases() 非対応');return;}
+  indexedDB.databases().then(function(dbs){
+    log('IndexedDB データベース: '+dbs.length+'件');
+    var line=document.createElement('div');line.className='big';line.textContent='IndexedDB：'+dbs.length+'件';
+    idbDiv.appendChild(line);
+    var chain=Promise.resolve();
+    dbs.forEach(function(d){
+      chain=chain.then(function(){return new Promise(function(res){
+        var q=indexedDB.open(d.name);
+        q.onerror=function(){line.textContent+=' / '+d.name+':開けず';res();};
+        q.onsuccess=function(){
+          var db=q.result,names=Array.prototype.slice.call(db.objectStoreNames);
+          log('IDB '+d.name+' ストア: '+(names.join(', ')||'なし'));
+          var c2=Promise.resolve();
+          names.forEach(function(sn){
+            c2=c2.then(function(){return new Promise(function(r2){
+              try{
+                var s=db.transaction(sn,'readonly').objectStore(sn),c=s.count();
+                c.onsuccess=function(){
+                  var div=document.createElement('div');
+                  div.className=(d.name.indexOf('photo')>=0)?'m':'g';
+                  div.textContent='・'+d.name+' / '+sn+'：'+c.result+'件';
+                  idbDiv.appendChild(div);log('   - '+sn+': '+c.result+'件');r2();
+                };
+                c.onerror=function(){r2();};
+              }catch(e){r2();}
+            });});
+          });
+          c2.then(function(){db.close();res();});
+        };
+      });});
+    });
+    return chain;
+  }).then(function(){document.getElementById('sum').appendChild(idbDiv);})
+   .catch(function(e){log('IndexedDB 調査失敗: '+e);});
+})();
+
+function vJudge(p,pts){
+  var v=[];
+  if(p>=60&&p<=90)v.push('本数が72本に近い');
+  if(pts>=11000&&pts<=15000)v.push('点数が13361点に近い');
+  return v.length?('★★ '+v.join('・')):'';
+}
+document.getElementById('f').onchange=function(ev){
+  var fs=ev.target.files,out=document.getElementById('fout');out.innerHTML='';
+  for(var i=0;i<fs.length;i++)(function(file){
+    var d=document.createElement('div');d.className='box';
+    d.innerHTML='<b>'+esc(file.name)+'</b><div class="small">'+file.size+' バイト・読み込み中…</div>';
+    out.appendChild(d);
+    var r=new FileReader();
+    r.onload=function(){
+      var o=null,err='';
+      try{o=JSON.parse(r.result);}catch(e){err=String(e);}
+      if(o===null){
+        // JSONでなければ、テキスト内の数値座標を数える
+        var t=String(r.result),cnt=(t.match(/3[45]\.\d{2,}/g)||[]).length;
+        d.innerHTML='<b>'+esc(file.name)+'</b><div class="r">JSONとして読めません '+esc(err)+'</div>'+
+          '<div class="small">テキスト内の緯度らしき数字：'+cnt+'個</div>';
+        return;
+      }
+      var s=scanPoints(o);
+      var leaf=[],txt=JSON.stringify(o);
+      ['lines','draw.lines','strokes','km_draw_mine_v1','km_draw_v99','mine'].forEach(function(k){
+        if(txt.indexOf('"'+k.split('.').pop()+'"')>=0)leaf.push(k);
+      });
+      var j=vJudge(s.paths,s.pts);
+      d.innerHTML='<b>'+esc(file.name)+'</b><div class="small">'+file.size+' バイト</div>'+
+        '<div class="big">点の並び：'+s.paths+'本 / '+s.pts+'点</div>'+
+        (s.paths>0?('<div class="small">範囲：緯度 '+s.minLat.toFixed(3)+'〜'+s.maxLat.toFixed(3)+' / 経度 '+s.minLng.toFixed(3)+'〜'+s.maxLng.toFixed(3)+'</div>'):'<div class="o">線の座標が見つかりません</div>')+
+        (leaf.length?'<div class="small">含まれる項目名：'+esc(leaf.join(', '))+'</div>':'')+
+        (j?'<div class="big g">'+j+'</div>':'');
+      log(file.name+' → '+s.paths+'本 / '+s.pts+'点 '+(j||''));
+    };
+    r.readAsText(file);
+  })(fs[i]);
+};
+
+document.getElementById('dl').onclick=function(){
+  var all={};
+  for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);all[k]=localStorage.getItem(k);}
+  var b=new Blob([JSON.stringify({app:'kumanaku-recover',version:2,at:new Date().toISOString(),localStorage:all},null,0)],{type:'application/json'});
+  var u=URL.createObjectURL(b),a=document.createElement('a');
+  a.href=u;a.download='recover_all_'+Date.now()+'.json';document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(u);a.remove();},2000);
+  log('全データを保存しました。');
+};
+</script>
+</body>
+</html>
