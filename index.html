@@ -7904,8 +7904,8 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v138 09/26 07:40';
-  var BTAG='v138';
+  var BUILD='v139 09/26 07:40';
+  var BTAG='v139';
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
     var VK='km_app_ver', prevV=null;
@@ -8803,7 +8803,86 @@ else window.addEventListener('load',function(){ setTimeout(boot,1100); });
 })();
 </script>
 
+
+<script id="km_dock_v139">
+/* KM_DOCK_V139 : 右下の常設アイコン列（重なり解消） */
+(function(){
+ var ROOT='km139dock', GRP='km139grp', PREF='km139_open';
+ function $(i){return document.getElementById(i);}
+ var LEG=['kmFbBox','kmFix131','kmPickBtn','kmRecChip','km137box','km135box','kmDock'];
+ function hideLeg(){ for(var i=0;i<LEG.length;i++){var e=$(LEG[i]); if(e) e.style.setProperty('display','none','important');} }
+ function B(txt,bg,fg,id,title){
+   return '<button id="'+id+'" title="'+(title||'')+'" style="min-width:60px;padding:5px 7px;border:0;border-radius:11px;'
+     +'background:'+bg+';color:'+fg+';font:800 10px/1.15 system-ui,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.55)">'+txt+'</button>';
+ }
+ function push(){ /* パネルをアイコン帯の上へ */
+   var grp=$(GRP), open = grp && grp.style.display!=='none';
+   var pb = open? 178:122;
+   [['kmDrawPanel'],['kmDrawMin'],['kmDvHead']].forEach(function(p){
+     var e=$(p[0]); if(!e) return;
+     e.style.setProperty('right','6px','important'); e.style.setProperty('left','auto','important');
+     e.style.setProperty('bottom','calc(env(safe-area-inset-bottom,0px) + '+pb+'px)','important');
+     e.style.setProperty('top','auto','important');
+   });
+ }
+ function clk(id){ var e=$(id); if(e){ try{ e.click(); return 1; }catch(x){} } return 0; }
+ function wrapClick(){
+   var e;
+   e=$('kmFbBox');   if(e){ var b=e.querySelector('button'); if(b) b.onclick=function(ev){ev.preventDefault();ev.stopPropagation(); var f=e.querySelector('button'); var old=f.__km; if(old) old(); }; }
+ }
+ function build(){
+   if($(ROOT)) return;
+   var d=document.createElement('div'); d.id=ROOT;
+   d.style.cssText='position:fixed;right:6px;bottom:calc(env(safe-area-inset-bottom,0px) + 58px);z-index:2147483600;'
+     +'display:flex;flex-direction:column;gap:4px;align-items:flex-end;font-family:system-ui,sans-serif';
+   var open=false; try{ open = localStorage.getItem(PREF)==='1'; }catch(e){}
+   d.innerHTML =
+      '<div id="'+GRP+'" style="display:'+(open?'flex':'none')+';gap:4px;align-items:flex-end;flex-wrap:wrap;justify-content:flex-end;max-width:96vw">'
+     +  B('🩹<br><span>バックアップ</span>','#0f4c6e','#fff','km139b','私の線を戻す（バックアップ）')
+     +  B('🎯<br><span>1本ずつ</span>','#f5a623','#20160a','km139p','線を1本ずつ選ぶ')
+     +  B('🔎<br><span>復元</span>','#1b7f4b','#fff','km139r','線の復元')
+     +  B('🧹<br><span>整理</span>','#37474f','#fff','km139c','画面を整理（重なりを隠す）')
+     +'</div>'
+     +'<div style="display:flex;gap:4px;align-items:flex-end">'
+     +  B('🩹<br><span>入れ直す</span>','#e0245e','#fff','km139a','保存した私の線を入れ直す')
+     +  B('↺<br><span>戻す</span>','#37474f','#fff','km139u','入れる前に戻す')
+     +  B('📋<br><span>ボタン</span>','rgba(13,17,23,.95)','#cde','km139t','追加ボタンの表示/非表示')
+     +'</div>';
+   document.body.appendChild(d);
+   $('km139a').onclick=function(ev){ev.preventDefault();ev.stopPropagation(); if(!clk('km137a')) clk('km137box');};
+   $('km139u').onclick=function(ev){ev.preventDefault();ev.stopPropagation(); clk('km137u');};
+   $('km139c').onclick=function(ev){ev.preventDefault();ev.stopPropagation(); clk('km137t');};
+   $('km139b').onclick=function(ev){ev.preventDefault();ev.stopPropagation();
+     var e=$('kmFbBox'); if(e){ var b=e.querySelector('button'); if(b){ b.style.display='block'; try{ b.click(); }catch(x){} } } };
+   $('km139p').onclick=function(ev){ev.preventDefault();ev.stopPropagation(); clk('kmPickBtn');};
+   $('km139r').onclick=function(ev){ev.preventDefault();ev.stopPropagation(); clk('kmRecChip');};
+   $('km139t').onclick=function(ev){ev.preventDefault();ev.stopPropagation();
+     var g=$('km139grp'); var on=(g.style.display==='none');
+     g.style.display = on?'flex':'none';
+     try{ localStorage.setItem(PREF, on?'1':'0'); }catch(x){}
+     push(); };
+   push();
+ }
+ function keep(){ hideLeg(); push(); }
+ function note(){ try{ var ds=document.querySelectorAll('div,span');
+     for(var i=0;i<ds.length;i++){ var e=ds[i]; if(e.children.length>1) continue;
+       var t=(e.textContent||'').replace(/\s+/g,'');
+       if(t.indexOf('あなたの線')===0||t.indexOf('「線を入れ直す」を押してください')>0){
+         e.style.setProperty('position','fixed','important'); e.style.setProperty('top','104px','important');
+         e.style.setProperty('right','6px','important'); e.style.setProperty('left','auto','important');
+         e.style.setProperty('max-width','54vw','important'); e.style.setProperty('font-size','10px','important');
+         e.style.setProperty('z-index','2147483500','important');
+       } } }catch(x){} }
+ function boot(){ hideLeg(); build(); push(); }
+ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+ [400,1200,2600,4200].forEach(function(t){ setTimeout(boot,t); setTimeout(keep,t); setTimeout(note,t); });
+ setInterval(keep,1000);
+ setTimeout(function(){ setInterval(note,1500); },5000);
+ window.__kmDock139={ build:build, keep:keep, open:function(){var g=$('km139grp'); if(g) g.style.display='flex'; push();} };
+})();
+</script>
 </body>
+
 <script>
 /* KM_DIAG_V91 : 消しゴムの原因を画面上で見える化 + 最寄り1本の強制削除 */
 (function(){
