@@ -1270,6 +1270,12 @@ svg.leaflet-image-layer.leaflet-interactive path {
 <!-- KM_PERF_V125_END -->
 </head>
 <body>
+<script id="km_el_v142">
+/* KM_EL_V142 : 削除した要素への参照を安全にする */
+window.kmEl=function(id){ var e=document.getElementById(id); if(e) return e;
+  var d=document.createElement("span"); d.dataset.kmDummy="1"; return d; };
+</script>
+
 <script>/* KM_FINDBACKUP_V134 : 旧街道は絶対に地図へ出さない＋作業前バックアップから自分の線を探して戻す */
 (function(){
   if(window.__kmFB) return; window.__kmFB=1;
@@ -1558,18 +1564,14 @@ svg.leaflet-image-layer.leaflet-interactive path {
   <input type="file" id="impFile" accept=".json" style="display:none">
   <input type="file" id="photoFile" accept="image/*" capture="environment" style="display:none">
   <input type="file" id="photoImpFile" accept=".json" style="display:none">
-<input type="file" id="nakaImpFile" accept=".json" style="display:none">
 </div>
 
 <div id="notice" class="panel">「▶ 記録開始」を押して歩き始めてください</div>
 
 <div id="btns">
   <button class="btn sub-btn" id="baseBtn">🗺 地図</button>
-  <button class="btn sub-btn" id="kojikuBtn">📜 古地図</button>
   <button class="btn sub-btn" id="cpBtn">⛩ 名所</button>
   <button class="btn sub-btn" id="kaidoBtn">🥾 街道</button>
-  <button class="btn sub-btn" id="nakaBtn">🛤 中山道</button>
-  <button class="btn sub-btn" id="gridBtn">▦ グリッド</button>
   <button class="btn sub-btn" id="drawBtn">✏️ 手描き</button>
   <button class="btn" id="recBtn">▶ 記録開始</button>
 </div>
@@ -3444,7 +3446,7 @@ document.getElementById('locBtn').addEventListener('click',function(){
     onPos(p);
   },function(){ notice('⚠ 現在地を取得できません'); },{enableHighAccuracy:true,timeout:10000});
 });
-document.getElementById('gridBtn').addEventListener('click',function(){
+kmEl('gridBtn').addEventListener('click',function(){
   gridOn=!gridOn;
   this.style.background = gridOn ? '#4caf50' : '#fff';
   this.style.color = gridOn ? '#fff' : '#333';
@@ -3457,7 +3459,7 @@ document.getElementById('baseBtn').addEventListener('click',function(){
   this.textContent = '🗺 ' + d.short;
   notice('🗺 地図: ' + d.name + ' (' + (baseIdx+1) + '/' + BASE_DEFS.length + ') もう一度押すと次の地図');
 });
-document.getElementById('kojikuBtn').addEventListener('click',function(){
+kmEl('kojikuBtn').addEventListener('click',function(){
   kojikuOn=!kojikuOn;
   if(kojikuOn){ setKojiku(); this.style.background='#8d5a2b'; this.style.color='#fff';
     notice('📜 明治期の古地図を重ねました(当時の街道が正確に描かれています)');
@@ -4210,7 +4212,7 @@ function nakaListRender(){
   });
 }
 let nakaListShown=false;
-document.getElementById('nakaBtn').addEventListener('click',function(){
+kmEl('nakaBtn').addEventListener('click',function(){
   nakaOn=!nakaOn;
   if(nakaOn){ map.addLayer(nakaLayer); map.addLayer(nakaShuLayer); drawNakasendo(); drawNakaShukuba(); nakaFitAll();
     this.style.background='#6b4226'; this.style.color='#fff';
@@ -4223,7 +4225,7 @@ document.getElementById('nakaModal').onclick=function(e){ if(e.target===this) th
 document.getElementById('nakaListBtn').onclick=function(){
   nakaListShown=!nakaListShown; this.textContent = nakaListShown? '🏮 一覧を閉じる':'🏮 宿場一覧'; nakaListRender();
 };
-document.getElementById('nakaFit').onclick=function(){ if(!nakaOn){ document.getElementById('nakaBtn').click(); } nakaFitAll(); };
+document.getElementById('nakaFit').onclick=function(){ if(!nakaOn){ kmEl('nakaBtn').click(); } nakaFitAll(); };
 document.getElementById('nakaReset').onclick=function(){
   if(!confirm('中山道の訪問記録をすべて消しますか?')) return;
   data.naka={}; save(); drawNakaShukuba(); nakaSummary(); nakaListRender(); notice('↺ 中山道の踏破記録をリセットしました');
@@ -4233,8 +4235,8 @@ document.getElementById('nakaExport').onclick=function(){
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='kumanaku_nakasendo_'+todayStr()+'.json'; a.click();
   notice('💾 中山道の踏破記録を書き出しました');
 };
-document.getElementById('nakaImport').onclick=function(){ document.getElementById('nakaImpFile').click(); };
-document.getElementById('nakaImpFile').onchange=function(){
+document.getElementById('nakaImport').onclick=function(){ kmEl('nakaImpFile').click(); };
+kmEl('nakaImpFile').onchange=function(){
   const f=this.files && this.files[0]; this.value=''; if(!f) return;
   const r=new FileReader();
   r.onload=function(){ try{ const o=JSON.parse(r.result);
@@ -6828,7 +6830,7 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_draw_main';
   var COLORS=['#e53935','#fb8c00','#1e88e5','#43a047','#111111'];
-  var st={mode:'pen',color:COLORS[0],width:3,lines:[],redo:[],delBase:{}};
+  var st={mode:'pan',color:COLORS[0],width:3,lines:[],redo:[],delBase:{}};
   var hist=[], map=null, Lg=null, layer=null, live=null, stroke=null, armed=false, erasing=false, raf=false, lastErase=null;
   window.KM_DRAW_STATE=st;
   window.KM_DRAW_VER='v129';
@@ -7904,8 +7906,8 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v141 09/26 07:40';
-  var BTAG='v141';
+  var BUILD='v143 09/26 07:40';
+  var BTAG='v143';
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
     var VK='km_app_ver', prevV=null;
@@ -8874,10 +8876,9 @@ else window.addEventListener('load',function(){ setTimeout(boot,1100); });
          e.style.setProperty('z-index','2147483500','important');
        } } }catch(x){} }
  function boot(){ hideLeg(); build(); push(); }
+ /* v143: 毎秒の再配置をやめた（位置合わせは数回だけ＝揺れ解消） */
  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
- [400,1200,2600,4200].forEach(function(t){ setTimeout(boot,t); setTimeout(keep,t); setTimeout(note,t); });
- setInterval(keep,1000);
- setTimeout(function(){ setInterval(note,1500); },5000);
+ [400,1500,3500].forEach(function(t){ setTimeout(boot,t); });
  window.__kmDock139={ build:build, keep:keep, open:function(){var g=$('km139grp'); if(g) g.style.display='flex'; push();} };
 })();
 </script>
@@ -8886,7 +8887,7 @@ else window.addEventListener('load',function(){ setTimeout(boot,1100); });
 /* KM_SLIM_V140 : 使わないボタンを隠す（DOMは残すのでJSは壊れない） */
 (function(){
  var KEY='km_slim_v140';
- var HIDE=['addBtn','kmSyncBtn','impBtn','clearBtn','nakaBtn','gridBtn','kojikuBtn'];
+ var HIDE=['addBtn','kmSyncBtn','impBtn','clearBtn'];
  function $(i){return document.getElementById(i);}
  function on(){ try{ return localStorage.getItem(KEY)!=='0'; }catch(e){ return true; } }
  function apply(){
@@ -8928,7 +8929,73 @@ function boot(){ apply(); addBtn2(); label(); }
  window.__kmPoi141={label:label, show:show, once:once};
 })();
 </script>
+
+<script id="km_fix_v143">
+/* KM_FIX_V143
+   ・消しゴムで消した範囲を記録し、保存データからも取り除く（再表示の防止）
+   ・復元用バックアップも同じ内容に揃える
+   ・起動時は「地図移動」モード（描画しない） */
+(function(){
+ var DEL='km_del_v143', LS='km_draw_main';
+ var BAKS=['km_draw_main_bak','km_before_v137','km_before_v135','km_before_v138'];
+ var CELL=0.002, TH=150;
+ function $(i){return document.getElementById(i);}
+ function load(){ try{ var a=JSON.parse(localStorage.getItem(DEL)||'[]'); return a.length?a:[]; }catch(e){ return []; } }
+ function save(a){ try{ localStorage.setItem(DEL, JSON.stringify(a.slice(-3000))); }catch(e){} }
+ function cell(ll){ return [Math.round(ll[0]/CELL), Math.round(ll[1]/CELL)]; }
+ function dist(a,b){ var R=6371000,t=Math.PI/180; var dLat=(b[0]-a[0])*t, dLng=(b[1]-a[1])*t;
+   var x=Math.sin(dLat/2), y=Math.sin(dLng/2);
+   var q=x*x+Math.cos(a[0]*t)*Math.cos(b[0]*t)*y*y; return 2*R*Math.asin(Math.min(1,Math.sqrt(q))); }
+ function radius(){ try{ var r=window.kmEraseM&&window.kmEraseM(); return (r>0&&isFinite(r))?r:80; }catch(e){ return 80; } }
+ function add(ll){ try{ if(!ll) return; var a=load(), c=cell([+ll.lat, +ll.lng]), i;
+     for(i=0;i<a.length;i++){ if(a[i][0]===c[0]&&a[i][1]===c[1]) return; }
+     a.push(c); save(a); }catch(e){} }
+ function scrub(){
+   try{
+     var d=load(); if(!d.length) return 0;
+     var raw=localStorage.getItem(LS); if(!raw) return 0;
+     var st=JSON.parse(raw), ln=(st&&st.lines)||[], R=radius()+TH, out=[], cut=0, i,j,k;
+     for(i=0;i<ln.length;i++){
+       var pts=ln[i].pts||[], keep=[];
+       for(j=0;j<pts.length;j++){
+         var hit=false, p=pts[j];
+         for(k=0;k<d.length;k++){
+           var c=[d[k][0]*CELL, d[k][1]*CELL];
+           if(dist(p,c)<=R){ hit=true; break; }
+         }
+         if(hit) cut++; else keep.push(p);
+       }
+       if(!keep.length) continue;
+       var o={}, q; for(q in ln[i]) o[q]=ln[i][q]; o.pts=keep; out.push(o);
+     }
+     if(cut>0){
+       var ns={}, q2; for(q2 in st) ns[q2]=st[q2]; ns.lines=out;
+       var txt=JSON.stringify(ns);
+       localStorage.setItem(LS, txt);
+       for(i=0;i<BAKS.length;i++){ try{ if(localStorage.getItem(BAKS[i])) localStorage.setItem(BAKS[i], txt); }catch(e){} }
+     }
+     return cut;
+   }catch(e){ return -1; }
+ }
+ function hook(){
+   try{
+     if(window.kmEraseAt && !window.kmEraseAt.__v143){ var o=window.kmEraseAt;
+       var w=function(ll){ var r=o.apply(this,arguments); try{ add(ll); scrub(); }catch(e){} return r; };
+       w.__v143=1; window.kmEraseAt=w; }
+     if(window.kmEraseReal && !window.kmEraseReal.__v143){ var o2=window.kmEraseReal;
+       var w2=function(ll){ var r=o2.apply(this,arguments); try{ add(ll); scrub(); }catch(e){} return r; };
+       w2.__v143=1; window.kmEraseReal=w2; }
+   }catch(e){}
+ }
+ function pan(){ try{ var b=$('kmDvPan'); if(b && !b.__v143){ b.click(); b.__v143=1; } }catch(e){} }
+ function boot(){ hook(); try{ scrub(); }catch(e){} pan(); }
+ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+ [600,1500,3000,6000].forEach(function(t){ setTimeout(boot,t); });
+ window.__kmFix143={scrub:scrub, add:add, hook:hook, pan:pan, del:load, radius:radius};
+})();
+</script>
 </body>
+
 
 
 
