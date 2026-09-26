@@ -6416,7 +6416,7 @@ setTimeout(hideSplash, 3500);
   function run(){
     try{ window.__kmFixed = window.__kmFixAll(); }catch(e){}
     try{ if(window.cpLayer && window.map && !window.map.hasLayer(window.cpLayer)) window.map.addLayer(window.cpLayer); }catch(e){}
-    try{ if(window.KM_CP_Z2!==12) window.KM_CP_Z2= 14; }catch(e){}
+    try{ window.KM_CP_Z2=1; }catch(e){}
     try{ if(window.kmApplyCpThin) window.kmApplyCpThin(); }catch(e){}
     try{ if(window.map) window.map.fire('zoomend'); }catch(e){}
   }
@@ -7906,8 +7906,8 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v143 09/26 07:40';
-  var BTAG='v143';
+  var BUILD='v144 09/26 07:40';
+  var BTAG='v144';
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
     var VK='km_app_ver', prevV=null;
@@ -8994,7 +8994,47 @@ function boot(){ apply(); addBtn2(); label(); }
  window.__kmFix143={scrub:scrub, add:add, hook:hook, pan:pan, del:load, radius:radius};
 })();
 </script>
+
+<script id="km_poi_v144">
+/* KM_POI_V144 : 名所・寺・社・城・史跡・墓を「常に」表示する
+   - 縮尺による間引きを無効化（代表点だけでなく全点を表示）
+   - レイヤが外れていても読み込み時に必ず戻す
+   - ボタンで手動OFFにした時だけ隠す */
+(function(){
+ var OFF='km_poi_v144_off';
+ function $(i){return document.getElementById(i);}
+ function lbl(){ var c=$('cpBtn'); if(c) c.textContent='⛩ 名所・史跡・墓'; }
+ function forcedOff(){ try{ return localStorage.getItem(OFF)==='1'; }catch(e){ return false; } }
+ function layer(){ try{ return window.cpLayer; }catch(e){ return null; } }
+ function mp(){ try{ return window.map; }catch(e){ return null; } }
+ function all(){ try{ var L=layer(); if(!L) return -1;
+     var a=(L.getLayers?L.getLayers().slice():[]), i, n=0;
+     for(i=0;i<a.length;i++){ if(!L.hasLayer(a[i])){ L.addLayer(a[i]); } n++; }
+     return n; }catch(e){ return -2; } }
+ function show(){ try{ var M=mp(), L=layer(); if(!M||!L) return 0;
+     if(!M.hasLayer(L)) M.addLayer(L); return all(); }catch(e){ return -3; } }
+ function wrapThin(){ try{
+     if(window.kmApplyCpThin && !window.kmApplyCpThin.__v144){ var o=window.kmApplyCpThin;
+       var w=function(){ o.apply(this,arguments); if(!forcedOff()) all(); };
+       w.__v144=1; window.kmApplyCpThin=w; }
+   }catch(e){} }
+ function sync(){ if(forcedOff()) return; try{ window.KM_CP_Z2=1; }catch(e){} wrapThin();
+   try{ if(window.kmApplyCpThin) window.kmApplyCpThin(); }catch(e){} show(); }
+ function watchBtn(){ try{ var b=$('cpBtn'); if(!b||b.__v144w) return; b.__v144w=1;
+     b.addEventListener('click',function(){ setTimeout(function(){ try{ var M=mp(), L=layer();
+       if(!M||!L) return; localStorage.setItem(OFF, M.hasLayer(L)?'0':'1'); }catch(e){} },60); });
+   }catch(e){} }
+ function boot(){ lbl(); watchBtn(); sync(); }
+ try{ window.KM_CP_Z2=10; }catch(e){}
+ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+ [500,1200,2500,4500].forEach(function(t){ setTimeout(boot,t); });
+ setInterval(sync,2500);
+ window.__kmPoi144={show:show, all:all, sync:sync, off:forcedOff,
+   set:function(v){ try{ localStorage.setItem(OFF, v?'1':'0'); }catch(e){} sync(); }};
+})();
+</script>
 </body>
+
 
 
 
