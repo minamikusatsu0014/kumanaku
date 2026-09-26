@@ -3526,7 +3526,7 @@ try{window.cpLayer=cpLayer;window.cpMarkers=cpMarkers;window.CHECKPOINTS=CHECKPO
   }
   var b=document.createElement('button');
   b.id='kmPosFixBtn'; b.type='button'; b.textContent='\uD83D\uDD27 位置修正';
-  b.style.cssText='position:fixed;right:0;top:35%;z-index:6000;font-size:12px;padding:8px 6px;border:1px solid #ffb300;border-right:0;border-radius:14px 0 0 14px;background:#fffbe6;color:#8a5a00;box-shadow:0 1px 5px rgba(0,0,0,.28);writing-mode:vertical-rl;letter-spacing:1px';
+  b.style.cssText='position:fixed;right:0;top:35%;z-index:2147483050;font-size:12px;padding:8px 6px;border:1px solid #ffb300;border-right:0;border-radius:14px 0 0 14px;background:#fffbe6;color:#8a5a00;box-shadow:0 1px 5px rgba(0,0,0,.28);writing-mode:vertical-rl;letter-spacing:1px';
   document.body.appendChild(b);
   var panel=document.createElement('div');
   panel.id='kmPosFixPanel';
@@ -8223,7 +8223,7 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v154 09/27 10:40';
+  var BUILD='v155 09/27 11:30';
   var BTAG=(function(m){ return m?m[0]:'v153'; })(/v([0-9]+)/.exec(BUILD||'v153'));
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
@@ -9650,15 +9650,34 @@ function boot(){ apply(); addBtn2(); label(); }
     if(id==='pnlChip_kmDrawPanel'||id==='drawBtn'){ delete CLOSED['kmDrawPanel']; delete CLOSED['drawPanel']; return; }
     if(id==='kmPosFixBtn'){ delete CLOSED['kmPosFixPanel']; return; }
   },true);
-  /* 閉じた印がある間は、誰が表示しようとしても伏せ続ける */
-  setInterval(function(){
+  /* 閉じた印がある間は伏せ続ける。400msポーリングをやめ、DOM変更と同時(描画前)に伏せる＝点滅しない */
+  function enforce(){
     var now=Date.now();
     for(var i=0;i<WATCH.length;i++){ var pid=WATCH[i]; if(!CLOSED[pid]) continue;
-      if(now-CLOSED[pid]>8000){ delete CLOSED[pid]; continue; }   /* 8秒でロック解除＝押せば必ず戻せる */
+      if(now-CLOSED[pid]>4000){ delete CLOSED[pid]; continue; }
       var el=document.getElementById(pid); if(!el) continue;
-      try{ if(getComputedStyle(el).display!=='none') el.style.setProperty('display','none','important'); }catch(e){}
+      try{ if(el.style.display!=='none'){ el.style.setProperty('display','none','important'); } }catch(e){}
     }
-  },400);
+  }
+  window.__kmClosedSet=function(pid){ CLOSED[pid]=Date.now(); try{enforce();}catch(e){} };
+  window.__kmClosedClear=function(pid){ try{ if(pid==='*'){ for(var k in CLOSED) delete CLOSED[k]; } else { delete CLOSED[pid]; } }catch(e){} };
+  try{ var _mo=new MutationObserver(function(){ enforce(); });
+       _mo.observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:['style','class']}); }catch(e){}
+  enforce(); setInterval(enforce,1000);
+  /* 押した瞬間(pointerdown)に開閉の意思を確定 → click側の処理順に依存しない */
+  document.addEventListener('pointerdown',function(ev){
+    var t=ev.target; if(!t||!t.closest) return;
+    var b=t.closest('button,a,[role=button],div'); var id=(b&&b.id)||'';
+    if(/^pnl(Close|Hide)_/.test(id)){ window.__kmClosedSet(id.replace(/^pnl(Close|Hide)_/,'')); return; }
+    if(id==='kmPosFixBtn'){ window.__kmClosedClear('kmPosFixPanel'); return; }
+    if(id==='drawBtn'){ window.__kmClosedClear('kmDrawPanel'); window.__kmClosedClear('drawPanel'); return; }
+    if(/^pnl(Show|Quick|Chip)_/.test(id)){ window.__kmClosedClear(id.replace(/^pnl(Show|Quick|Chip)_/,'')); return; }
+    var tx=((b&&b.textContent)||'').trim();
+    if(/^(✕|×|✖|閉じる)$/.test(tx)){
+      var p=t.parentElement,d=0;
+      while(p&&p!==document.body&&d<6){ if(p.id&&WATCH.indexOf(p.id)>=0){ window.__kmClosedSet(p.id); break; } p=p.parentElement; d++; }
+    }
+  },true);
   window.__kmClosedFlags=CLOSED;
 })();</script>
 </body>
