@@ -8223,7 +8223,7 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v164 09/27 02:10';
+  var BUILD='v165 09/27 03:30';
   var BTAG=(function(m){ return m?m[0]:'v153'; })(/v([0-9]+)/.exec(BUILD||'v153'));
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
@@ -9681,328 +9681,9 @@ function boot(){ apply(); addBtn2(); label(); }
   window.__kmClosedFlags=CLOSED;
 })();</script>
 
-<script>/* KM_VAULT_V157 */
-/* KM_VAULT_V157 : 描いた線を失わない（多重バックアップ・空上書き拒否・復元・書き出し/読み込み）
-   - 保存キーへの書き込みを横取りし、線が入った値を「金庫」へ必ず複製する
-   - 金庫に中身があるのに空(0本)で上書きしようとした時は拒否する（アプリ側の事故を防ぐ）
-   - 起動時、本体が空なら 金庫 → _bak → km_all_backup_v129 の順に自動復元
-   - 常時表示の「線の保存」ボタンから JSON 書き出し／読み込みができる */
-(function(){
-  if(window.__kmVault157) return; window.__kmVault157=1;
-  var MAIN=['km_draw_main','km_draw_v99','km_draw','km_draw_mine_v1','km_edit_v1'];
-  var VK='km_draw_vault_v157';
-  function parse(t){ try{ return JSON.parse(t||'null'); }catch(e){ return null; } }
-  function countOf(k,j){ if(!j) return 0;
-    try{ if(j.lines) return (j.lines||[]).length;
-         if(Object.prototype.toString.call(j)==='[object Array]') return j.length;
-         return 0; }catch(e){ return 0; } }
-  function get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
-  function vaultRead(){ return parse(get(VK))||{}; }
-  function vaultWrite(v){ try{ localStorage.setItem(VK, JSON.stringify(v)); }catch(e){} }
-  function snap(reason){
-    var v=vaultRead(), n0=0;
-    for(var i=0;i<MAIN.length;i++){ var k=MAIN[i], raw=get(k), n=countOf(k,parse(raw));
-      if(n>0){ v[k]={t:Date.now(),raw:raw,n:n}; n0+=n; } }
-    v.savedAt=Date.now(); v.why=reason||'auto'; v.total=n0;
-    vaultWrite(v); return v;
-  }
-  var origSet=null;
-  try{
-    var proto=Storage.prototype; origSet=proto.setItem;
-    if(!proto.__km157){ proto.__km157=1;
-      var origRm=proto.removeItem;
-      proto.setItem=function(k,val){
-        try{
-          if(MAIN.indexOf(k)>=0){
-            var n=countOf(k,parse(val)), v=vaultRead(), old=v[k];
-            if(n===0 && old && old.n>0 && !window.__kmUserCleared){
-              window.__kmVaultBlocked=(window.__kmVaultBlocked||0)+1;
-              return;                                  /* 空での上書きを拒否 */
-            }
-            if(n>0){ v[k]={t:Date.now(),raw:val,n:n}; v.savedAt=Date.now(); v.why='live'; vaultWrite(v); }
-          }
-        }catch(e){}
-        return origSet.call(this,k,val);
-      };
-      proto.removeItem=function(k){
-        try{
-          if(MAIN.indexOf(k)>=0){
-            snap('before-remove');
-            var v=vaultRead(), e=v[k];
-            if(e && e.n>0 && !window.__kmUserCleared){ return; }   /* 金庫に線がある間は消させない */
-          }
-        }catch(e){}
-        return origRm.call(this,k);
-      };
-    }
-  }catch(e){}
-  function restore(){
-    var v=vaultRead(), done=[];
-    for(var i=0;i<MAIN.length;i++){
-      var k=MAIN[i];
-      if(countOf(k,parse(get(k)))>0) continue;
-      var cand=(v[k]&&v[k].raw)||get(k+'_bak')||null;
-      if(!cand){
-        var aj=parse(get('km_all_backup_v129'));
-        if(aj&&aj[k]!==undefined) cand=JSON.stringify(aj[k]);
-        if(!cand&&aj&&aj[k]===undefined){ /* 配列で入っている旧形式も探す */
-          var al=parse(get('km_all_backup_v129'));
-          if(al&&al.lines) cand=JSON.stringify({lines:al.lines});
-        }
-      }
-      if(cand&&countOf(k,parse(cand))>0){
-        try{ localStorage.setItem(k,cand); done.push(k+'('+countOf(k,parse(cand))+'本)'); }catch(e){}
-      }
-    }
-    return done;
-  }
-  function heal(){                                                 /* 消されても気づいた時点で戻す */
-    if(window.__kmUserCleared) return [];
-    var v=vaultRead(), d=[];
-    for(var i=0;i<MAIN.length;i++){ var k=MAIN[i], e=v[k];
-      if(e && e.n>0 && countOf(k,parse(get(k)))===0){ try{ localStorage.setItem(k,e.raw); d.push(k); }catch(x){} } }
-    return d;
-  }
-  function counts(){ var o={}; for(var i=0;i<MAIN.length;i++){ var k=MAIN[i]; o[k]=countOf(k,parse(get(k))); }
-    var v=vaultRead(); o['__vault']=v.total||0; o['__vaultAt']=v.savedAt||0; o['__blocked']=window.__kmVaultBlocked||0; o['__why']=v.why||''; return o; }
-  function exportJSON(){ var o={v:157,at:Date.now(),keys:{}};
-    for(var i=0;i<MAIN.length;i++){ var k=MAIN[i], raw=get(k); if(raw&&countOf(k,parse(raw))>0) o.keys[k]=parse(raw); }
-    var v=vaultRead(); if(v.total) o.vault=v;
-    return JSON.stringify(o); }
-  function importJSON(txt){
-    var o=parse(txt); if(!o) return 'JSONが読めません';
-    var n=0, ks=o.keys||{};
-    for(var k in ks){ var c=countOf(k,ks[k]); if(c>0){ try{ localStorage.setItem(k,JSON.stringify(ks[k])); n+=c; }catch(e){} } }
-    if(o.vault){ try{ vaultWrite(o.vault); }catch(e){} }
-    if(n===0 && o.vault){                                          /* 金庫しか無い書き出しでも戻せる */
-      for(var k2 in o.vault){ var ent=o.vault[k2];
-        if(ent && ent.raw && countOf(k2,parse(ent.raw))>0){ try{ localStorage.setItem(k2,ent.raw); n+=countOf(k2,parse(ent.raw)); }catch(e){} } }
-    }
-    return n? (n+'本を復元しました') : '線データが見つかりません';
-  }
-  function fmt(t){ try{ var d=new Date(t); return (d.getMonth()+1)+'/'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); }catch(e){ return '-'; } }
-  function stat(){
-    var c=counts(); var el=document.getElementById('kmVaultStat'); if(!el) return;
-    el.textContent='いま表示中: '+(c['km_draw_main']||0)+'本 / 金庫: '+(c['__vault']||0)+'本'
-      +(c['__vaultAt']?(' ('+fmt(c['__vaultAt'])+')'):'')
-      +((c['__blocked']||0)?(' / 空上書きを'+(c['__blocked']||0)+'回拒否'):''); }
-  function ui(){
-    try{
-      if(!document.getElementById('kmVaultBtn')){
-        var b=document.createElement('button'); b.type='button'; b.id='kmVaultBtn'; b.textContent='🧷 線の保存';
-        b.style.cssText='position:fixed;left:0;top:52%;z-index:2147483040;font:800 12px system-ui,sans-serif;padding:9px 8px;'
-          +'border:1px solid #2e7d32;border-left:0;border-radius:0 10px 10px 0;background:#e8f5e9;color:#1b5e20;'
-          +'box-shadow:0 1px 6px rgba(0,0,0,.3);touch-action:manipulation';
-        b.onclick=function(ev){ try{ev.preventDefault();ev.stopPropagation();}catch(e){}
-          var p=document.getElementById('kmVaultPanel');
-          if(!p) return; var open=false; try{ open=getComputedStyle(p).display!=='none'; }catch(e){}
-          p.style.display = open?'none':'block'; if(!open){ stat(); try{ document.getElementById('kmVaultTa').value=exportJSON(); }catch(e){} } };
-        document.body.appendChild(b);
-      }
-      var btn=document.getElementById('kmVaultBtn'); if(btn&&btn.parentElement!==document.body) document.body.appendChild(btn);
-      if(!document.getElementById('kmVaultPanel')){
-        var p=document.createElement('div'); p.id='kmVaultPanel';
-        p.style.cssText='position:fixed;left:50%;top:12%;transform:translateX(-50%);z-index:2147483041;display:none;'
-          +'background:#fff;border:1px solid #81c784;border-radius:12px;padding:10px;width:min(92vw,360px);'
-          +'font:12px system-ui,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.35)';
-        p.innerHTML='<div style="font-weight:bold;margin-bottom:6px">🧷 線の保存・復元</div>'
-          +'<div id="kmVaultStat" style="color:#33691e;background:#f1f8e9;border-radius:6px;padding:5px;margin-bottom:6px">…</div>'
-          +'<textarea id="kmVaultTa" spellcheck="false" style="width:100%;height:70px;font:11px/1.35 monospace;box-sizing:border-box"></textarea>'
-          +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">'
-          +'<button type="button" id="kmVaultExp">⬇ 書き出し</button>'
-          +'<button type="button" id="kmVaultImp">⬆ 読み込み</button>'
-          +'<button type="button" id="kmVaultRest">↺ 金庫から復元</button>'
-          +'<button type="button" id="kmVaultClose">✕</button></div>'
-          +'<div style="color:#666;font-size:11px;margin-top:5px">書き出したJSONは必ず別の場所に控えてください（端末のデータ削除で消えます）。</div>';
-        document.body.appendChild(p);
-      }
-      var q=function(i){ return document.getElementById(i); };
-      if(q('kmVaultClose')) q('kmVaultClose').onclick=function(ev){ try{ev.preventDefault();}catch(e){} q('kmVaultPanel').style.display='none'; };
-      if(q('kmVaultExp')) q('kmVaultExp').onclick=function(ev){ try{ev.preventDefault();}catch(e){}
-        var t=exportJSON(); q('kmVaultTa').value=t; stat();
-        try{ var blob=new Blob([t],{type:'application/json'}); var a=document.createElement('a');
-          a.href=URL.createObjectURL(blob); a.download='kumanaku_lines_'+Date.now()+'.json';
-          document.body.appendChild(a); a.click(); a.remove(); }catch(e){}
-        try{ q('kmVaultTa').focus(); q('kmVaultTa').select(); }catch(e){} };
-      if(q('kmVaultImp')) q('kmVaultImp').onclick=function(ev){ try{ev.preventDefault();}catch(e){}
-        var msg=importJSON(q('kmVaultTa').value); stat();
-        try{ q('kmVaultStat').textContent=msg+'（再読み込みします）'; }catch(e){}
-        setTimeout(function(){ try{ location.reload(); }catch(e){} },900); };
-      if(q('kmVaultRest')) q('kmVaultRest').onclick=function(ev){ try{ev.preventDefault();}catch(e){}
-        var d=restore(); stat();
-        try{ q('kmVaultStat').textContent=d.length? ('復元: '+d.join(', ')+'（再読み込みします）') : '金庫に戻せる線がありません'; }catch(e){}
-        if(d.length) setTimeout(function(){ try{ location.reload(); }catch(e){} },900); };
-    }catch(e){}
-  }
-  window.__kmVault157API={snapshot:snap, restore:restore, counts:counts, exportJSON:exportJSON, importJSON:importJSON};
-  try{ window.addEventListener('load',function(){ setTimeout(function(){ snap('load'); var d=restore(); ui(); stat(); if(d.length) setTimeout(function(){ try{ location.reload(); }catch(e){} },700); },900); }); }catch(e){}
-  try{ document.addEventListener('visibilitychange',function(){ if(document.hidden) snap('hide'); }); }catch(e){}
-  try{ setInterval(function(){ snap('tick'); if(heal().length) window.__kmVaultHeals=(window.__kmVaultHeals||0)+1; stat(); ui(); },5000); }catch(e){}
-  ui();
-})();
 
-</script>
-<script>/* KM_JOIN_V158 : 既存の線の「端」から描き始めたら、その線の続きとして自動でつなぐ
-   - onUp が線を確定した直後に、いちばん新しい線(last)の端点と既存線の端点を比較
-   - 70m以内なら1本に連結（向きは4通りを自動判定）。超えていれば何もしない
-   - 保存形式は v:96 のまま（lines 配列に pts を足すだけ）で後方互換
-   - チップで入/切を切替（既定は入） */
-(function(){
-  if(window.__kmJoin158) return; window.__kmJoin158=1;
-  var LSK='km_draw_main', THRESH=70, ON=(localStorage.getItem('km_join_v158_on')!=='0');
-  var LAST='';
-  function num(v){ return (typeof v==='number' && isFinite(v)); }
-  function dist(a,b){
-    if(!a||!b||!num(a[0])||!num(a[1])||!num(b[0])||!num(b[1])) return 1e9;
-    var R=6371008.8, la1=a[0]*Math.PI/180, la2=b[0]*Math.PI/180,
-        dLa=(b[0]-a[0])*Math.PI/180, dLo=(b[1]-a[1])*Math.PI/180;
-    var h=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(la1)*Math.cos(la2)*Math.sin(dLo/2)*Math.sin(dLo/2);
-    return 2*R*Math.asin(Math.sqrt(h));
-  }
-  function read(){ try{ return JSON.parse(localStorage.getItem(LSK)||'null'); }catch(e){ return null; } }
-  function ok(o){ return !!(o&&o.pts&&o.pts.length>=2&&num(o.pts[0][0])&&num(o.pts[0][1])); }
-  function refresh(L){
-    var API=window.__kmDrawAPI;
-    if(API&&typeof API.clear==='function'&&typeof API.add==='function'){
-      try{ API.clear(); API.add(L); return 'api'; }catch(e){}
-    }
-    try{ location.reload(); }catch(e){}
-    return 'reload';
-  }
-  function join(){
-    if(!ON) return 'off';
-    var j=read(); if(!j||!j.lines||j.lines.length<2) return 'no';
-    var L=j.lines, last=L[L.length-1];
-    if(!ok(last)) return 'no';
-    var best=-1,bestD=1e9,mode='';
-    for(var i=0;i<L.length-1;i++){
-      var o=L[i]; if(!ok(o)) continue;
-      var aS=last.pts[0], aE=last.pts[last.pts.length-1],
-          bS=o.pts[0], bE=o.pts[o.pts.length-1];
-      var cands=[[dist(aS,bE),'A'],[dist(aS,bS),'B'],[dist(aE,bS),'C'],[dist(aE,bE),'D']];
-      for(var k=0;k<4;k++){ if(cands[k][0]<bestD){ bestD=cands[k][0]; best=i; mode=cands[k][1]; } }
-    }
-    if(best<0) return 'no';
-    if(bestD>THRESH){ LAST='far:'+Math.round(bestD)+'m'; return LAST; }
-    var o=L[best], np;
-    if(mode==='A') np=o.pts.concat(last.pts);
-    else if(mode==='B') np=last.pts.slice().reverse().concat(o.pts);
-    else if(mode==='C') np=last.pts.concat(o.pts);
-    else np=o.pts.concat(last.pts.slice().reverse());
-    L[best]={color:(o.color||last.color), width:(o.width||last.width), pts:np};
-    L.pop();
-    j.lines=L; j.v=96;
-    try{ localStorage.setItem(LSK, JSON.stringify(j)); }catch(e){ return 'store-err'; }
-    var how=refresh(L); LAST='joined:'+Math.round(bestD)+'m/'+how;
-    try{ console.log('[KM_JOIN_V158] '+LAST); }catch(e){}
-    return LAST;
-  }
-  var _old=window.kmAppendStroke;
-  window.kmAppendStroke=function(){
-    var r=false;
-    try{ r=_old? _old.apply(this,arguments):false; }catch(e){ r=false; }
-    if(!r){ try{ setTimeout(join,250); }catch(e){} }   /* 確定→保存の後に連結 */
-    return r;
-  };
-  function chip(){
-    if(document.getElementById('kmJoin158Btn')) return;
-    var b=document.createElement('div'); b.id='kmJoin158Btn';
-    b.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:196px;z-index:2147483060;background:'+(ON?'#0b7a3b':'#666')+';color:#fff;border-radius:16px;padding:6px 12px;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.35)';
-    b.textContent=ON?'🔗 線つなぎ:入（端から描くと続きになります）':'🔗 線つなぎ:切';
-    b.onclick=function(ev){ ON=!ON; try{ localStorage.setItem('km_join_v158_on',ON?'1':'0'); }catch(e){} b.style.background=ON?'#0b7a3b':'#666'; b.textContent=ON?'🔗 線つなぎ:入（端から描くと続きになります）':'🔗 線つなぎ:切'; try{ ev.stopPropagation(); }catch(e){} };
-    b.addEventListener('pointerdown',function(ev){ try{ ev.stopPropagation(); }catch(e){} },true);
-    document.body.appendChild(b);
-  }
-  window.__kmJoin158Join=join;
-  window.__kmJoin158State=function(){ return { on:ON, last:LAST, thresh:THRESH }; };
-  try{ setInterval(chip,1000); }catch(e){}
-  try{ if(document.body) chip(); else document.addEventListener('DOMContentLoaded',chip); }catch(e){}
-})();
-</script>
-<script>/* KM_LINECHECK_V159 : 画面に「線チェック」ボタンを出す（PCのコンソール不要）
-   - 保存キーごとの 本数 / 点数 / 藤井寺周辺の点数 を集計して、画面に表示＋コピーできる
-   - 読み取り専用（保存データは一切変更しない） */
-(function(){
-  if(window.__kmLineCheck159) return; window.__kmLineCheck159=1;
-  var K=['km_draw_main','km_draw_v99','km_draw','km_draw_mine_v1','km_edit_v1','km_draw_vault_v157'];
-  var BOX=null, TA=null, SUP=null;
 
-  window.__kmLineCheck=function(){
-    var out={};
-    K.forEach(function(k){
-      var raw=null; try{ raw=localStorage.getItem(k); }catch(e){}
-      if(!raw){ out[k]='(なし)'; return; }
-      var j=null; try{ j=JSON.parse(raw); }catch(e){ out[k]='解析不能 '+raw.length+'文字'; return; }
-      var lines=(j&&j.lines)||[], near=0, pts=0, list=[];
-      lines.forEach(function(L){
-        var p0=L&&L.pts||[]; list.push(p0.length); pts+=p0.length;
-        p0.forEach(function(p){ if(p && p[0]>34.53 && p[0]<34.61 && p[1]>135.56 && p[1]<135.66) near++; });
-      });
-      out[k]={ 本数:lines.length, 点数:pts, 藤井寺周辺の点数:near, 各線の点数:list };
-    });
-    return out;
-  };
 
-  function line(k,v){
-    if(typeof v==='string') return k+' : '+v;
-    return k+' : 本数 '+v.本数+' / 点数 '+v.点数+' / 藤井寺周辺 '+v.藤井寺周辺の点数+'  ['+v.各線の点数.join('・')+']';
-  }
-
-  function build(){
-    if(document.getElementById('chkBox159')) return;
-    BOX=document.createElement('div'); BOX.id='chkBox159';
-    BOX.style.cssText='position:fixed;inset:0;z-index:2147483600;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:12px';
-    BOX.innerHTML='<div style="background:#fff;color:#111;border-radius:12px;max-width:520px;width:100%;max-height:86vh;overflow:auto;padding:12px">'
-      +'<div style="font-weight:800;font-size:15px;margin-bottom:6px">🔍 線データの残り確認（読み取りのみ）</div>'
-      +'<div id="chkSum159" style="font-size:13px;line-height:1.6;margin:6px 0 8px"></div>'
-      +'<textarea id="chkTa159" readonly style="width:100%;height:170px;font:12px/1.45 monospace;border:1px solid #ccc;border-radius:8px;padding:6px;box-sizing:border-box"></textarea>'
-      +'<div style="display:flex;gap:8px;margin-top:8px">'
-      +'<button id="chkCopy159" style="flex:1;padding:10px;border:0;border-radius:8px;background:#0b7a3b;color:#fff;font-weight:700">📋 全部コピー</button>'
-      +'<button id="chkClose159" style="flex:1;padding:10px;border:0;border-radius:8px;background:#444;color:#fff;font-weight:700">✕ 閉じる</button>'
-      +'</div>'
-      +'<div style="font-size:11px;color:#555;margin-top:6px">藤井寺周辺 = 緯度34.53〜34.61 / 経度135.56〜135.66 の中にある点の数です。</div>'
-      +'</div>';
-    document.body.appendChild(BOX);
-    TA=BOX.querySelector('#chkTa159'); SUP=BOX.querySelector('#chkSum159');
-    BOX.querySelector('#chkClose159').onclick=function(ev){ BOX.style.display='none'; try{ ev.stopPropagation(); }catch(e){} };
-    BOX.querySelector('#chkCopy159').onclick=function(ev){
-      try{ TA.focus(); TA.select(); document.execCommand('copy'); }catch(e){}
-      try{ if(navigator.clipboard) navigator.clipboard.writeText(TA.value); }catch(e){}
-      this.textContent='✅ コピーしました'; var b=this;
-      setTimeout(function(){ b.textContent='📋 全部コピー'; },1600);
-      try{ ev.stopPropagation(); }catch(e){}
-    };
-  }
-
-  function show(){
-    build();
-    var o=window.__kmLineCheck(); var main=null;
-    try{ main=JSON.parse(localStorage.getItem('km_draw_main')||'null'); }catch(e){}
-    var n=(main&&main.lines)?main.lines.length:(typeof o['km_draw_main']==='object'?o['km_draw_main'].本数:0);
-    var near=(typeof o['km_draw_main']==='object')?o['km_draw_main'].藤井寺周辺の点数:0;
-    var vault=(typeof o['km_draw_vault_v157']==='object')?o['km_draw_vault_v157'].本数:0;
-    SUP.innerHTML='<b style="font-size:15px">'+(n?'✅ 線は残っています：'+n+'本':'❌ 線は残っていません：0本')+'</b>'
-      +'<br>そのうち藤井寺周辺の点：<b>'+near+'</b>'
-      +'<br>金庫(v157)の線：'+vault+'本'
-      +'<br><span style="color:#555">※「(なし)」はそのキーに何も保存されていないという意味です。</span>';
-    TA.value=JSON.stringify(o,null,2);
-    BOX.style.display='flex';
-  }
-
-  function chip(){
-    if(document.getElementById('kmChk159Btn')) return;
-    var b=document.createElement('div'); b.id='kmChk159Btn';
-    b.style.cssText='position:fixed;left:8px;top:504px;z-index:2147483050;background:#1d4ed8;color:#fff;border-radius:14px;padding:7px 11px;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.35)';
-    b.textContent='🔍 線チェック';
-    b.onclick=function(ev){ try{ ev.stopPropagation(); }catch(e){} show(); };
-    b.addEventListener('pointerdown',function(ev){ try{ ev.stopPropagation(); }catch(e){} },true);
-    document.body.appendChild(b);
-  }
-  window.__kmLineCheckUI=show;
-  try{ setInterval(chip,1000); }catch(e){}
-  try{ if(document.body) chip(); else document.addEventListener('DOMContentLoaded',chip); }catch(e){}
-})();
-</script>
 <script>/* KM_AUTOSAVE_V163 : 自動保存（これだけを追加。他の動作は変更しない）
    - 線を描いた直後（短い待ち時間のあと）と、画面を離れた時／隠れた時に保存する
    - 保存はアプリ本体と同じキー km_draw_main と同じ形（v:96 / lines）を使う
@@ -10055,298 +9736,249 @@ function boot(){ apply(); addBtn2(); label(); }
     window.__kmAutoSaveState=function(){ return { main:nLines(raw(K)), bak:nLines(raw(B)), hasState:!!S() }; };
   }catch(e){}
 })();</script>
-<script>/* KM_ROUTENAV_V164 : 手描き線のナビ案内＋GPX/KML書き出し（追加のみ・既存コードは変更しない）
-   - 保存済みの手描き線（km_draw_main の lines[].pts = [緯度,経度]）を読み、現在地をGPSで追う
-   - 表示: 線までの距離 / 次の折れ点までの距離と方角 / 進んだ割合 / 線から外れた警告
-   - 歩いた区間を緑で塗る。折れ点が近づいたら短い音＋読み上げ（日本語）
-   - GPX / KML 書き出しボタン（線の形をそのまま保持・Googleマップの経由地制限を受けない）
-   - 既定は「切」。使うときだけチップをタップして開始する */
+<script>/* KM_ROUTENAV_V165 : 手描き線のナビ＋GPX/KML書き出し（完全に独立・押すまで一切動かない）
+   - 起動時に作るのは左下のチップ1つだけ。層・マーカー・位置情報の取得は一切しない
+   - パネルは「線ナビ」を押した時だけ生成し、閉じれば何も残さない
+   - 案内中だけ保存済みの手描き線（km_draw_main の lines[].pts=[緯度,経度]）を読む
+   - 歩いた区間を緑で塗る。停止で完全に片付ける
+   - window/document の全体イベントは一切つかまない＝手描き・消しゴムに干渉しない
+   - 自動開始はしない（前回の状態を復元しない） */
 (function(){
+  'use strict';
   try{
-    if(window.__kmRouteNav164) return; window.__kmRouteNav164=1;
-    var K='km_draw_main', BAK=K+'_bak', SELKEY='km_nav_sel_v164', ONKEY='km_nav_on_v164';
-    var OFF_TH=40, BEND_TH=25, NEAR_BEND=90, GOAL_TH=25;
-    var watchId=null, ACTIVE=false, SEL=0, LINES=[], covLayer=null, lastOff=0, spoke={}, progLast=0;
+    if(window.__kmNav165) return; window.__kmNav165=1;
+    var K='km_draw_main', SELKEY='km_nav_sel_v165', GCOL='#16a34a';
+    var OFF_TH=40, BEND_TH=25, NEAR=90, GOAL=25;
+    var SEL=0, LINES=[], ACTIVE=false, wid=null, cov=null, bar=null, pn=null, spoke={}, lastOff=0, lastC=null;
 
     function raw(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
-    function num(v){ return (typeof v==='number'&&isFinite(v)); }
-    function parse(t){ try{ return JSON.parse(t||'null'); }catch(e){ return null; } }
+    function isN(v){ return (typeof v==='number'&&isFinite(v)); }
+    function J(t){ try{ return JSON.parse(t||'null'); }catch(e){ return null; } }
+    function hv(a,b){ var la1=a[0]*Math.PI/180,la2=b[0]*Math.PI/180,dLa=(b[0]-a[0])*Math.PI/180,dLo=(b[1]-a[1])*Math.PI/180;
+      var h=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(la1)*Math.cos(la2)*Math.sin(dLo/2)*Math.sin(dLo/2);
+      return 2*6371008.8*Math.asin(Math.min(1,Math.sqrt(h))); }
+    function brg(a,b){ var la1=a[0]*Math.PI/180,la2=b[0]*Math.PI/180,dLo=(b[1]-a[1])*Math.PI/180;
+      var y=Math.sin(dLo)*Math.cos(la2), x=Math.cos(la1)*Math.sin(la2)-Math.sin(la1)*Math.cos(la2)*Math.cos(dLo);
+      return (Math.atan2(y,x)*180/Math.PI+360)%360; }
+    function dname(d){ return ['北','北東','東','南東','南','南西','西','北西'][Math.round(((d%360)+360)%360/45)%8]; }
 
     function collect(){
-      var out=[], seen={};
-      function take(j){
-        var L=(j&&j.lines)||[];
-        for(var i=0;i<L.length;i++){
-          var o=L[i]; if(!o||!o.pts||o.pts.length<2) continue;
-          var pts=[]; for(var k=0;k<o.pts.length;k++){ var p=o.pts[k]; if(p&&num(p[0])&&num(p[1])) pts.push([+p[0],+p[1]]); }
-          if(pts.length<2) continue;
-          var key=pts[0][0].toFixed(5)+','+pts[0][1].toFixed(5)+'|'+pts.length+'|'+pts[pts.length-1][0].toFixed(5)+','+pts[pts.length-1][1].toFixed(5);
-          if(seen[key]) continue; seen[key]=1;
-          out.push({pts:pts, color:(o.color||'#e11d48'), width:(o.width||4), name:(o.name||('線 '+(out.length+1)))});
-        }
+      var j=J(raw(K)), out=[], L=(j&&j.lines)||[];
+      for(var i=0;i<L.length;i++){
+        var o=L[i]; if(!o||!o.pts||o.pts.length<2) continue;
+        var p=[]; for(var k=0;k<o.pts.length;k++){ var q=o.pts[k]; if(q&&isN(q[0])&&isN(q[1])) p.push([+q[0],+q[1]]); }
+        if(p.length>1) out.push({pts:p, name:(o.name||('線 '+(out.length+1)))});
       }
-      take(parse(raw(K)));
-      try{ var st=window.KM_DRAW_STATE; if(st&&st.lines) take({lines:st.lines}); }catch(e){}
       return out;
     }
-    function reload(){ LINES=collect(); try{ SEL=Math.max(0,Math.min(LINES.length-1,parseInt(raw(SELKEY)||'0',10)||0)); }catch(e){ SEL=0; } }
-    reload();
+    function reload(){
+      LINES=collect();
+      var s=parseInt(raw(SELKEY)||'0',10); if(!isFinite(s)) s=0;
+      SEL=Math.max(0,Math.min(Math.max(0,LINES.length-1),s));
+    }
+    function totalOf(L){ var m=0; for(var i=1;i<L.pts.length;i++) m+=hv(L.pts[i-1],L.pts[i]); return m; }
 
-    /* ---- 距離・方角・線への射影（メートル基準） ---- */
-    var KX=111320, KY=110540;
-    function hv(a,b){
-      var la1=a[0]*Math.PI/180, la2=b[0]*Math.PI/180, dLa=(b[0]-a[0])*Math.PI/180, dLo=(b[1]-a[1])*Math.PI/180;
-      var h=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(la1)*Math.cos(la2)*Math.sin(dLo/2)*Math.sin(dLo/2);
-      return 2*6371008.8*Math.asin(Math.min(1,Math.sqrt(h)));
-    }
-    function brg(a,b){
-      var la1=a[0]*Math.PI/180, la2=b[0]*Math.PI/180, dLo=(b[1]-a[1])*Math.PI/180;
-      var y=Math.sin(dLo)*Math.cos(la2), x=Math.cos(la1)*Math.sin(la2)-Math.sin(la1)*Math.cos(la2)*Math.cos(dLo);
-      return (Math.atan2(y,x)*180/Math.PI+360)%360;
-    }
-    function dirName(d){ var n=['北','北東','東','南東','南','南西','西','北西']; return n[Math.round(((d%360)+360)%360/45)%8]; }
     function proj(p,a,b){
-      var kx=KX*Math.cos(a[0]*Math.PI/180);
-      var bx=(b[1]-a[1])*kx, by=(b[0]-a[0])*KY;
-      var px=(p[1]-a[1])*kx, py=(p[0]-a[0])*KY;
+      var KX=111320, KY=110540, kx=KX*Math.cos(a[0]*Math.PI/180);
+      var bx=(b[1]-a[1])*kx, by=(b[0]-a[0])*KY, px=(p[1]-a[1])*kx, py=(p[0]-a[0])*KY;
       var L2=bx*bx+by*by, L0=Math.sqrt(L2);
       var t=L2>0?Math.max(0,Math.min(1,(px*bx+py*by)/L2)):0;
-      var cx=bx*t, cy=by*t, d=Math.sqrt((px-cx)*(px-cx)+(py-cy)*(py-cy));
-      return {t:t, dist:d, len:L0, along:t*L0};
+      var cx=bx*t, cy=by*t;
+      return {dist:Math.sqrt((px-cx)*(px-cx)+(py-cy)*(py-cy)), len:L0, along:t*L0};
     }
     function calc(lat,lng){
-      if(!LINES.length) return {ok:false,why:'no-lines'};
-      var L=LINES[SEL]; if(!L||L.pts.length<2) return {ok:false,why:'no-line'};
-      var P=[lat,lng], best=null, cum=0, acc=0, cumAt=[0];
+      if(!LINES.length) return {ok:false, why:'no-lines'};
+      var L=LINES[SEL]; if(!L||L.pts.length<2) return {ok:false, why:'no-line'};
+      var P=[lat,lng], best=null, acc=0, cumAt=[0];
       for(var i=0;i<L.pts.length-1;i++){
         var r=proj(P,L.pts[i],L.pts[i+1]);
-        if(!best||r.dist<best.dist){ best={dist:r.dist, seg:i, t:r.t, progress:acc+r.along}; }
+        if(!best||r.dist<best.dist) best={dist:r.dist, seg:i, progress:acc+r.along};
         acc+=r.len; cumAt.push(acc);
       }
-      var total=acc;
-      /* 次の折れ点（曲がり角>=25度）。無ければ終点 */
-      var nextIdx=-1, nextTurn=null, pi=best.seg;
-      for(var j=pi+1;j<L.pts.length;j++){
+      var total=acc, ni=-1;
+      for(var j=best.seg+1;j<L.pts.length;j++){
         var ang=0;
-        if(j>=1 && j<L.pts.length-1){
-          var b1=brg(L.pts[j-1],L.pts[j]), b2=brg(L.pts[j],L.pts[j+1]);
-          ang=Math.abs(((b2-b1+540)%360)-180);
-        }
-        var ahead=(cumAt[j]||0) > best.progress+5;
-        if(ahead && (j===L.pts.length-1 || ang>=BEND_TH)){ nextIdx=j; nextTurn=ang; break; }
+        if(j>=1&&j<L.pts.length-1){ var b1=brg(L.pts[j-1],L.pts[j]), b2=brg(L.pts[j],L.pts[j+1]); ang=Math.abs(((b2-b1+540)%360)-180); }
+        if((cumAt[j]||0)>best.progress+5 && (j===L.pts.length-1||ang>=BEND_TH)){ ni=j; break; }
       }
-      if(nextIdx<0) nextIdx=L.pts.length-1;
-      var nv=L.pts[nextIdx], dNext=hv(P,nv), dB=brg(P,nv);
+      if(ni<0) ni=L.pts.length-1;
+      var nv=L.pts[ni], dn=hv(P,nv), db=brg(P,nv);
       return {ok:true, dist:best.dist, off:(best.dist>OFF_TH), progress:best.progress, total:total,
-        remain:Math.max(0,total-best.progress), pct:total>0?Math.min(100,(best.progress/total)*100):0,
-        nextIdx:nextIdx, nextTurn:nextTurn, nextM:dNext, nextDir:dirName(dB), goal:(nextIdx===L.pts.length-1),
-        lineName:L.name};
+        remain:Math.max(0,total-best.progress), pct:(total>0?Math.min(100,(best.progress/total)*100):0),
+        nextIdx:ni, nextM:dn, nextDir:dname(db), goal:(ni===L.pts.length-1), name:L.name};
     }
 
-    /* ---- 音と読み上げ ---- */
-    function beep(f,d){
-      try{
-        var AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
-        var ac=beep._ac||(beep._ac=new AC()); if(ac.state==='suspended'){ try{ ac.resume(); }catch(e){} }
-        var o=ac.createOscillator(), g=ac.createGain();
-        o.type='sine'; o.frequency.value=f||880;
-        g.gain.value=0.0001; o.connect(g); g.connect(ac.destination);
-        var t0=ac.currentTime, len=(d||0.14);
-        g.gain.exponentialRampToValueAtTime(0.25,t0+0.02);
-        g.gain.exponentialRampToValueAtTime(0.0001,t0+len);
-        o.start(t0); o.stop(t0+len+0.02);
-      }catch(e){}
-    }
-    function speak(t){
-      try{ window.__kmNavSpeakLog=(window.__kmNavSpeakLog||[]); window.__kmNavSpeakLog.push(t); }catch(e){}
-      try{
-        var SS=window.speechSynthesis; if(!SS||!window.SpeechSynthesisUtterance) return;
-        try{ SS.cancel(); }catch(e){}
-        var u=new SpeechSynthesisUtterance(t); u.lang='ja-JP'; u.rate=1.05;
-        SS.speak(u);
-      }catch(e){}
-    }
-
-    /* ---- 画面 ---- */
-    var BAR=null;
-    function bar(){
-      if(BAR&&BAR.parentNode) return BAR;
-      BAR=document.createElement('div'); BAR.id='knNavBar164';
-      BAR.style.cssText='position:fixed;left:6px;right:6px;top:62px;z-index:2147483070;background:rgba(17,24,39,.92);color:#fff;border-radius:10px;padding:7px 10px;font-size:13px;line-height:1.5;display:none;box-shadow:0 2px 10px rgba(0,0,0,.4)';
-      document.body.appendChild(BAR); return BAR;
-    }
-    function showBar(html,off){
-      var b=bar(); b.style.display='block'; b.style.background=off?'rgba(153,27,27,.95)':'rgba(17,24,39,.92)'; b.innerHTML=html;
-    }
-    function hideBar(){ if(BAR) BAR.style.display='none'; }
+    function bark(){ if(!bar||!bar.parentNode){ bar=document.createElement('div'); bar.id='knNavBar165';
+        bar.style.cssText='position:fixed;left:6px;right:6px;top:62px;z-index:2147483070;background:rgba(17,24,39,.92);color:#fff;border-radius:10px;padding:7px 10px;font-size:13px;line-height:1.5;box-shadow:0 2px 10px rgba(0,0,0,.4)';
+        document.body.appendChild(bar); } return bar; }
+    function showBar(h,warn){ var b=bark(); b.style.display='block'; b.style.background=warn?'rgba(153,27,27,.95)':'rgba(17,24,39,.92)'; b.innerHTML=h; }
+    function hideBar(){ if(bar) bar.style.display='none'; }
 
     function cover(P){
       try{
-        var map=window.map, Lg=window.L; if(!map||!Lg||!map.addLayer) return;
+        var mp=window.map, Lg=window.L; if(!mp||!Lg||!mp.addLayer) return;
         var L=LINES[SEL]; if(!L) return;
         var r=calc(P[0],P[1]); if(!r.ok) return;
-        var pts=L.pts.slice(0,r.seg+1).concat([P]);
-        if(covLayer){ try{ map.removeLayer(covLayer); }catch(e){} }
-        covLayer=Lg.polyline(pts,{color:'#16a34a',weight:5,opacity:0.9,interactive:false});
-        map.addLayer(covLayer);
+        var pts=L.pts.slice(0,r.seg+1).concat([[P[0],P[1]]]);
+        if(cov){ try{ mp.removeLayer(cov); }catch(e){} cov=null; }
+        cov=Lg.polyline(pts,{color:GCOL,weight:5,opacity:0.9,interactive:false});
+        mp.addLayer(cov);
+      }catch(e){}
+    }
+    function uncov(){ try{ if(cov&&window.map) window.map.removeLayer(cov); }catch(e){} cov=null; }
+
+    function beep(f,d){
+      try{
+        var AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+        var ac=beep._c||(beep._c=new AC()); if(ac.state==='suspended'){ try{ ac.resume(); }catch(e){} }
+        var o=ac.createOscillator(), g=ac.createGain(); o.type='sine'; o.frequency.value=f;
+        g.gain.value=0.0001; o.connect(g); g.connect(ac.destination);
+        var t=ac.currentTime, L=d||0.14;
+        g.gain.exponentialRampToValueAtTime(0.25,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+L);
+        o.start(t); o.stop(t+L+0.02);
+      }catch(e){}
+    }
+    function speak(t){
+      try{ (window.__kmNav165Speak=window.__kmNav165Speak||[]).push(t); }catch(e){}
+      try{ var S=window.speechSynthesis; if(!S||!window.SpeechSynthesisUtterance) return;
+        try{ S.cancel(); }catch(e){}
+        var u=new SpeechSynthesisUtterance(t); u.lang='ja-JP'; u.rate=1.05; S.speak(u);
       }catch(e){}
     }
 
-    var lastCalc=null;
     function apply(lat,lng){
-      lastCalc=calc(lat,lng);
-      if(!lastCalc.ok){
-        showBar('🧭 線ナビ：手描きの線がありません。先に線を描いてください。',true);
-        return lastCalc;
-      }
-      var r=lastCalc;
-      var head='🧭 <b>'+r.lineName+'</b>　線まで <b>'+Math.round(r.dist)+'m</b>　次の折れ点 <b>'+Math.round(r.nextM)+'m</b> '+r.nextDir+(r.goal?'（終点）':'');
+      if(!ACTIVE) return {ok:false, why:'inactive'};
+      var r=calc(lat,lng); lastC=r;
+      if(!r.ok){ showBar('🧭 手描きの線がありません。先に線を描いてください。',true); return r; }
+      var head='🧭 <b>'+r.name+'</b>　線まで <b>'+Math.round(r.dist)+'m</b>　次の折れ点 <b>'+Math.round(r.nextM)+'m</b> '+r.nextDir+(r.goal?'（終点）':'');
       var sub='進んだ '+Math.round(r.progress)+'m / '+Math.round(r.total)+'m（'+r.pct.toFixed(0)+'%）　残り '+Math.round(r.remain)+'m';
-      if(r.off){ head='⚠ <b>線から外れています</b>（'+Math.round(r.dist)+'m）　最寄りへ '+r.nextDir+' '+Math.round(Math.min(r.nextM,r.dist))+'m'; }
+      if(r.off) head='⚠ <b>線から外れています</b>（'+Math.round(r.dist)+'m）　最寄りへ '+r.nextDir+' '+Math.round(r.dist)+'m';
       showBar(head+'<br><span style="opacity:.85">'+sub+'</span>', r.off);
       cover([lat,lng]);
       var now=Date.now();
       if(r.off && now-lastOff>20000){ lastOff=now; beep(420,0.18); speak('線から外れています'); }
       if(!r.off){
         var key='b'+r.nextIdx;
-        if(r.nextM<=NEAR_BEND && !spoke[key]){ spoke[key]=1; beep(r.goal?980:880,0.13); speak(r.goal?'まもなく終点です':'まもなく'+(r.goal?'終点':'折れ点')+'、'+r.nextDir+'です'); }
-        if(r.goal && r.nextM<=GOAL_TH && !spoke['goal']){ spoke['goal']=1; beep(1046,0.22); speak('終点に到着しました'); }
+        if(r.nextM<=NEAR && !spoke[key]){ spoke[key]=1; beep(r.goal?980:880,0.13); speak(r.goal?'まもなく終点です':'まもなく折れ点、'+r.nextDir+'です'); }
+        if(r.goal && r.nextM<=GOAL && !spoke.g){ spoke.g=1; beep(1046,0.22); speak('終点に到着しました'); }
       }
       return r;
     }
 
     function start(){
-      if(!window.navigator||!navigator.geolocation){ showBar('🧭 この端末では位置情報が使えません',true); return 'no-geo'; }
-      reload(); if(!LINES.length){ showBar('🧭 手描きの線がありません。先に線を描いてください。',true); return 'no-lines'; }
-      ACTIVE=true; try{ localStorage.setItem(ONKEY,'1'); }catch(e){}
-      spoke={}; lastOff=0;
+      reload();
+      if(!LINES.length){ showBar('🧭 手描きの線がありません。先に線を描いてください。',true); return 'no-lines'; }
+      if(!(window.navigator&&navigator.geolocation)){ showBar('🧭 この端末では位置情報が使えません',true); return 'no-geo'; }
+      ACTIVE=true; spoke={}; lastOff=0;
       var L=LINES[SEL];
-      speak('線ナビを開始します。全長 約'+ (Math.round(L.pts.reduce(function(a,p,i,arr){return i?a+hv(arr[i-1],p):0;},0)/100)/10) +'キロ');
+      speak('線ナビを開始します。全長 約'+(Math.round(totalOf(L)/100)/10)+'キロ');
       try{
-        watchId=navigator.geolocation.watchPosition(function(pos){
-          try{ apply(pos.coords.latitude,pos.coords.longitude); }catch(e){}
-        },function(err){
-          showBar('🧭 位置情報を取得できません（'+((err&&err.message)||'error')+'）。HTTPSのページで開いているか、位置情報の許可をご確認ください。',true);
-        },{enableHighAccuracy:true,maximumAge:2000,timeout:20000});
-      }catch(e){ return 'watch-err'; }
-      tick(); return 'started';
+        wid=navigator.geolocation.watchPosition(function(p){
+          if(!ACTIVE) return; try{ apply(p.coords.latitude,p.coords.longitude); }catch(e){}
+        },function(e){ if(!ACTIVE) return; showBar('🧭 位置情報を取得できません（'+((e&&e.message)||'error')+'）',true); },
+        {enableHighAccuracy:true,maximumAge:2000,timeout:20000});
+      }catch(e){ ACTIVE=false; return 'watch-err'; }
+      return 'started';
     }
     function stop(){
-      ACTIVE=false; try{ localStorage.setItem(ONKEY,'0'); }catch(e){}
-      try{ if(watchId!=null) navigator.geolocation.clearWatch(watchId); }catch(e){}
-      watchId=null;
-      try{ if(covLayer&&window.map){ window.map.removeLayer(covLayer); } }catch(e){}
-      covLayer=null; hideBar(); return 'stopped';
+      ACTIVE=false;
+      try{ if(wid!=null&&navigator.geolocation) navigator.geolocation.clearWatch(wid); }catch(e){}
+      wid=null; uncov(); hideBar(); return 'stopped';
     }
-    function tick(){ if(!ACTIVE) return; setTimeout(function(){ try{ if(lastCalc&&lastCalc.ok){ apply(lastCalc.lat||0,0); } }catch(e){} tick(); },15000); }
 
-    /* ---- GPX / KML ---- */
     function esc(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
     function gpx(i){
-      reload(); var L=LINES[i==null?SEL:i]; if(!L) return '';
+      reload(); var L=LINES[(i==null?SEL:i)]; if(!L) return '';
       var s='<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="kumanaku" xmlns="http://www.topografix.com/GPX/1/1">\n<trk><name>'+esc(L.name)+'</name><trkseg>\n';
-      for(var k=0;k<L.pts.length;k++){ s+='<trkpt lat="'+L.pts[k][0]+'" lon="'+L.pts[k][1]+'"></trkpt>\n'; }
+      for(var k=0;k<L.pts.length;k++) s+='<trkpt lat="'+L.pts[k][0]+'" lon="'+L.pts[k][1]+'"></trkpt>\n';
       return s+'</trkseg></trk>\n</gpx>\n';
     }
     function kml(i){
-      reload(); var L=LINES[i==null?SEL:i]; if(!L) return '';
+      reload(); var L=LINES[(i==null?SEL:i)]; if(!L) return '';
       var c=[]; for(var k=0;k<L.pts.length;k++) c.push(L.pts[k][1]+','+L.pts[k][0]+',0');
       return '<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document>\n<Placemark><name>'+esc(L.name)+'</name>\n<LineString><coordinates>'+c.join(' ')+'</coordinates></LineString>\n</Placemark></Document></kml>\n';
     }
-    function dl(name,text,mime){
+    function dl(name,txt,mime){
       try{
-        var b=new Blob([text],{type:mime||'application/octet-stream'});
-        var a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name;
-        document.body.appendChild(a); a.click(); setTimeout(function(){ try{ URL.revokeObjectURL(a.href); a.remove(); }catch(e){} },1500);
-        return true;
+        var b=new Blob([txt],{type:mime}), a=document.createElement('a');
+        a.href=URL.createObjectURL(b); a.download=name; document.body.appendChild(a); a.click();
+        setTimeout(function(){ try{ URL.revokeObjectURL(a.href); a.remove(); }catch(e){} },1500); return true;
       }catch(e){ return false; }
     }
 
-    /* ---- パネル ---- */
-    var PN=null;
     function panel(){
-      if(PN&&PN.parentNode) return PN;
-      PN=document.createElement('div'); PN.id='knNavPn164';
-      PN.style.cssText='position:fixed;inset:0;z-index:2147483600;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:12px';
-      PN.innerHTML='<div style="background:#fff;color:#111;border-radius:12px;max-width:520px;width:100%;max-height:86vh;overflow:auto;padding:12px">'
+      if(pn&&pn.parentNode) return pn;
+      pn=document.createElement('div'); pn.id='knNavPn165';
+      pn.style.cssText='position:fixed;inset:0;z-index:2147483600;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:12px';
+      pn.innerHTML='<div style="background:#fff;color:#111;border-radius:12px;max-width:520px;width:100%;max-height:86vh;overflow:auto;padding:12px">'
         +'<div style="font-weight:800;font-size:15px;margin-bottom:6px">🧭 線ナビ（手描きの線を案内）</div>'
         +'<div style="font-size:12px;color:#555;margin-bottom:8px">案内する線を選んで「開始」を押してください。歩いた区間は地図上で緑に塗られます。</div>'
-        +'<select id="knNavSel164" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:8px;margin-bottom:8px"></select>'
-        +'<div id="knNavInfo164" style="font-size:12px;line-height:1.6;background:#f3f4f6;border-radius:8px;padding:8px;margin-bottom:8px"></div>'
+        +'<select id="knNavSel165" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:8px;margin-bottom:8px"></select>'
+        +'<div id="knNavInfo165" style="font-size:12px;line-height:1.6;background:#f3f4f6;border-radius:8px;padding:8px;margin-bottom:8px"></div>'
         +'<div style="display:flex;gap:8px;margin-bottom:8px">'
-        +'<button id="knNavGo164" style="flex:1;padding:11px;border:0;border-radius:8px;background:#0b7a3b;color:#fff;font-weight:700">▶ 開始</button>'
-        +'<button id="knNavStop164" style="flex:1;padding:11px;border:0;border-radius:8px;background:#444;color:#fff;font-weight:700">■ 停止</button>'
+        +'<button id="knNavGo165" style="flex:1;padding:11px;border:0;border-radius:8px;background:#0b7a3b;color:#fff;font-weight:700">▶ 開始</button>'
+        +'<button id="knNavStop165" style="flex:1;padding:11px;border:0;border-radius:8px;background:#444;color:#fff;font-weight:700">■ 停止</button>'
         +'</div>'
         +'<div style="display:flex;gap:8px;margin-bottom:8px">'
-        +'<button id="knNavGpx164" style="flex:1;padding:10px;border:0;border-radius:8px;background:#1d4ed8;color:#fff;font-weight:700">⬇ GPX書き出し</button>'
-        +'<button id="knNavKml164" style="flex:1;padding:10px;border:0;border-radius:8px;background:#1d4ed8;color:#fff;font-weight:700">⬇ KML書き出し</button>'
+        +'<button id="knNavGpx165" style="flex:1;padding:10px;border:0;border-radius:8px;background:#1d4ed8;color:#fff;font-weight:700">⬇ GPX書き出し</button>'
+        +'<button id="knNavKml165" style="flex:1;padding:10px;border:0;border-radius:8px;background:#1d4ed8;color:#fff;font-weight:700">⬇ KML書き出し</button>'
         +'</div>'
-        +'<button id="knNavClose164" style="width:100%;padding:10px;border:0;border-radius:8px;background:#e5e7eb;color:#111;font-weight:700">✕ 閉じる</button>'
-        +'<div style="font-size:11px;color:#555;margin-top:8px">GPX/KMLは線の形をそのまま保つので、YAMAP・ジオグラフィカ等に読み込めます。Googleマップは経由地の数に制限があり、道路に沿って引き直されるため形は変わりません。</div>'
+        +'<button id="knNavClose165" style="width:100%;padding:10px;border:0;border-radius:8px;background:#e5e7eb;color:#111;font-weight:700">✕ 閉じる</button>'
+        +'<div style="font-size:11px;color:#555;margin-top:8px">GPX/KMLは線の形をそのまま保つので、YAMAP・ジオグラフィカ等に読み込めます。</div>'
         +'</div>';
-      document.body.appendChild(PN);
-      function sync(){
-        reload();
-        var s=PN.querySelector('#knNavSel164'); s.innerHTML='';
-        if(!LINES.length){ var o=document.createElement('option'); o.textContent='（手描きの線がありません）'; s.appendChild(o); }
-        for(var i=0;i<LINES.length;i++){
-          var op=document.createElement('option'); op.value=i;
-          var m=0; for(var k=1;k<LINES[i].pts.length;k++) m+=hv(LINES[i].pts[k-1],LINES[i].pts[k]);
-          op.textContent='線 '+(i+1)+'　全長 '+Math.round(m)+'m　点 '+LINES[i].pts.length;
-          s.appendChild(op);
-        }
-        s.value=SEL;
-        var m2=0; if(LINES[SEL]){ for(var q=1;q<LINES[SEL].pts.length;q++) m2+=hv(LINES[SEL].pts[q-1],LINES[SEL].pts[q]); }
-        PN.querySelector('#knNavInfo164').innerHTML = LINES.length
-          ? ('選択中: <b>線 '+(SEL+1)+'</b>　全長 <b>'+Math.round(m2)+'m</b><br>状態: '+(ACTIVE?'<b style="color:#0b7a3b">案内中</b>':'停止中')+'　外れ判定: '+OFF_TH+'m')
-          : '手描きの線が見つかりません。線を描いてから開いてください。';
-      }
-      s2=null;
-      PN.querySelector('#knNavSel164').onchange=function(ev){ SEL=parseInt(this.value,10)||0; try{ localStorage.setItem(SELKEY,String(SEL)); }catch(e){} spoke={}; sync(); try{ ev.stopPropagation(); }catch(e){} };
-      PN.querySelector('#knNavGo164').onclick=function(ev){ var r=start(); sync(); try{ ev.stopPropagation(); }catch(e){} };
-      PN.querySelector('#knNavStop164').onclick=function(ev){ stop(); sync(); try{ ev.stopPropagation(); }catch(e){} };
-      PN.querySelector('#knNavGpx164').onclick=function(ev){ var t=gpx(); var ok=t?dl('kumanaku_line_'+(SEL+1)+'.gpx',t,'application/gpx+xml'):false; this.textContent=ok?'✅ 書き出しました':'⚠ 線がありません'; var b=this; setTimeout(function(){ b.textContent='⬇ GPX書き出し'; },1800); try{ ev.stopPropagation(); }catch(e){} };
-      PN.querySelector('#knNavKml164').onclick=function(ev){ var t=kml(); var ok=t?dl('kumanaku_line_'+(SEL+1)+'.kml',t,'application/vnd.google-earth.kml+xml'):false; this.textContent=ok?'✅ 書き出しました':'⚠ 線がありません'; var b=this; setTimeout(function(){ b.textContent='⬇ KML書き出し'; },1800); try{ ev.stopPropagation(); }catch(e){} };
-      PN.querySelector('#knNavClose164').onclick=function(ev){ PN.style.display='none'; try{ ev.stopPropagation(); }catch(e){} };
-      PN._sync=sync; return PN;
+      document.body.appendChild(pn);
+      pn.querySelector('#knNavSel165').onchange=function(){ SEL=parseInt(this.value,10)||0; try{ localStorage.setItem(SELKEY,String(SEL)); }catch(e){} spoke={}; sync(); };
+      pn.querySelector('#knNavGo165').onclick=function(){ var r=start(); sync(); this.blur(); };
+      pn.querySelector('#knNavStop165').onclick=function(){ stop(); sync(); this.blur(); };
+      pn.querySelector('#knNavGpx165').onclick=function(){ var t=gpx(), ok=!!t&&dl('kumanaku_line_'+(SEL+1)+'.gpx',t,'application/gpx+xml'), b=this; b.textContent=ok?'✅ 書き出しました':'⚠ 線がありません'; setTimeout(function(){ b.textContent='⬇ GPX書き出し'; },1800); };
+      pn.querySelector('#knNavKml165').onclick=function(){ var t=kml(), ok=!!t&&dl('kumanaku_line_'+(SEL+1)+'.kml',t,'application/vnd.google-earth.kml+xml'), b=this; b.textContent=ok?'✅ 書き出しました':'⚠ 線がありません'; setTimeout(function(){ b.textContent='⬇ KML書き出し'; },1800); };
+      pn.querySelector('#knNavClose165').onclick=function(){ pn.style.display='none'; };
+      return pn;
     }
-    function open(){ var p=panel(); p._sync(); p.style.display='flex'; }
+    function sync(){
+      reload();
+      var s=pn.querySelector('#knNavSel165'); s.innerHTML='';
+      if(!LINES.length){ var o=document.createElement('option'); o.textContent='（手描きの線がありません）'; s.appendChild(o); }
+      for(var i=0;i<LINES.length;i++){ var op=document.createElement('option'); op.value=i; op.textContent='線 '+(i+1)+'　全長 '+Math.round(totalOf(LINES[i]))+'m　点 '+LINES[i].pts.length; s.appendChild(op); }
+      s.value=String(SEL);
+      pn.querySelector('#knNavInfo165').innerHTML = LINES.length
+        ? ('選択中: <b>線 '+(SEL+1)+'</b>　全長 <b>'+Math.round(totalOf(LINES[SEL]))+'m</b><br>状態: '+(ACTIVE?'<b style="color:#0b7a3b">案内中</b>':'停止中')+'　外れ判定: '+OFF_TH+'m')
+        : '手描きの線が見つかりません。線を描いてから開いてください。';
+    }
+    function open(){ var p=panel(); sync(); p.style.display='flex'; return 'open'; }
 
     function chip(){
-      if(document.getElementById('knNav164Btn')) return;
-      var b=document.createElement('div'); b.id='knNav164Btn';
-      b.style.cssText='position:fixed;left:8px;top:542px;z-index:2147483055;background:#7c3aed;color:#fff;border-radius:14px;padding:7px 11px;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.35)';
+      if(document.getElementById('knNav165Btn')) return true;
+      if(!document.body) return false;
+      var b=document.createElement('div'); b.id='knNav165Btn';
+      b.style.cssText='position:fixed;left:8px;top:502px;z-index:2147483055;background:#7c3aed;color:#fff;border-radius:14px;padding:7px 11px;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.35)';
       b.textContent='🧭 線ナビ';
-      b.onclick=function(ev){ try{ ev.stopPropagation(); }catch(e){} open(); };
-      b.addEventListener('pointerdown',function(ev){ try{ ev.stopPropagation(); }catch(e){} },true);
-      document.body.appendChild(b);
+      b.addEventListener('click',function(){ open(); });
+      document.body.appendChild(b); return true;
     }
-
-    window.__kmNavOpen=open;
+    var tries=0;
+    var t=setInterval(function(){ tries++; if(chip()||tries>40){ clearInterval(t); } },250);
 
     try{
       window.addEventListener('click',function(ev){
-        var t=ev.target; var n=0;
-        while(t&&n<6){ if(t.id==='knNavClose164'){ try{ document.getElementById('knNavPn164').style.display='none'; }catch(e){} try{ ev.stopPropagation(); ev.preventDefault(); }catch(e){} return; } t=t.parentNode; n++; }
-      },true);
-      window.addEventListener('pointerdown',function(ev){
-        var t=ev.target; var n=0;
-        while(t&&n<6){ if(t.id==='knNav164Btn'){ try{ window.__kmNavOpen(); }catch(e){} try{ ev.stopPropagation(); ev.preventDefault(); }catch(e){} return; } t=t.parentNode; n++; }
+        var t=ev.target,n=0;
+        while(t&&n<6){
+          if(t.id==='knNavClose165'){ try{ document.getElementById('knNavPn165').style.display='none'; }catch(e){} try{ ev.stopPropagation(); ev.preventDefault(); }catch(e){} return; }
+          if(t.id==='knNav165Btn'){ try{ open(); }catch(e){} try{ ev.stopPropagation(); }catch(e){} return; }
+          t=t.parentNode; n++;
+        }
       },true);
     }catch(e){}
 
-    window.__kmNavCalc=calc;
-    window.__kmNavApply=apply;
-    window.__kmNavStart=start;
-    window.__kmNavStop=stop;
-    window.__kmNavGpx=gpx;
-    window.__kmNavKml=kml;
-    window.__kmNavLines=function(){ reload(); return LINES.map(function(l){ return {name:l.name, pts:l.pts.length}; }); };
-    window.__kmNavState=function(){ return {active:ACTIVE, sel:SEL, lines:LINES.length, last:lastCalc}; };
-
-    try{ setInterval(chip,1200); }catch(e){}
-    try{ if(document.body) chip(); else document.addEventListener('DOMContentLoaded',chip); }catch(e){}
-    try{ if(raw(ONKEY)==='1') setTimeout(function(){ try{ start(); }catch(e){} },3500); }catch(e){}
+    window.__kmNav165Open=open;
+    window.__kmNav165Start=start;
+    window.__kmNav165Stop=stop;
+    window.__kmNav165Calc=calc;
+    window.__kmNav165Apply=apply;
+    window.__kmNav165Gpx=gpx;
+    window.__kmNav165Kml=kml;
+    window.__kmNav165Lines=function(){ reload(); return LINES.map(function(l){ return {name:l.name, pts:l.pts.length, len:Math.round(totalOf(l))}; }); };
+    window.__kmNav165State=function(){ return {active:ACTIVE, sel:SEL, lines:LINES.length, cover:!!cov, bar:(!!bar&&bar.style.display!=='none'), panel:(!!pn&&pn.style.display==='flex'), last:lastC}; };
   }catch(e){}
 })();</script>
 </body>
