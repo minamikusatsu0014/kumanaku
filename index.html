@@ -8223,7 +8223,7 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v165 09/27 03:30';
+  var BUILD='v166 09/27 06:30';
   var BTAG=(function(m){ return m?m[0]:'v153'; })(/v([0-9]+)/.exec(BUILD||'v153'));
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
@@ -9910,7 +9910,7 @@ function boot(){ apply(); addBtn2(); label(); }
       if(pn&&pn.parentNode) return pn;
       pn=document.createElement('div'); pn.id='knNavPn165';
       pn.style.cssText='position:fixed;inset:0;z-index:2147483600;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:12px';
-      pn.innerHTML='<div style="background:#fff;color:#111;border-radius:12px;max-width:520px;width:100%;max-height:86vh;overflow:auto;padding:12px">'
+      pn.innerHTML='<button id="knNavX165" title="閉じる" style="position:fixed;top:10px;right:10px;width:54px;height:54px;z-index:2147483647;background:#dc2626;color:#fff;border:0;border-radius:12px;font-size:26px;font-weight:800;line-height:1;box-shadow:0 3px 12px rgba(0,0,0,.55)">✕</button><div style="background:#fff;color:#111;border-radius:12px;max-width:520px;width:100%;max-height:86vh;overflow:auto;padding:12px">'
         +'<div style="font-weight:800;font-size:15px;margin-bottom:6px">🧭 線ナビ（手描きの線を案内）</div>'
         +'<div style="font-size:12px;color:#555;margin-bottom:8px">案内する線を選んで「開始」を押してください。歩いた区間は地図上で緑に塗られます。</div>'
         +'<select id="knNavSel165" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:8px;margin-bottom:8px"></select>'
@@ -9927,6 +9927,18 @@ function boot(){ apply(); addBtn2(); label(); }
         +'<div style="font-size:11px;color:#555;margin-top:8px">GPX/KMLは線の形をそのまま保つので、YAMAP・ジオグラフィカ等に読み込めます。</div>'
         +'</div>';
       document.body.appendChild(pn);
+      function closePn(){
+        try{ pn.style.display='none'; }catch(e){}
+        try{ if(history.state&&history.state.__knNav165){ history.back(); } }catch(e){}
+      }
+      pn.__close=closePn; window.__knNav165Close=closePn;
+      try{ pn.addEventListener('click',function(ev){
+        var t=ev.target,k=0;
+        while(t&&t!==pn&&k<4){ if(t.id==='knNavX165'||t.id==='knNavClose165'){ try{ev.stopPropagation();ev.preventDefault();}catch(e){} closePn(); return; } t=t.parentNode; k++; }
+      },true); }catch(e){}
+      try{ pn.querySelector('#knNavX165').addEventListener('click',function(ev){ try{ev.stopPropagation();ev.preventDefault();}catch(e){} closePn(); }); }catch(e){}
+      try{ pn.querySelector('#knNavClose165').addEventListener('click',function(ev){ try{ev.stopPropagation();ev.preventDefault();}catch(e){} closePn(); }); }catch(e){}
+      try{ pn.addEventListener('click',function(ev){ if(ev.target===pn) closePn(); }); }catch(e){}
       pn.querySelector('#knNavSel165').onchange=function(){ SEL=parseInt(this.value,10)||0; try{ localStorage.setItem(SELKEY,String(SEL)); }catch(e){} spoke={}; sync(); };
       pn.querySelector('#knNavGo165').onclick=function(){ var r=start(); sync(); this.blur(); };
       pn.querySelector('#knNavStop165').onclick=function(){ stop(); sync(); this.blur(); };
@@ -9945,7 +9957,9 @@ function boot(){ apply(); addBtn2(); label(); }
         ? ('選択中: <b>線 '+(SEL+1)+'</b>　全長 <b>'+Math.round(totalOf(LINES[SEL]))+'m</b><br>状態: '+(ACTIVE?'<b style="color:#0b7a3b">案内中</b>':'停止中')+'　外れ判定: '+OFF_TH+'m')
         : '手描きの線が見つかりません。線を描いてから開いてください。';
     }
-    function open(){ var p=panel(); sync(); p.style.display='flex'; return 'open'; }
+    function open(){ var p=panel(); sync(); p.style.display='flex';
+      try{ if(!(history.state&&history.state.__knNav165)) history.pushState({__knNav165:1},''); }catch(e){}
+      return 'open'; }
 
     function chip(){
       if(document.getElementById('knNav165Btn')) return true;
@@ -9963,13 +9977,15 @@ function boot(){ apply(); addBtn2(); label(); }
       window.addEventListener('click',function(ev){
         var t=ev.target,n=0;
         while(t&&n<6){
-          if(t.id==='knNavClose165'){ try{ document.getElementById('knNavPn165').style.display='none'; }catch(e){} try{ ev.stopPropagation(); ev.preventDefault(); }catch(e){} return; }
+          if(t.id==='knNavX165'||t.id==='knNavClose165'){ try{ if(window.__knNav165Close) window.__knNav165Close(); else document.getElementById('knNavPn165').style.display='none'; }catch(e){} try{ ev.stopPropagation(); ev.preventDefault(); }catch(e){} return; }
           if(t.id==='knNav165Btn'){ try{ open(); }catch(e){} try{ ev.stopPropagation(); }catch(e){} return; }
           t=t.parentNode; n++;
         }
       },true);
     }catch(e){}
 
+    try{ window.addEventListener('popstate',function(){ try{ if(pn&&pn.style.display==='flex') pn.style.display='none'; }catch(e){} }); }catch(e){}
+    try{ window.addEventListener('keydown',function(ev){ try{ if(ev.key==='Escape'&&pn&&pn.style.display==='flex') pn.style.display='none'; }catch(e){} }); }catch(e){}
     window.__kmNav165Open=open;
     window.__kmNav165Start=start;
     window.__kmNav165Stop=stop;
@@ -9981,6 +9997,41 @@ function boot(){ apply(); addBtn2(); label(); }
     window.__kmNav165State=function(){ return {active:ACTIVE, sel:SEL, lines:LINES.length, cover:!!cov, bar:(!!bar&&bar.style.display!=='none'), panel:(!!pn&&pn.style.display==='flex'), last:lastC}; };
   }catch(e){}
 })();</script>
+<script>/* KM_CLOSEBTN_V166 */
+(function(){
+  var IDS=['kmPosFixPanel','drawPanel','kmTracePanel','kmRecPanel','kmDrawPanel','kmPickPanel','kmEdPanel','kmGeomPanel','kmSyncPanel','kmNavPn165'];
+  function vis(el){ try{ var cs=getComputedStyle(el); return cs.display!=='none'&&cs.visibility!=='hidden'&&el.offsetHeight>40; }catch(e){ return false; } }
+  function already(p){
+    if(p.querySelector('#kmUniX')) return true;
+    if(p.querySelector('[id^="pnlClose_"]')) return true;
+    var b=p.querySelectorAll('button,a,span,div');
+    for(var i=0;i<b.length;i++){ var t=(b[i].textContent||'').trim(); if(t==='✕'||t==='×'||t==='✖'||t==='閉じる') return true; }
+    return false;
+  }
+  function closeP(p){
+    var b=p.querySelector('[id^="pnlClose_"]');
+    if(b){ try{ b.click(); }catch(e){} }
+    try{ if(getComputedStyle(p).display==='none') return; }catch(e){}
+    try{ if(window.__knNav165Close&&p.id==='knNavPn165'){ window.__knNav165Close(); return; } }catch(e){}
+    try{ p.style.display='none'; }catch(e){}
+  }
+  function deco(p){
+    if(!p||p.__kmUniX) return;
+    p.__kmUniX=1;
+    if(already(p)) return;
+    var x=document.createElement('button');
+    x.id='kmUniX'; x.type='button'; x.title='閉じる'; x.textContent='✕';
+    x.style.cssText='position:fixed;top:10px;right:10px;width:52px;height:52px;z-index:2147483647;background:#dc2626;color:#fff;border:0;border-radius:12px;font-size:24px;font-weight:800;line-height:1;box-shadow:0 3px 12px rgba(0,0,0,.55)';
+    x.addEventListener('click',function(ev){ try{ev.stopPropagation();ev.preventDefault();}catch(e){} closeP(p); },true);
+    p.appendChild(x);
+  }
+  function scan(){ for(var i=0;i<IDS.length;i++){ var e=document.getElementById(IDS[i]); if(e) deco(e); } }
+  setInterval(scan,600); setTimeout(scan,1200); document.addEventListener('click',function(){ setTimeout(scan,120); },true);
+  try{ new MutationObserver(function(){ setTimeout(scan,120); }).observe(document.body,{childList:true,subtree:false}); }catch(e){}
+  window.__kmCloseAudit=function(){ var r={}; for(var i=0;i<IDS.length;i++){ var e=document.getElementById(IDS[i]); if(e&&vis(e)) r[IDS[i]]= !!e.querySelector('#kmUniX')||!!e.querySelector('[id^="pnlClose_"]'); } return r; };
+  try{ var t=document.createElement('div'); }catch(e){}
+})();
+</script>
 </body>
 
 
