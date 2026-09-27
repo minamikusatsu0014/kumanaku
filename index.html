@@ -8223,7 +8223,7 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v156 09/27 15:20';
+  var BUILD='v163 09/27 00:40';
   var BTAG=(function(m){ return m?m[0]:'v153'; })(/v([0-9]+)/.exec(BUILD||'v153'));
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
@@ -9679,6 +9679,381 @@ function boot(){ apply(); addBtn2(); label(); }
     }
   },true);
   window.__kmClosedFlags=CLOSED;
+})();</script>
+
+<script>/* KM_VAULT_V157 */
+/* KM_VAULT_V157 : 描いた線を失わない（多重バックアップ・空上書き拒否・復元・書き出し/読み込み）
+   - 保存キーへの書き込みを横取りし、線が入った値を「金庫」へ必ず複製する
+   - 金庫に中身があるのに空(0本)で上書きしようとした時は拒否する（アプリ側の事故を防ぐ）
+   - 起動時、本体が空なら 金庫 → _bak → km_all_backup_v129 の順に自動復元
+   - 常時表示の「線の保存」ボタンから JSON 書き出し／読み込みができる */
+(function(){
+  if(window.__kmVault157) return; window.__kmVault157=1;
+  var MAIN=['km_draw_main','km_draw_v99','km_draw','km_draw_mine_v1','km_edit_v1'];
+  var VK='km_draw_vault_v157';
+  function parse(t){ try{ return JSON.parse(t||'null'); }catch(e){ return null; } }
+  function countOf(k,j){ if(!j) return 0;
+    try{ if(j.lines) return (j.lines||[]).length;
+         if(Object.prototype.toString.call(j)==='[object Array]') return j.length;
+         return 0; }catch(e){ return 0; } }
+  function get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+  function vaultRead(){ return parse(get(VK))||{}; }
+  function vaultWrite(v){ try{ localStorage.setItem(VK, JSON.stringify(v)); }catch(e){} }
+  function snap(reason){
+    var v=vaultRead(), n0=0;
+    for(var i=0;i<MAIN.length;i++){ var k=MAIN[i], raw=get(k), n=countOf(k,parse(raw));
+      if(n>0){ v[k]={t:Date.now(),raw:raw,n:n}; n0+=n; } }
+    v.savedAt=Date.now(); v.why=reason||'auto'; v.total=n0;
+    vaultWrite(v); return v;
+  }
+  var origSet=null;
+  try{
+    var proto=Storage.prototype; origSet=proto.setItem;
+    if(!proto.__km157){ proto.__km157=1;
+      var origRm=proto.removeItem;
+      proto.setItem=function(k,val){
+        try{
+          if(MAIN.indexOf(k)>=0){
+            var n=countOf(k,parse(val)), v=vaultRead(), old=v[k];
+            if(n===0 && old && old.n>0 && !window.__kmUserCleared){
+              window.__kmVaultBlocked=(window.__kmVaultBlocked||0)+1;
+              return;                                  /* 空での上書きを拒否 */
+            }
+            if(n>0){ v[k]={t:Date.now(),raw:val,n:n}; v.savedAt=Date.now(); v.why='live'; vaultWrite(v); }
+          }
+        }catch(e){}
+        return origSet.call(this,k,val);
+      };
+      proto.removeItem=function(k){
+        try{
+          if(MAIN.indexOf(k)>=0){
+            snap('before-remove');
+            var v=vaultRead(), e=v[k];
+            if(e && e.n>0 && !window.__kmUserCleared){ return; }   /* 金庫に線がある間は消させない */
+          }
+        }catch(e){}
+        return origRm.call(this,k);
+      };
+    }
+  }catch(e){}
+  function restore(){
+    var v=vaultRead(), done=[];
+    for(var i=0;i<MAIN.length;i++){
+      var k=MAIN[i];
+      if(countOf(k,parse(get(k)))>0) continue;
+      var cand=(v[k]&&v[k].raw)||get(k+'_bak')||null;
+      if(!cand){
+        var aj=parse(get('km_all_backup_v129'));
+        if(aj&&aj[k]!==undefined) cand=JSON.stringify(aj[k]);
+        if(!cand&&aj&&aj[k]===undefined){ /* 配列で入っている旧形式も探す */
+          var al=parse(get('km_all_backup_v129'));
+          if(al&&al.lines) cand=JSON.stringify({lines:al.lines});
+        }
+      }
+      if(cand&&countOf(k,parse(cand))>0){
+        try{ localStorage.setItem(k,cand); done.push(k+'('+countOf(k,parse(cand))+'本)'); }catch(e){}
+      }
+    }
+    return done;
+  }
+  function heal(){                                                 /* 消されても気づいた時点で戻す */
+    if(window.__kmUserCleared) return [];
+    var v=vaultRead(), d=[];
+    for(var i=0;i<MAIN.length;i++){ var k=MAIN[i], e=v[k];
+      if(e && e.n>0 && countOf(k,parse(get(k)))===0){ try{ localStorage.setItem(k,e.raw); d.push(k); }catch(x){} } }
+    return d;
+  }
+  function counts(){ var o={}; for(var i=0;i<MAIN.length;i++){ var k=MAIN[i]; o[k]=countOf(k,parse(get(k))); }
+    var v=vaultRead(); o['__vault']=v.total||0; o['__vaultAt']=v.savedAt||0; o['__blocked']=window.__kmVaultBlocked||0; o['__why']=v.why||''; return o; }
+  function exportJSON(){ var o={v:157,at:Date.now(),keys:{}};
+    for(var i=0;i<MAIN.length;i++){ var k=MAIN[i], raw=get(k); if(raw&&countOf(k,parse(raw))>0) o.keys[k]=parse(raw); }
+    var v=vaultRead(); if(v.total) o.vault=v;
+    return JSON.stringify(o); }
+  function importJSON(txt){
+    var o=parse(txt); if(!o) return 'JSONが読めません';
+    var n=0, ks=o.keys||{};
+    for(var k in ks){ var c=countOf(k,ks[k]); if(c>0){ try{ localStorage.setItem(k,JSON.stringify(ks[k])); n+=c; }catch(e){} } }
+    if(o.vault){ try{ vaultWrite(o.vault); }catch(e){} }
+    if(n===0 && o.vault){                                          /* 金庫しか無い書き出しでも戻せる */
+      for(var k2 in o.vault){ var ent=o.vault[k2];
+        if(ent && ent.raw && countOf(k2,parse(ent.raw))>0){ try{ localStorage.setItem(k2,ent.raw); n+=countOf(k2,parse(ent.raw)); }catch(e){} } }
+    }
+    return n? (n+'本を復元しました') : '線データが見つかりません';
+  }
+  function fmt(t){ try{ var d=new Date(t); return (d.getMonth()+1)+'/'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); }catch(e){ return '-'; } }
+  function stat(){
+    var c=counts(); var el=document.getElementById('kmVaultStat'); if(!el) return;
+    el.textContent='いま表示中: '+(c['km_draw_main']||0)+'本 / 金庫: '+(c['__vault']||0)+'本'
+      +(c['__vaultAt']?(' ('+fmt(c['__vaultAt'])+')'):'')
+      +((c['__blocked']||0)?(' / 空上書きを'+(c['__blocked']||0)+'回拒否'):''); }
+  function ui(){
+    try{
+      if(!document.getElementById('kmVaultBtn')){
+        var b=document.createElement('button'); b.type='button'; b.id='kmVaultBtn'; b.textContent='🧷 線の保存';
+        b.style.cssText='position:fixed;left:0;top:52%;z-index:2147483040;font:800 12px system-ui,sans-serif;padding:9px 8px;'
+          +'border:1px solid #2e7d32;border-left:0;border-radius:0 10px 10px 0;background:#e8f5e9;color:#1b5e20;'
+          +'box-shadow:0 1px 6px rgba(0,0,0,.3);touch-action:manipulation';
+        b.onclick=function(ev){ try{ev.preventDefault();ev.stopPropagation();}catch(e){}
+          var p=document.getElementById('kmVaultPanel');
+          if(!p) return; var open=false; try{ open=getComputedStyle(p).display!=='none'; }catch(e){}
+          p.style.display = open?'none':'block'; if(!open){ stat(); try{ document.getElementById('kmVaultTa').value=exportJSON(); }catch(e){} } };
+        document.body.appendChild(b);
+      }
+      var btn=document.getElementById('kmVaultBtn'); if(btn&&btn.parentElement!==document.body) document.body.appendChild(btn);
+      if(!document.getElementById('kmVaultPanel')){
+        var p=document.createElement('div'); p.id='kmVaultPanel';
+        p.style.cssText='position:fixed;left:50%;top:12%;transform:translateX(-50%);z-index:2147483041;display:none;'
+          +'background:#fff;border:1px solid #81c784;border-radius:12px;padding:10px;width:min(92vw,360px);'
+          +'font:12px system-ui,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.35)';
+        p.innerHTML='<div style="font-weight:bold;margin-bottom:6px">🧷 線の保存・復元</div>'
+          +'<div id="kmVaultStat" style="color:#33691e;background:#f1f8e9;border-radius:6px;padding:5px;margin-bottom:6px">…</div>'
+          +'<textarea id="kmVaultTa" spellcheck="false" style="width:100%;height:70px;font:11px/1.35 monospace;box-sizing:border-box"></textarea>'
+          +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">'
+          +'<button type="button" id="kmVaultExp">⬇ 書き出し</button>'
+          +'<button type="button" id="kmVaultImp">⬆ 読み込み</button>'
+          +'<button type="button" id="kmVaultRest">↺ 金庫から復元</button>'
+          +'<button type="button" id="kmVaultClose">✕</button></div>'
+          +'<div style="color:#666;font-size:11px;margin-top:5px">書き出したJSONは必ず別の場所に控えてください（端末のデータ削除で消えます）。</div>';
+        document.body.appendChild(p);
+      }
+      var q=function(i){ return document.getElementById(i); };
+      if(q('kmVaultClose')) q('kmVaultClose').onclick=function(ev){ try{ev.preventDefault();}catch(e){} q('kmVaultPanel').style.display='none'; };
+      if(q('kmVaultExp')) q('kmVaultExp').onclick=function(ev){ try{ev.preventDefault();}catch(e){}
+        var t=exportJSON(); q('kmVaultTa').value=t; stat();
+        try{ var blob=new Blob([t],{type:'application/json'}); var a=document.createElement('a');
+          a.href=URL.createObjectURL(blob); a.download='kumanaku_lines_'+Date.now()+'.json';
+          document.body.appendChild(a); a.click(); a.remove(); }catch(e){}
+        try{ q('kmVaultTa').focus(); q('kmVaultTa').select(); }catch(e){} };
+      if(q('kmVaultImp')) q('kmVaultImp').onclick=function(ev){ try{ev.preventDefault();}catch(e){}
+        var msg=importJSON(q('kmVaultTa').value); stat();
+        try{ q('kmVaultStat').textContent=msg+'（再読み込みします）'; }catch(e){}
+        setTimeout(function(){ try{ location.reload(); }catch(e){} },900); };
+      if(q('kmVaultRest')) q('kmVaultRest').onclick=function(ev){ try{ev.preventDefault();}catch(e){}
+        var d=restore(); stat();
+        try{ q('kmVaultStat').textContent=d.length? ('復元: '+d.join(', ')+'（再読み込みします）') : '金庫に戻せる線がありません'; }catch(e){}
+        if(d.length) setTimeout(function(){ try{ location.reload(); }catch(e){} },900); };
+    }catch(e){}
+  }
+  window.__kmVault157API={snapshot:snap, restore:restore, counts:counts, exportJSON:exportJSON, importJSON:importJSON};
+  try{ window.addEventListener('load',function(){ setTimeout(function(){ snap('load'); var d=restore(); ui(); stat(); if(d.length) setTimeout(function(){ try{ location.reload(); }catch(e){} },700); },900); }); }catch(e){}
+  try{ document.addEventListener('visibilitychange',function(){ if(document.hidden) snap('hide'); }); }catch(e){}
+  try{ setInterval(function(){ snap('tick'); if(heal().length) window.__kmVaultHeals=(window.__kmVaultHeals||0)+1; stat(); ui(); },5000); }catch(e){}
+  ui();
+})();
+
+</script>
+<script>/* KM_JOIN_V158 : 既存の線の「端」から描き始めたら、その線の続きとして自動でつなぐ
+   - onUp が線を確定した直後に、いちばん新しい線(last)の端点と既存線の端点を比較
+   - 70m以内なら1本に連結（向きは4通りを自動判定）。超えていれば何もしない
+   - 保存形式は v:96 のまま（lines 配列に pts を足すだけ）で後方互換
+   - チップで入/切を切替（既定は入） */
+(function(){
+  if(window.__kmJoin158) return; window.__kmJoin158=1;
+  var LSK='km_draw_main', THRESH=70, ON=(localStorage.getItem('km_join_v158_on')!=='0');
+  var LAST='';
+  function num(v){ return (typeof v==='number' && isFinite(v)); }
+  function dist(a,b){
+    if(!a||!b||!num(a[0])||!num(a[1])||!num(b[0])||!num(b[1])) return 1e9;
+    var R=6371008.8, la1=a[0]*Math.PI/180, la2=b[0]*Math.PI/180,
+        dLa=(b[0]-a[0])*Math.PI/180, dLo=(b[1]-a[1])*Math.PI/180;
+    var h=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(la1)*Math.cos(la2)*Math.sin(dLo/2)*Math.sin(dLo/2);
+    return 2*R*Math.asin(Math.sqrt(h));
+  }
+  function read(){ try{ return JSON.parse(localStorage.getItem(LSK)||'null'); }catch(e){ return null; } }
+  function ok(o){ return !!(o&&o.pts&&o.pts.length>=2&&num(o.pts[0][0])&&num(o.pts[0][1])); }
+  function refresh(L){
+    var API=window.__kmDrawAPI;
+    if(API&&typeof API.clear==='function'&&typeof API.add==='function'){
+      try{ API.clear(); API.add(L); return 'api'; }catch(e){}
+    }
+    try{ location.reload(); }catch(e){}
+    return 'reload';
+  }
+  function join(){
+    if(!ON) return 'off';
+    var j=read(); if(!j||!j.lines||j.lines.length<2) return 'no';
+    var L=j.lines, last=L[L.length-1];
+    if(!ok(last)) return 'no';
+    var best=-1,bestD=1e9,mode='';
+    for(var i=0;i<L.length-1;i++){
+      var o=L[i]; if(!ok(o)) continue;
+      var aS=last.pts[0], aE=last.pts[last.pts.length-1],
+          bS=o.pts[0], bE=o.pts[o.pts.length-1];
+      var cands=[[dist(aS,bE),'A'],[dist(aS,bS),'B'],[dist(aE,bS),'C'],[dist(aE,bE),'D']];
+      for(var k=0;k<4;k++){ if(cands[k][0]<bestD){ bestD=cands[k][0]; best=i; mode=cands[k][1]; } }
+    }
+    if(best<0) return 'no';
+    if(bestD>THRESH){ LAST='far:'+Math.round(bestD)+'m'; return LAST; }
+    var o=L[best], np;
+    if(mode==='A') np=o.pts.concat(last.pts);
+    else if(mode==='B') np=last.pts.slice().reverse().concat(o.pts);
+    else if(mode==='C') np=last.pts.concat(o.pts);
+    else np=o.pts.concat(last.pts.slice().reverse());
+    L[best]={color:(o.color||last.color), width:(o.width||last.width), pts:np};
+    L.pop();
+    j.lines=L; j.v=96;
+    try{ localStorage.setItem(LSK, JSON.stringify(j)); }catch(e){ return 'store-err'; }
+    var how=refresh(L); LAST='joined:'+Math.round(bestD)+'m/'+how;
+    try{ console.log('[KM_JOIN_V158] '+LAST); }catch(e){}
+    return LAST;
+  }
+  var _old=window.kmAppendStroke;
+  window.kmAppendStroke=function(){
+    var r=false;
+    try{ r=_old? _old.apply(this,arguments):false; }catch(e){ r=false; }
+    if(!r){ try{ setTimeout(join,250); }catch(e){} }   /* 確定→保存の後に連結 */
+    return r;
+  };
+  function chip(){
+    if(document.getElementById('kmJoin158Btn')) return;
+    var b=document.createElement('div'); b.id='kmJoin158Btn';
+    b.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:196px;z-index:2147483060;background:'+(ON?'#0b7a3b':'#666')+';color:#fff;border-radius:16px;padding:6px 12px;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.35)';
+    b.textContent=ON?'🔗 線つなぎ:入（端から描くと続きになります）':'🔗 線つなぎ:切';
+    b.onclick=function(ev){ ON=!ON; try{ localStorage.setItem('km_join_v158_on',ON?'1':'0'); }catch(e){} b.style.background=ON?'#0b7a3b':'#666'; b.textContent=ON?'🔗 線つなぎ:入（端から描くと続きになります）':'🔗 線つなぎ:切'; try{ ev.stopPropagation(); }catch(e){} };
+    b.addEventListener('pointerdown',function(ev){ try{ ev.stopPropagation(); }catch(e){} },true);
+    document.body.appendChild(b);
+  }
+  window.__kmJoin158Join=join;
+  window.__kmJoin158State=function(){ return { on:ON, last:LAST, thresh:THRESH }; };
+  try{ setInterval(chip,1000); }catch(e){}
+  try{ if(document.body) chip(); else document.addEventListener('DOMContentLoaded',chip); }catch(e){}
+})();
+</script>
+<script>/* KM_LINECHECK_V159 : 画面に「線チェック」ボタンを出す（PCのコンソール不要）
+   - 保存キーごとの 本数 / 点数 / 藤井寺周辺の点数 を集計して、画面に表示＋コピーできる
+   - 読み取り専用（保存データは一切変更しない） */
+(function(){
+  if(window.__kmLineCheck159) return; window.__kmLineCheck159=1;
+  var K=['km_draw_main','km_draw_v99','km_draw','km_draw_mine_v1','km_edit_v1','km_draw_vault_v157'];
+  var BOX=null, TA=null, SUP=null;
+
+  window.__kmLineCheck=function(){
+    var out={};
+    K.forEach(function(k){
+      var raw=null; try{ raw=localStorage.getItem(k); }catch(e){}
+      if(!raw){ out[k]='(なし)'; return; }
+      var j=null; try{ j=JSON.parse(raw); }catch(e){ out[k]='解析不能 '+raw.length+'文字'; return; }
+      var lines=(j&&j.lines)||[], near=0, pts=0, list=[];
+      lines.forEach(function(L){
+        var p0=L&&L.pts||[]; list.push(p0.length); pts+=p0.length;
+        p0.forEach(function(p){ if(p && p[0]>34.53 && p[0]<34.61 && p[1]>135.56 && p[1]<135.66) near++; });
+      });
+      out[k]={ 本数:lines.length, 点数:pts, 藤井寺周辺の点数:near, 各線の点数:list };
+    });
+    return out;
+  };
+
+  function line(k,v){
+    if(typeof v==='string') return k+' : '+v;
+    return k+' : 本数 '+v.本数+' / 点数 '+v.点数+' / 藤井寺周辺 '+v.藤井寺周辺の点数+'  ['+v.各線の点数.join('・')+']';
+  }
+
+  function build(){
+    if(document.getElementById('chkBox159')) return;
+    BOX=document.createElement('div'); BOX.id='chkBox159';
+    BOX.style.cssText='position:fixed;inset:0;z-index:2147483600;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:12px';
+    BOX.innerHTML='<div style="background:#fff;color:#111;border-radius:12px;max-width:520px;width:100%;max-height:86vh;overflow:auto;padding:12px">'
+      +'<div style="font-weight:800;font-size:15px;margin-bottom:6px">🔍 線データの残り確認（読み取りのみ）</div>'
+      +'<div id="chkSum159" style="font-size:13px;line-height:1.6;margin:6px 0 8px"></div>'
+      +'<textarea id="chkTa159" readonly style="width:100%;height:170px;font:12px/1.45 monospace;border:1px solid #ccc;border-radius:8px;padding:6px;box-sizing:border-box"></textarea>'
+      +'<div style="display:flex;gap:8px;margin-top:8px">'
+      +'<button id="chkCopy159" style="flex:1;padding:10px;border:0;border-radius:8px;background:#0b7a3b;color:#fff;font-weight:700">📋 全部コピー</button>'
+      +'<button id="chkClose159" style="flex:1;padding:10px;border:0;border-radius:8px;background:#444;color:#fff;font-weight:700">✕ 閉じる</button>'
+      +'</div>'
+      +'<div style="font-size:11px;color:#555;margin-top:6px">藤井寺周辺 = 緯度34.53〜34.61 / 経度135.56〜135.66 の中にある点の数です。</div>'
+      +'</div>';
+    document.body.appendChild(BOX);
+    TA=BOX.querySelector('#chkTa159'); SUP=BOX.querySelector('#chkSum159');
+    BOX.querySelector('#chkClose159').onclick=function(ev){ BOX.style.display='none'; try{ ev.stopPropagation(); }catch(e){} };
+    BOX.querySelector('#chkCopy159').onclick=function(ev){
+      try{ TA.focus(); TA.select(); document.execCommand('copy'); }catch(e){}
+      try{ if(navigator.clipboard) navigator.clipboard.writeText(TA.value); }catch(e){}
+      this.textContent='✅ コピーしました'; var b=this;
+      setTimeout(function(){ b.textContent='📋 全部コピー'; },1600);
+      try{ ev.stopPropagation(); }catch(e){}
+    };
+  }
+
+  function show(){
+    build();
+    var o=window.__kmLineCheck(); var main=null;
+    try{ main=JSON.parse(localStorage.getItem('km_draw_main')||'null'); }catch(e){}
+    var n=(main&&main.lines)?main.lines.length:(typeof o['km_draw_main']==='object'?o['km_draw_main'].本数:0);
+    var near=(typeof o['km_draw_main']==='object')?o['km_draw_main'].藤井寺周辺の点数:0;
+    var vault=(typeof o['km_draw_vault_v157']==='object')?o['km_draw_vault_v157'].本数:0;
+    SUP.innerHTML='<b style="font-size:15px">'+(n?'✅ 線は残っています：'+n+'本':'❌ 線は残っていません：0本')+'</b>'
+      +'<br>そのうち藤井寺周辺の点：<b>'+near+'</b>'
+      +'<br>金庫(v157)の線：'+vault+'本'
+      +'<br><span style="color:#555">※「(なし)」はそのキーに何も保存されていないという意味です。</span>';
+    TA.value=JSON.stringify(o,null,2);
+    BOX.style.display='flex';
+  }
+
+  function chip(){
+    if(document.getElementById('kmChk159Btn')) return;
+    var b=document.createElement('div'); b.id='kmChk159Btn';
+    b.style.cssText='position:fixed;left:8px;top:504px;z-index:2147483050;background:#1d4ed8;color:#fff;border-radius:14px;padding:7px 11px;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.35)';
+    b.textContent='🔍 線チェック';
+    b.onclick=function(ev){ try{ ev.stopPropagation(); }catch(e){} show(); };
+    b.addEventListener('pointerdown',function(ev){ try{ ev.stopPropagation(); }catch(e){} },true);
+    document.body.appendChild(b);
+  }
+  window.__kmLineCheckUI=show;
+  try{ setInterval(chip,1000); }catch(e){}
+  try{ if(document.body) chip(); else document.addEventListener('DOMContentLoaded',chip); }catch(e){}
+})();
+</script>
+<script>/* KM_AUTOSAVE_V163 : 自動保存（これだけを追加。他の動作は変更しない）
+   - 線を描いた直後（短い待ち時間のあと）と、画面を離れた時／隠れた時に保存する
+   - 保存はアプリ本体と同じキー km_draw_main と同じ形（v:96 / lines）を使う
+   - 直前に上書きされる前の中身を km_draw_main_bak に退避する
+   - 保存容量エラーでも描画が止まらないように、失敗は握りつぶす
+   - 起動時、本体が空で退避があるときだけ戻す（アプリ既存の読み込み口 __kmDrawAPI.add 使用） */
+(function(){
+  try{
+    if(window.__kmAutoSave163) return; window.__kmAutoSave163=1;
+    var K='km_draw_main', B=K+'_bak', T=null, DONE=false;
+    function S(){ try{ var s=window.KM_DRAW_STATE; return (s&&s.lines)?s:null; }catch(e){ return null; } }
+    function raw(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+    function nLines(t){ try{ var j=JSON.parse(t||'null'); var l=(j&&j.lines)||[]; var n=0; for(var i=0;i<l.length;i++){ if(l[i]&&l[i].pts&&l[i].pts.length>1) n++; } return n; }catch(e){ return 0; } }
+    function saveNow(){
+      try{
+        if(typeof window.kmSaveFlush==='function'){ try{ window.kmSaveFlush(); }catch(e){} }
+        var st=S(); if(!st) return 'no-state';
+        var L=(st.lines||[]).filter(function(l){ return l&&l.pts&&l.pts.length>1; });
+        if(!L.length) return 'empty';
+        var cur=raw(K), prev=null; try{ prev=JSON.parse(cur||'null'); }catch(e){}
+        var obj=prev&&typeof prev==='object'?prev:{};
+        obj.v=obj.v||96; obj.lines=L;
+        var out=JSON.stringify(obj);
+        if(nLines(cur)>0 && cur!==out){ try{ localStorage.setItem(B,cur); }catch(e){} }
+        try{ localStorage.setItem(K,out); }
+        catch(e){ try{ localStorage.removeItem(B); localStorage.setItem(K,out); }catch(e2){ return 'quota'; } }
+        return 'saved:'+L.length;
+      }catch(e){ return 'err'; }
+    }
+    function debounce(){ try{ clearTimeout(T); }catch(e){} T=setTimeout(saveNow,700); }
+    try{ document.addEventListener('pointerup',debounce,true); }catch(e){}
+    try{ document.addEventListener('touchend',debounce,true); }catch(e){}
+    try{ document.addEventListener('visibilitychange',function(){ try{ if(document.visibilityState==='hidden') saveNow(); }catch(e){} },true); }catch(e){}
+    try{ window.addEventListener('pagehide',function(){ saveNow(); },true); }catch(e){}
+    try{ window.addEventListener('blur',function(){ saveNow(); },true); }catch(e){}
+    try{ setInterval(saveNow,20000); }catch(e){}
+    function restore(){
+      if(DONE) return; DONE=true;
+      try{
+        if(nLines(raw(K))>0) return;                     /* 本体に線があるなら何もしない */
+        var t=raw(B); var j=null; try{ j=JSON.parse(t||'null'); }catch(e){}
+        var L=(j&&j.lines)||[];
+        if(!L.length) return;                             /* 退避が無ければ何もしない */
+        var api=window.__kmDrawAPI;
+        if(api&&typeof api.add==='function'){ try{ api.add(L); }catch(e){} }
+      }catch(e){}
+    }
+    try{ if(document.readyState==='complete') setTimeout(restore,2500); else window.addEventListener('load',function(){ setTimeout(restore,2500); }); }catch(e){}
+    window.__kmAutoSaveNow=saveNow;
+    window.__kmAutoSaveState=function(){ return { main:nLines(raw(K)), bak:nLines(raw(B)), hasState:!!S() }; };
+  }catch(e){}
 })();</script>
 </body>
 
