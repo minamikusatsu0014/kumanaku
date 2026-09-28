@@ -8223,7 +8223,7 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v166 09/27 06:30';
+  var BUILD='v167 09/27 08:30';
   var BTAG=(function(m){ return m?m[0]:'v153'; })(/v([0-9]+)/.exec(BUILD||'v153'));
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
@@ -9609,6 +9609,7 @@ function boot(){ apply(); addBtn2(); label(); }
     var id=b.id||''; var tx=(b.textContent||'').trim();
     if(id==='drawBtn' || id==='pnlChip_kmDrawPanel' || /^手描き$/.test(tx) || /^手描きトレース$/.test(tx) || /^手描きトレース ▴$/.test(tx)){
       try{ ev.preventDefault(); ev.stopImmediatePropagation(); }catch(e){}
+      try{ if(window.__kmToggleDraw167) window.__kmToggleDraw167(); }catch(e){}
     }
   },true);
   /* パネル一覧から紛らわしい「旧・別画面」行を隠す */
@@ -10030,6 +10031,166 @@ function boot(){ apply(); addBtn2(); label(); }
   try{ new MutationObserver(function(){ setTimeout(scan,120); }).observe(document.body,{childList:true,subtree:false}); }catch(e){}
   window.__kmCloseAudit=function(){ var r={}; for(var i=0;i<IDS.length;i++){ var e=document.getElementById(IDS[i]); if(e&&vis(e)) r[IDS[i]]= !!e.querySelector('#kmUniX')||!!e.querySelector('[id^="pnlClose_"]'); } return r; };
   try{ var t=document.createElement('div'); }catch(e){}
+})();
+</script>
+<script>/* KM_FIX_V167 : ①消した線を復活させない ②手描きパネルを何度でも開ける ③線ナビ開始で地図に戻る */
+(function(){
+  /* ---------- ① 消した線を復活させない ---------- */
+  var LEG=['km_draw_v99','km_draw_mine_v1','km_draw','km_draw_vault_v157','km_all_backup_v129','km_edit_v1'];
+  function J(k){ try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } }
+  function blank(k){ try{ var j=J(k); if(j&&j.lines&&j.lines.length){ localStorage.setItem(k, JSON.stringify({v:96,lines:[]})); return 1; } }catch(e){} return 0; }
+  var last=-1, DELAT=0;
+  setInterval(function(){
+    try{
+      var S=window.KM_DRAW_STATE; if(!S||!S.lines) return;
+      var n=S.lines.length;
+      if(last<0){ last=n; return; }
+      if(n>last){ DELAT=0; window.__kmUserDelAt=0;
+        try{ localStorage.removeItem('km_clear_at'); }catch(e){}
+        last=n; return; }
+      if(n<last){
+        DELAT=Date.now(); window.__kmUserDelAt=DELAT; last=n;
+        try{ window.__kmAllowEmptyLines=true; }catch(e){}
+        try{ localStorage.setItem('km_draw_main', JSON.stringify({v:96,lines:S.lines})); }catch(e){}
+        try{ if(typeof window.kmSaveFlush==='function') window.kmSaveFlush(); }catch(e){}
+        if(n===0){
+          try{ localStorage.setItem('km_clear_at', String(DELAT)); localStorage.setItem('km_draw_main_bak', JSON.stringify({v:96,lines:[]})); }catch(e){}
+          window.__kmUserCleared=DELAT;
+          LEG.forEach(blank);
+          try{ window.__kmDeletePurged=1; }catch(e){}
+        }
+        setTimeout(function(){ try{ window.__kmAllowEmptyLines=false; }catch(e){} },2500);
+        return;
+      }
+      if(DELAT && (Date.now()-DELAT)<600000 && n===0){
+        blank('km_draw_main'); blank('km_draw_main_bak'); LEG.forEach(blank);
+      }
+    }catch(e){}
+  },500);
+
+  /* ---------- ② 手描きパネル：閉じた後も何度でも開く ---------- */
+  var KEEP=0;
+  function P(){ return document.getElementById('kmDrawPanel'); }
+  function vis(el){ try{ var c=getComputedStyle(el); return c.display!=='none'&&c.visibility!=='hidden'&&el.offsetHeight>2; }catch(e){ return false; } }
+  function openP(){
+    var p=P(); if(!p) return 'no-panel';
+    KEEP=0;
+    try{ window.__kmClosedClear&&window.__kmClosedClear('kmDrawPanel'); }catch(e){}
+    try{ window.__kmClosedClear&&window.__kmClosedClear('drawPanel'); }catch(e){}
+    try{ delete (window.__kmClosedFlags||{})['kmDrawPanel']; }catch(e){}
+    p.style.setProperty('display','block','important');
+    try{ window.__pnlShow&&window.__pnlShow('kmDrawPanel'); }catch(e){}
+    return 'open';
+  }
+  function closeP(){
+    var p=P(); if(!p) return 'closed';
+    KEEP=Date.now();
+    p.style.setProperty('display','none','important');
+    try{ window.__kmClosedSet&&window.__kmClosedSet('kmDrawPanel'); }catch(e){}
+    return 'closed';
+  }
+  setInterval(function(){
+    try{
+      if(!KEEP) return;
+      if(Date.now()-KEEP>3500){ KEEP=0; return; }
+      var p=P(); if(p&&vis(p)) p.style.setProperty('display','none','important');
+    }catch(e){}
+  },150);
+  var lastTog=0;
+  window.__kmToggleDraw167=function(){
+    var now=Date.now(); if(now-lastTog<220) return 'debounce'; lastTog=now;
+    var p=P(); if(!p) return 'no-panel';
+    return vis(p)?closeP():openP();
+  };
+  window.__kmDrawOpen167=openP; window.__kmDrawClose167=closeP; window.__kmDrawVis167=function(){ var p=P(); return p?vis(p):false; };
+  document.addEventListener('click',function(ev){
+    var t=ev.target; if(!t||!t.closest) return;
+    var b=t.closest('button,a,[role=button]'); if(!b) return;
+    var id=b.id||'', tx=(b.textContent||'').trim();
+    if(id==='drawBtn'||id==='pnlChip_kmDrawPanel'||/^手描き(トレース)?( ▴)?$/.test(tx)){
+      ev.preventDefault(); ev.stopImmediatePropagation(); window.__kmToggleDraw167();
+    }
+  },true);
+  document.addEventListener('click',function(ev){
+    var t=ev.target; if(!t||!t.closest) return;
+    var b=t.closest('button,a,[role=button]'); if(!b) return;
+    var id=b.id||'', tx=(b.textContent||'').trim();
+    if(/^pnlClose_kmDrawPanel$/.test(id)||/^pnlHide_kmDrawPanel$/.test(id)||/^(✕|×|✖)$/.test(tx)){
+      setTimeout(function(){ try{ window.__kmClosedClear&&window.__kmClosedClear('kmDrawPanel'); }catch(e){} },120);
+    }
+  },false);
+
+  /* ---------- ③ 線ナビ：開始したら地図に戻る＋案内バーで停止/再表示 ---------- */
+  var BAR=null;
+  function bar(show){
+    try{
+      if(!BAR){ BAR=document.createElement('div'); BAR.id='kmNavBar167';
+        BAR.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:74px;z-index:2147483300;display:flex;gap:8px;align-items:center;background:rgba(17,24,39,.94);color:#fff;border-radius:14px;padding:8px 10px;box-shadow:0 4px 14px rgba(0,0,0,.5);font-size:13px;font-weight:700';
+        BAR.innerHTML='<span style="color:#86efac">🧭 案内中</span>'
+          +'<button id="kmNavBarStop167" style="border:0;border-radius:10px;background:#dc2626;color:#fff;font-weight:800;padding:9px 12px;font-size:13px">⏹ 停止</button>'
+          +'<button id="kmNavBarBack167" style="border:0;border-radius:10px;background:#374151;color:#fff;font-weight:800;padding:9px 12px;font-size:13px">⚙ 再表示</button>';
+        document.body.appendChild(BAR);
+        BAR.querySelector('#kmNavBarStop167').addEventListener('click',function(ev){ try{ev.stopPropagation();}catch(e){}
+          try{ window.__kmNav165Stop&&window.__kmNav165Stop(); }catch(e){} bar(false); },true);
+        BAR.querySelector('#kmNavBarBack167').addEventListener('click',function(ev){ try{ev.stopPropagation();}catch(e){}
+          try{ window.__kmNav165Open&&window.__kmNav165Open(); }catch(e){} },true);
+      }
+      BAR.style.display=show?'flex':'none';
+    }catch(e){}
+  }
+  function hideNav(){ try{ document.getElementById('knNavPn165').style.setProperty('display','none','important'); }catch(e){} }
+  function wrapStart(){
+    if(!window.__kmNav165Start || window.__kmNav165Start.__w167) return;
+    var s0=window.__kmNav165Start;
+    var w=function(){ var r; try{ r=s0.apply(this,arguments); }catch(e){ r='ERR'; }
+      try{ hideNav(); }catch(e){} try{ bar(true); }catch(e){} return r; };
+    w.__w167=1; window.__kmNav165Start=w;
+  }
+  wrapStart(); setTimeout(wrapStart,1500); setTimeout(wrapStart,4000); setInterval(wrapStart,5000);
+  try{ var s1=window.__kmNav165Stop; if(s1&&!s1.__w167){ var w2=function(){ try{ bar(false); }catch(e){} return s1.apply(this,arguments); }; w2.__w167=1; window.__kmNav165Stop=w2; } }catch(e){}
+  window.__kmNavBarVis167=function(){ return BAR?getComputedStyle(BAR).display:'none'; };
+  /* ①b: 「消す」操作そのものを捕まえて、その場で保存も空にする（復活を根絶） PURGEALL167 */
+  window.__kmPurgeUntil=0;
+  function purgeAll(){
+    try{
+      window.__kmUserCleared=Date.now(); window.__kmPurgeUntil=Date.now()+600000;
+      DELAT=Date.now(); last=0; window.__kmAllowEmptyLines=true;
+      ['km_draw_main','km_draw_main_bak','km_draw_vault_v157','km_all_backup_v129','km_draw_v99','km_draw_mine_v1','km_draw','km_edit_v1'].forEach(function(k){
+        try{ var j=JSON.parse(localStorage.getItem(k)||'null'); if(!j||j.lines){ localStorage.setItem(k, JSON.stringify({v:96,lines:[]})); } }catch(e){}
+      });
+      localStorage.setItem('km_clear_at', String(Date.now()));
+    }catch(e){}
+    setTimeout(function(){ try{ window.__kmAllowEmptyLines=false; }catch(e){} },4000);
+    return 1;
+  }
+  window.__kmPurgeAll167=purgeAll;
+  try{ var _c0=window.__kmDrawAPI.clear; window.__kmDrawAPI.clear=function(){ var r=_c0.apply(this,arguments); purgeAll(); return r; }; }catch(e){}
+  document.addEventListener('click',function(ev){
+    var t=ev.target; if(!t||!t.closest) return;
+    var b=t.closest('button,a,[role=button]'); if(!b) return;
+    var id=b.id||'', tx=(b.textContent||'').trim();
+    if(id==='kmDvClr'||id==='kmEdClr'||/全消去/.test(tx)){
+      [0,80,250,700].forEach(function(ms){ setTimeout(function(){ purgeAll(); }, ms); });
+    }
+  },true);
+
+  /* ③b: パネル内の「開始」ボタン実クリックを捕まえて、確実に地図へ戻す */
+  try{
+    window.addEventListener('click',function(ev){
+      try{
+        var t=ev.target; if(!t||!t.closest) return;
+        var b=t.closest('button,a,[role=button]'); if(!b) return;
+        var p=document.getElementById('knNavPn165'); if(!p||!p.contains(b)) return;
+        var tx=(b.textContent||'').trim(), id=b.id||'';
+        if(/開始/.test(tx)||id==='knNavGo165'){                 /* KNNAV_BTN_167 */
+          [120,400,900,1500].forEach(function(ms){ setTimeout(function(){ hideNav(); bar(true); },ms); });
+        } else if(/停止/.test(tx)||id==='knNavStop165'){
+          setTimeout(function(){ bar(false); },250);
+        }
+      }catch(e){}
+    },true);
+  }catch(e){}
+
 })();
 </script>
 </body>
