@@ -8223,7 +8223,7 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v169 09/28 07:00';
+  var BUILD='v172 09/28 12:00';
   var BTAG=(function(m){ return m?m[0]:'v153'; })(/v([0-9]+)/.exec(BUILD||'v153'));
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
@@ -9609,7 +9609,7 @@ function boot(){ apply(); addBtn2(); label(); }
     var id=b.id||''; var tx=(b.textContent||'').trim();
     if(id==='drawBtn' || id==='pnlChip_kmDrawPanel' || /^手描き$/.test(tx) || /^手描きトレース$/.test(tx) || /^手描きトレース ▴$/.test(tx)){
       try{ ev.preventDefault(); ev.stopImmediatePropagation(); }catch(e){}
-      try{ if(window.__kmToggleDraw167) window.__kmToggleDraw167(); }catch(e){}
+      try{ if(window.__kmDrawOpen167) window.__kmDrawOpen167(); }catch(e){}
     }
   },true);
   /* パネル一覧から紛らわしい「旧・別画面」行を隠す */
@@ -10091,19 +10091,77 @@ function boot(){ apply(); addBtn2(); label(); }
   var KEEP=0;
   function P(){ return document.getElementById('kmDrawPanel'); }
   function vis(el){ try{ var c=getComputedStyle(el); return c.display!=='none'&&c.visibility!=='hidden'&&el.offsetHeight>2; }catch(e){ return false; } }
+  /* 親要素が隠れていると、いくら display を戻しても見えない。
+     親の display/visibility/opacity/pointer-events もここで必ず復帰させる。 */
+  function unchain(p){
+    try{
+      var e=p.parentElement, d=0, touched=[];
+      while(e && e!==document.body && d<8){
+        try{
+          var cs=getComputedStyle(e);
+          if(cs.display==='none'){ e.style.setProperty('display','block','important'); touched.push(e.id||e.tagName); }
+          if(cs.visibility==='hidden'){ e.style.setProperty('visibility','visible','important'); }
+          if(cs.opacity==='0'){ e.style.setProperty('opacity','1','important'); }
+          if(cs.pointerEvents==='none'){ e.style.setProperty('pointer-events','auto','important'); }
+        }catch(x){}
+        e=e.parentElement; d++;
+      }
+      return touched.join(',');
+    }catch(e){ return ''; }
+  }
   function openP(){
     var p=P(); if(!p) return 'no-panel';
     KEEP=0;
     try{ window.__kmClosedClear&&window.__kmClosedClear('kmDrawPanel'); }catch(e){}
     try{ window.__kmClosedClear&&window.__kmClosedClear('drawPanel'); }catch(e){}
     try{ delete (window.__kmClosedFlags||{})['kmDrawPanel']; }catch(e){}
-    p.style.setProperty('display','block','important');
+    try{ if(window.__kmLayout145&&window.__kmLayout145.build) window.__kmLayout145.build(); }catch(e){}
     try{ window.__pnlShow&&window.__pnlShow('kmDrawPanel'); }catch(e){}
+    try{
+      p.style.setProperty('position','fixed','important');
+      p.style.setProperty('display','block','important');
+      p.style.setProperty('visibility','visible','important');
+      p.style.setProperty('opacity','1','important');
+      p.style.setProperty('pointer-events','auto','important');
+      p.style.setProperty('z-index','2147483000','important');
+    }catch(e){}
+    OPENAT=Date.now();
+    p.__kmUnchain=unchain(p);
+    try{ var st=document.getElementById('kmStack145');
+      if(st){ st.style.setProperty('pointer-events','auto','important'); } }catch(e){}
+    try{ p.setAttribute('data-km-open','1'); }catch(e){}
+    [120,350,700,1100,1650].forEach(function(ms){ setTimeout(reassert,ms); });
+    var r=p.getBoundingClientRect();
+    if(!(r.width>40 && r.height>40)){          /* それでも出ない時は body 直下へ移す */
+      try{ p.style.setProperty('left','8px','important'); p.style.setProperty('right','auto','important');
+           p.style.setProperty('top','96px','important'); p.style.setProperty('bottom','auto','important');
+           document.body.appendChild(p); p.__kmMoved=1; }catch(e){}
+    }
+    try{ window.__kmDrawVis167&&0; }catch(e){}
     return 'open';
+  }
+  var OPENAT=0;
+  function reassert(){
+    try{
+      if(KEEP) return;                       /* 本人が閉じた後は開き直さない */
+      if(!OPENAT || (Date.now()-OPENAT)>1800) return;
+      var e=P(); if(!e) return;
+      var cs=getComputedStyle(e);
+      if(cs.display==='none'||cs.visibility==='hidden'||cs.opacity==='0'){
+        e.style.setProperty('position','fixed','important');
+        e.style.setProperty('display','block','important');
+        e.style.setProperty('visibility','visible','important');
+        e.style.setProperty('opacity','1','important');
+        e.style.setProperty('pointer-events','auto','important');
+        e.style.setProperty('z-index','2147483000','important');
+      }
+    }catch(e){}
   }
   function closeP(){
     var p=P(); if(!p) return 'closed';
+    if(OPENAT && (Date.now()-OPENAT)<350) return 'keep-open';   /* 開いた直後の閉じは無視 */
     KEEP=Date.now();
+    try{ p.setAttribute('data-km-open','0'); }catch(e){}
     p.style.setProperty('display','none','important');
     try{ window.__kmClosedSet&&window.__kmClosedSet('kmDrawPanel'); }catch(e){}
     return 'closed';
@@ -10119,15 +10177,20 @@ function boot(){ apply(); addBtn2(); label(); }
   window.__kmToggleDraw167=function(){
     var now=Date.now(); if(now-lastTog<220) return 'debounce'; lastTog=now;
     var p=P(); if(!p) return 'no-panel';
-    return vis(p)?closeP():openP();
+    var open=(vis(p) && p.getAttribute('data-km-open')!=='0');
+    if(!open) return openP();
+    try{ p.setAttribute('data-km-open','0'); }catch(e){}
+    return closeP();
   };
   window.__kmDrawOpen167=openP; window.__kmDrawClose167=closeP; window.__kmDrawVis167=function(){ var p=P(); return p?vis(p):false; };
   document.addEventListener('click',function(ev){
     var t=ev.target; if(!t||!t.closest) return;
     var b=t.closest('button,a,[role=button]'); if(!b) return;
     var id=b.id||'', tx=(b.textContent||'').trim();
-    if(id==='drawBtn'||id==='pnlChip_kmDrawPanel'||/^手描き(トレース)?( ▴)?$/.test(tx)){
-      ev.preventDefault(); ev.stopImmediatePropagation(); window.__kmToggleDraw167();
+    if(id==='drawBtn'||id==='pnlChip_kmDrawPanel'||id==='kmDrawMin'||/手描き/.test(tx)){
+      ev.preventDefault(); ev.stopImmediatePropagation();
+      /* 迷いを無くす：押したら必ず開く（閉じるはパネル内の✕／最小化だけ） */
+      try{ if(window.__kmDrawOpen167) window.__kmDrawOpen167(); }catch(e){}
     }
   },true);
   document.addEventListener('click',function(ev){
@@ -10213,6 +10276,189 @@ function boot(){ apply(); addBtn2(); label(); }
   }catch(e){}
 
 })();
+</script>
+<style>
+.kmArr172{color:#1e88e5;font-size:16px;line-height:20px;text-align:center;text-shadow:0 0 2px #fff,0 0 2px #fff,0 0 2px #fff;transform-origin:50% 50%;display:block}
+#kmLive172{position:fixed;left:8px;bottom:104px;z-index:9998;background:rgba(255,255,255,.94);border:1px solid #cfd8dc;border-radius:10px;padding:6px 8px;font:11px/1.5 system-ui,-apple-system,sans-serif;color:#263238;box-shadow:0 2px 10px rgba(0,0,0,.18);max-width:250px}
+</style>
+<script>
+
+/* KM_LIVEPOS_V172 : 現在地マーカーを常時追従（ナビのように移動） */
+(function(){
+  if(window.__kmLivePos172) return; window.__kmLivePos172=1;
+
+  function MAP(){
+    try{ if(typeof map!=='undefined' && map && map.setView) return map; }catch(e){}
+    try{ return window.map||window.__map||window.kmMap||null; }catch(e){ return null; }
+  }
+
+  var legacyOK=false;
+  try{ legacyOK = (typeof meMarker !== 'undefined'); }catch(e){ legacyOK=false; }
+
+  var myM=null, myC=null, arrow=null, arrowHTML=null;
+  var curLL=null, tgtLL=null, rafId=null, lastBearing=null;
+  var follow=true, wid=null, starting=false;
+  var lastFix=0, lastSpeed=null, lastAcc=null, nErr=0, nFix=0, lastLL=null;
+  var errs=[]; window.__kmLiveErrs172=errs;
+
+  function note(t){ try{ notice(t); }catch(e){} }
+  function el(id){ return document.getElementById(id); }
+
+  function readout(){
+    var st=el('kmLv172State'), inf=el('kmLv172Info'), b=el('kmLv172Follow');
+    if(!st) return;
+    if(nFix===0){ st.textContent='📡 測位待ち…'; inf.textContent = nErr? ('エラー '+nErr+' 件') : '位置情報の許可を確認してください'; }
+    else{
+      var ago=Math.round((Date.now()-lastFix)/1000);
+      st.textContent = follow ? '🧭 追従中' : '⏸ 追従オフ（地図を動かしました）';
+      inf.textContent = '受信 '+ago+'秒前 ・ 精度 ±'+Math.round(lastAcc||0)+'m ・ 速度 '+(lastSpeed==null?'-':(lastSpeed*3.6).toFixed(1)+'km/h')+' ・ 測位 '+nFix+'回';
+    }
+    if(b) b.textContent = follow ? '🎯 追従 ON' : '🎯 追従 OFF';
+  }
+
+  function ensure(lat,lon,acc){
+    var m=MAP(); if(!m) return false;
+    if(!myM || !myM._map){
+      myC=L.circle([lat,lon],{radius:acc||99,color:'#1e88e5',weight:1,fillColor:'#1e88e5',fillOpacity:.12}).addTo(m);
+      myM=L.circleMarker([lat,lon],{radius:7,color:'#fff',weight:2.5,fillColor:'#1e88e5',fillOpacity:1}).addTo(m);
+      if(legacyOK){ try{ meMarker=myM; meCircle=myC; }catch(e){} }
+      try{
+        var ic=L.divIcon({className:'kmArrWrap172',html:'<div class="kmArr172">▲</div>',iconSize:[20,20],iconAnchor:[10,10]});
+        arrow=L.marker([lat,lon],{icon:ic,interactive:false,zIndexOffset:-1}).addTo(m);
+        arrowHTML=document.querySelector('.kmArr172');
+      }catch(e){}
+      try{ if(!m._loaded || m.getZoom()<13) m.setView([lat,lon], Math.max(m.getZoom(),16)); }catch(e){}
+    }
+    return true;
+  }
+
+  function paint(){
+    if(!myM||!curLL) return;
+    try{ myM.setLatLng(curLL); }catch(e){}
+    if(myC){ try{ myC.setLatLng(curLL); if(lastAcc) myC.setRadius(lastAcc); }catch(e){} }
+    if(arrow && arrow._map){ try{ arrow.setLatLng(curLL); }catch(e){}
+      if(arrowHTML && lastBearing!=null) arrowHTML.style.transform='rotate('+lastBearing+'deg)';
+    }
+    if(follow){ var m=MAP(); if(m){ try{ m.panTo(curLL,{animate:false}); }catch(e){} } }
+  }
+
+  function animate(){
+    rafId=null;
+    if(!curLL||!tgtLL) return;
+    var dLat=tgtLL[0]-curLL[0], dLon=tgtLL[1]-curLL[1];
+    var mag=Math.abs(dLat)+Math.abs(dLon);
+    if(mag<1e-7){ curLL=[tgtLL[0],tgtLL[1]]; paint(); return; }
+    var k = mag>0.02 ? 1 : 0.28;
+    curLL=[curLL[0]+dLat*k, curLL[1]+dLon*k];
+    paint();
+    if(k<1) rafId=requestAnimationFrame(animate);
+  }
+
+  function distM(a,b,c,d){ var R=6371000,t=Math.PI/180;
+    var x=(c-a)*t, y=(d-b)*t*Math.cos((a+c)/2*t);
+    return Math.sqrt(x*x+y*y)*R; }
+  function bearingOf(a,b,c,d){ var t=Math.PI/180;
+    var y=Math.sin((d-b)*t)*Math.cos(c*t);
+    var x=Math.cos(a*t)*Math.sin(c*t)-Math.sin(a*t)*Math.cos(c*t)*Math.cos((d-b)*t);
+    return (Math.atan2(y,x)/t+360)%360; }
+
+  function onFix(p){
+    var la=p.coords.latitude, lo=p.coords.longitude, acc=p.coords.accuracy||null;
+    nFix++; lastFix=Date.now(); lastAcc=acc;
+    lastSpeed = (p.coords.speed!=null && !isNaN(p.coords.speed)) ? p.coords.speed : null;
+    try{
+      if(p.coords.heading!=null && !isNaN(p.coords.heading) && (p.coords.speed||0)>0.8) lastBearing=p.coords.heading;
+      else if(lastLL && distM(lastLL[0],lastLL[1],la,lo)>3) lastBearing=bearingOf(lastLL[0],lastLL[1],la,lo);
+    }catch(e){}
+    if(!ensure(la,lo,acc)) return;
+    tgtLL=[la,lo];
+    if(!curLL){ curLL=[la,lo]; paint(); }
+    else if(!rafId) rafId=requestAnimationFrame(animate);
+    lastLL=[la,lo];
+    readout();
+  }
+
+  function start(){
+    if(!navigator.geolocation){ note('⚠ この端末はGPSに対応していません'); return 'no-geo'; }
+    if(wid!=null || starting) return 'already';
+    starting=true;
+    try{
+      wid=navigator.geolocation.watchPosition(onFix, function(e){
+        nErr++; try{ errs.push((e&&e.message)||('code'+e.code)); }catch(_){}
+        readout();
+        if(nErr<=2) note('⚠ 位置情報エラー: '+((e&&e.message)||('code'+((e&&e.code)||0))));
+        try{ if(wid!=null) navigator.geolocation.clearWatch(wid); }catch(_){}
+        wid=null; starting=false;
+        setTimeout(start, Math.min(15000, 2500*nErr));
+      }, {enableHighAccuracy:true, maximumAge:0, timeout:20000});
+    }catch(e){ starting=false; return 'watch-err'; }
+    starting=false; readout(); return 'started';
+  }
+
+  var wl=null;
+  function wake(){ try{ if(navigator.wakeLock && !wl){ navigator.wakeLock.request('screen').then(function(l){ wl=l; l.addEventListener('release',function(){ wl=null; }); }).catch(function(){}); } }catch(e){} }
+
+  function restartIfStale(){
+    try{
+      if(wid==null || (lastFix && (Date.now()-lastFix)>25000)){
+        if(wid!=null) navigator.geolocation.clearWatch(wid);
+        wid=null; nErr=0; start();
+      }
+    }catch(e){}
+  }
+
+  document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible'){ wake(); restartIfStale(); } });
+  window.addEventListener('online', restartIfStale);
+  window.addEventListener('focus', restartIfStale);
+  try{ var m0=MAP(); if(m0) m0.on('dragstart', function(){ follow=false; readout(); }); }catch(e){}
+
+  function buildUI(){
+    if(el('kmLive172')) return;
+    var d=document.createElement('div'); d.id='kmLive172';
+    d.innerHTML='<div style="display:flex;align-items:center;gap:6px"><b id="kmLv172State">📡 測位待ち…</b><span id="kmLv172X" style="margin-left:auto;cursor:pointer;font-weight:700;color:#c62828;padding:0 5px">✕</span></div>'
+      +'<div id="kmLv172Info" style="margin:2px 0 4px">位置情報の許可を確認してください</div>'
+      +'<button id="kmLv172Follow" style="font:11px system-ui;padding:3px 8px;border:1px solid #1e88e5;background:#fff;color:#1565c0;border-radius:8px;margin-right:4px">🎯 追従 ON</button>'
+      +'<button id="kmLv172Center" style="font:11px system-ui;padding:3px 8px;border:1px solid #90a4ae;background:#fff;color:#37474f;border-radius:8px">📍 現在地へ</button>';
+    document.body.appendChild(d);
+    el('kmLv172X').addEventListener('click', function(){ d.style.display='none'; });
+    el('kmLv172Follow').addEventListener('click', function(){
+      follow=!follow; readout();
+      if(follow && curLL){ var m=MAP(); if(m) m.setView(curLL, Math.max(m.getZoom(),16)); }
+    });
+    el('kmLv172Center').addEventListener('click', function(){
+      d.style.display='block'; follow=true; restartIfStale();
+      if(curLL){ var m=MAP(); if(m) m.setView(curLL, Math.max(m.getZoom(),16)); }
+      readout();
+    });
+  }
+
+  document.addEventListener('click', function(ev){
+    var t=ev.target;
+    while(t && t!==document){
+      if(t.id==='locBtn'){ follow=true; var d=el('kmLive172'); if(d) d.style.display='block'; restartIfStale(); readout(); break; }
+      t=t.parentNode;
+    }
+  }, true);
+
+  buildUI(); readout();
+  setTimeout(function(){ start(); wake(); }, 400);
+  document.addEventListener('touchstart', function once(){ document.removeEventListener('touchstart', once); start(); wake(); }, {passive:true});
+  document.addEventListener('click', function once2(){ document.removeEventListener('click', once2); start(); wake(); }, true);
+  setInterval(readout, 1000);
+  setInterval(restartIfStale, 5000);
+
+  window.__kmLiveTest172=onFix;
+  window.__kmLiveStart=start;
+  window.__kmLiveGet=function(){
+    return { ver:'v172', follow:follow, nFix:nFix, errs:nErr, legacyOK:legacyOK,
+      cur: curLL?[curLL[0],curLL[1]]:null, target: tgtLL?[tgtLL[0],tgtLL[1]]:null,
+      lastFix:lastFix, acc:lastAcc, speed:lastSpeed, bearing:lastBearing,
+      marker: (myM&&myM._map)?[myM.getLatLng().lat,myM.getLatLng().lng]:null,
+      mapCenter: (function(){ try{ var m=MAP(); var c=m.getCenter(); return [c.lat,c.lng]; }catch(e){ return null; } })(),
+      watchAlive: wid!=null };
+  };
+})();
+
 </script>
 </body>
 
