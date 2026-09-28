@@ -8223,7 +8223,7 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v167 09/27 08:30';
+  var BUILD='v169 09/28 07:00';
   var BTAG=(function(m){ return m?m[0]:'v153'; })(/v([0-9]+)/.exec(BUILD||'v153'));
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
@@ -10039,34 +10039,53 @@ function boot(){ apply(); addBtn2(); label(); }
   var LEG=['km_draw_v99','km_draw_mine_v1','km_draw','km_draw_vault_v157','km_all_backup_v129','km_edit_v1'];
   function J(k){ try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } }
   function blank(k){ try{ var j=J(k); if(j&&j.lines&&j.lines.length){ localStorage.setItem(k, JSON.stringify({v:96,lines:[]})); return 1; } }catch(e){} return 0; }
-  var last=-1, DELAT=0;
+  var last=-1, DELAT=0, pendN=-1, pendAt=0, TOUCHAT=0;
+  ['pointerdown','pointerup','touchstart','touchend','click'].forEach(function(ev){
+    try{ document.addEventListener(ev,function(){ TOUCHAT=Date.now(); },true); }catch(e){}
+  });
+  function writeNow(){
+    var S=window.KM_DRAW_STATE; if(!S||!S.lines) return 0;
+    try{ window.__kmAllowEmptyLines=true; }catch(e){}
+    try{ localStorage.setItem('km_draw_main', JSON.stringify({v:96,lines:S.lines})); }catch(e){}
+    try{ if(typeof window.kmSaveFlush==='function') window.kmSaveFlush(); }catch(e){}
+    setTimeout(function(){ try{ window.__kmAllowEmptyLines=false; }catch(e){} },3000);
+    return S.lines.length;
+  }
+  /* 観測：増えた＝本人の描き足し。減った＝すぐには断定しない（描画中の一時的な減少を消去と誤認しない） */
   setInterval(function(){
     try{
       var S=window.KM_DRAW_STATE; if(!S||!S.lines) return;
       var n=S.lines.length;
       if(last<0){ last=n; return; }
-      if(n>last){ DELAT=0; window.__kmUserDelAt=0;
-        try{ localStorage.removeItem('km_clear_at'); }catch(e){}
-        last=n; return; }
-      if(n<last){
-        DELAT=Date.now(); window.__kmUserDelAt=DELAT; last=n;
-        try{ window.__kmAllowEmptyLines=true; }catch(e){}
-        try{ localStorage.setItem('km_draw_main', JSON.stringify({v:96,lines:S.lines})); }catch(e){}
-        try{ if(typeof window.kmSaveFlush==='function') window.kmSaveFlush(); }catch(e){}
-        if(n===0){
-          try{ localStorage.setItem('km_clear_at', String(DELAT)); localStorage.setItem('km_draw_main_bak', JSON.stringify({v:96,lines:[]})); }catch(e){}
-          window.__kmUserCleared=DELAT;
-          LEG.forEach(blank);
-          try{ window.__kmDeletePurged=1; }catch(e){}
-        }
-        setTimeout(function(){ try{ window.__kmAllowEmptyLines=false; }catch(e){} },2500);
-        return;
-      }
-      if(DELAT && (Date.now()-DELAT)<600000 && n===0){
-        blank('km_draw_main'); blank('km_draw_main_bak'); LEG.forEach(blank);
-      }
+      if(n>last){ last=n; DELAT=0; pendAt=0; pendN=-1; window.__kmUserDelAt=0;
+        try{ localStorage.removeItem('km_clear_at'); }catch(e){} return; }
+      if(n<last){ if(pendN!==n){ pendN=n; pendAt=Date.now(); } return; }
+      if(pendAt && n===last){ pendAt=0; pendN=-1; }   /* 元に戻った＝一時的な減少だった */
     }catch(e){}
-  },500);
+  },400);
+  /* 確定：低い値が2.4秒以上つづいた時だけ「本人の削除」とみなす */
+  setInterval(function(){
+    try{
+      if(!pendAt) return;
+      var S=window.KM_DRAW_STATE; if(!S||!S.lines) return;
+      var n=S.lines.length;
+      if(n!==pendN){ pendAt=0; pendN=-1; return; }
+      if(Date.now()-pendAt < 2500) return;
+      if(!(TOUCHAT && (Date.now()-TOUCHAT)<6000)){ pendAt=0; pendN=-1; return; }  /* 触っていない時の減少＝内部同期。消去とみなさない */
+      if(last>=0 && n<last){
+        DELAT=Date.now(); window.__kmUserDelAt=DELAT; last=n;
+        if(n>0){ writeNow(); }                 /* 一部の線を消した：今の内容をそのまま保存 */
+        if(n===0){                             /* 全部消えた：保存も空に */
+          try{ window.__kmAllowEmptyLines=true; }catch(e){}
+          try{ localStorage.setItem('km_draw_main', JSON.stringify({v:96,lines:[]})); }catch(e){}
+          try{ if(typeof window.kmSaveFlush==='function') window.kmSaveFlush(); }catch(e){}
+          try{ localStorage.setItem('km_clear_at', String(DELAT)); localStorage.setItem('km_draw_main_bak', JSON.stringify({v:96,lines:[]})); }catch(e){}
+          setTimeout(function(){ try{ window.__kmAllowEmptyLines=false; }catch(e){} },3000);
+        }
+      }
+      pendAt=0; pendN=-1;
+    }catch(e){}
+  },300);
 
   /* ---------- ② 手描きパネル：閉じた後も何度でも開く ---------- */
   var KEEP=0;
@@ -10092,7 +10111,7 @@ function boot(){ apply(); addBtn2(); label(); }
   setInterval(function(){
     try{
       if(!KEEP) return;
-      if(Date.now()-KEEP>3500){ KEEP=0; return; }
+      if(Date.now()-KEEP>900){ KEEP=0; return; }
       var p=P(); if(p&&vis(p)) p.style.setProperty('display','none','important');
     }catch(e){}
   },150);
@@ -10164,6 +10183,8 @@ function boot(){ apply(); addBtn2(); label(); }
     return 1;
   }
   window.__kmPurgeAll167=purgeAll;
+  try{ var _a0=window.__kmDrawAPI.add; window.__kmDrawAPI.add=function(){ var r=_a0.apply(this,arguments); try{ writeNow(); }catch(e){} return r; }; }catch(e){}
+  try{ var _r0=window.__kmDrawAPI.replace; if(_r0){ window.__kmDrawAPI.replace=function(){ var r=_r0.apply(this,arguments); try{ writeNow(); }catch(e){} return r; }; } }catch(e){}
   try{ var _c0=window.__kmDrawAPI.clear; window.__kmDrawAPI.clear=function(){ var r=_c0.apply(this,arguments); purgeAll(); return r; }; }catch(e){}
   document.addEventListener('click',function(ev){
     var t=ev.target; if(!t||!t.closest) return;
