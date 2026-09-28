@@ -7213,7 +7213,7 @@ setTimeout(hideSplash, 3500);
         else { map.fitBounds(L.latLngBounds(bb).pad(0.25)); }
         try{ redraw(); }catch(e){}
         return 2; }catch(e){ return -1; } };
-    window.__kmDrawAPI.fixVer='v173';
+    window.__kmDrawAPI.fixVer='v174';
   }catch(e){}
 
 
@@ -8241,7 +8241,7 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v173 09/28 12:00';
+  var BUILD='v174 09/28 12:00';
   var BTAG=(function(m){ return m?m[0]:'v153'; })(/v([0-9]+)/.exec(BUILD||'v153'));
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
@@ -9769,6 +9769,8 @@ function boot(){ apply(); addBtn2(); label(); }
     var K='km_draw_main', SELKEY='km_nav_sel_v165', GCOL='#16a34a';
     var OFF_TH=40, BEND_TH=25, NEAR=90, GOAL=25;
     var SEL=0, LINES=[], ACTIVE=false, wid=null, cov=null, bar=null, pn=null, spoke={}, lastOff=0, lastC=null;
+    /* NAVFOLLOW_V174 : ナビ中の地図追従（既定ON／操作・描画中は休止） */
+    var NAVF=true, NAVT=0, NAVWHY='', NAVREADY=false, NAVFIX=0, navLast=null;
 
     function raw(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
     function isN(v){ return (typeof v==='number'&&isFinite(v)); }
@@ -9833,6 +9835,73 @@ function boot(){ apply(); addBtn2(); label(); }
     function showBar(h,warn){ var b=bark(); b.style.display='block'; b.style.background=warn?'rgba(153,27,27,.95)':'rgba(17,24,39,.92)'; b.innerHTML=h; }
     function hideBar(){ if(bar) bar.style.display='none'; }
 
+    /* ---------- NAVFOLLOW_V174 ---------- */
+    function navDrawing(){
+      try{ var m2=window.KM_DRAW_STATE; if(m2 && m2.mode && m2.mode!=='pan') return true; }catch(e){}
+      return false;
+    }
+    function navMoving(){
+      try{ var mp=window.map; if(!mp) return false;
+        if(mp.dragging){ var d=mp.dragging._draggable;
+          if(mp.dragging.moving && mp.dragging.moving()) return true;
+          if(d && d._moving) return true; }
+        if(mp._animatingZoom) return true;
+        if(mp._panAnim && mp._panAnim._inProgress) return true;
+      }catch(e){}
+      return false;
+    }
+    function navFollow(lat,lng){
+      try{
+        var mp=window.map; if(!mp||!mp.panTo) return;
+        NAVREADY=true; NAVFIX++;
+        if(!NAVF){ NAVWHY='off'; return; }
+        if(navDrawing()){ NAVWHY='drawing'; return; }
+        if(navMoving()){ NAVWHY='user'; return; }
+        var now=Date.now();
+        if(now-NAVT<400){ NAVWHY='throttle'; return; }
+        var c=mp.getCenter();
+        if(Math.abs(c.lat-lat)<2e-6 && Math.abs(c.lng-lng)<2e-6){ NAVT=now; NAVWHY='same'; return; }
+        NAVT=now; NAVWHY='follow';
+        mp.panTo([lat,lng],{animate:true,duration:0.3,noMoveStart:true});
+      }catch(e){}
+    }
+    function navHold(){
+      if(!NAVF) return;
+      NAVF=false; NAVWHY='user';
+      try{ speak('地図の追従を停止しました'); }catch(e){}
+    }
+    function navBtnPaint(){
+      try{ var b=document.getElementById('kmNavFollowBtn174'); if(!b) return;
+        b.textContent = NAVF ? '🎯 追従中（タップで停止）' : '🎯 現在地に戻る';
+        b.style.background = NAVF ? 'rgba(22,163,74,.95)' : 'rgba(180,83,9,.95)';
+        b.style.borderColor = NAVF ? '#bbf7d0' : '#fed7aa'; }catch(e){}
+    }
+    function navBarExtra(){
+      try{
+        var b=bark(); if(!b) return;
+        if(!document.getElementById('kmNavFollowBtn174')){
+          var d=document.createElement('div'); d.id='kmNavFollowWrap174';
+          d.style.cssText='margin-top:6px;display:flex;gap:6px;align-items:center';
+          var bt=document.createElement('button'); bt.id='kmNavFollowBtn174'; bt.type='button';
+          bt.style.cssText='flex:1;font:13px system-ui;padding:6px 8px;border:1px solid #bbf7d0;border-radius:8px;color:#fff;background:rgba(22,163,74,.95)';
+          bt.textContent='🎯 追従中（タップで停止）';
+          bt.addEventListener('click', function(ev){ ev.preventDefault(); ev.stopPropagation();
+            if(NAVF){ NAVF=false; NAVWHY='off'; }
+            else{ NAVF=true; NAVWHY='on'; NAVT=0;
+              try{ if(navLast&&window.map&&window.map.panTo) window.map.panTo(navLast,{animate:true,duration:0.4}); }catch(e){} }
+            navBtnPaint(); });
+          d.appendChild(bt); b.appendChild(d);
+        }
+        navBtnPaint();
+      }catch(e){}
+    }
+    window.__kmNavFollowGet174=function(){
+      var c=null,z=null; try{ var mp=window.map,q=mp&&mp.getCenter(); c=q?[+q.lat.toFixed(6),+q.lng.toFixed(6)]:null; z=mp?mp.getZoom():null; }catch(e){}
+      return { on:NAVF, why:NAVWHY, fixes:NAVFIX, ready:NAVREADY, center:c, zoom:z, last:navLast, active:ACTIVE };
+    };
+    window.__kmNavFollowSet174=function(v){ NAVF=!!v; navBtnPaint(); return NAVF; };
+    /* ---------- /NAVFOLLOW_V174 ---------- */
+
     function cover(P){
       try{
         var mp=window.map, Lg=window.L; if(!mp||!Lg||!mp.addLayer) return;
@@ -9873,6 +9942,7 @@ function boot(){ apply(); addBtn2(); label(); }
       var sub='進んだ '+Math.round(r.progress)+'m / '+Math.round(r.total)+'m（'+r.pct.toFixed(0)+'%）　残り '+Math.round(r.remain)+'m';
       if(r.off) head='⚠ <b>線から外れています</b>（'+Math.round(r.dist)+'m）　最寄りへ '+r.nextDir+' '+Math.round(r.dist)+'m';
       showBar(head+'<br><span style="opacity:.85">'+sub+'</span>', r.off);
+      navLast=[lat,lng]; navFollow(lat,lng); navBarExtra();
       cover([lat,lng]);
       var now=Date.now();
       if(r.off && now-lastOff>20000){ lastOff=now; beep(420,0.18); speak('線から外れています'); }
@@ -9889,12 +9959,29 @@ function boot(){ apply(); addBtn2(); label(); }
       if(!LINES.length){ showBar('🧭 手描きの線がありません。先に線を描いてください。',true); return 'no-lines'; }
       if(!(window.navigator&&navigator.geolocation)){ showBar('🧭 この端末では位置情報が使えません',true); return 'no-geo'; }
       ACTIVE=true; spoke={}; lastOff=0;
+      NAVF=true; NAVWHY='on'; NAVT=0; NAVREADY=false; NAVFIX=0; navLast=null;
+      try{ window.__kmLivePause173=true; }catch(e){}
+      try{
+        var mp=window.map;
+        if(mp && mp.on && !window.__kmNavEv174){
+          window.__kmNavEv174=1;
+          mp.on('dragstart', function(){ setTimeout(function(){ navHold(); navBarExtra(); },60); });
+          mp.on('zoomstart', function(){ try{ if(mp._animatingZoom) return; }catch(e){} setTimeout(function(){ navHold(); navBarExtra(); },60); });
+        }
+      }catch(e){}
       var L=LINES[SEL];
       speak('線ナビを開始します。全長 約'+(Math.round(totalOf(L)/100)/10)+'キロ');
       try{
         wid=navigator.geolocation.watchPosition(function(p){
           if(!ACTIVE) return; try{ apply(p.coords.latitude,p.coords.longitude); }catch(e){}
-        },function(e){ if(!ACTIVE) return; showBar('🧭 位置情報を取得できません（'+((e&&e.message)||'error')+'）',true); },
+        },function(e){ if(!ACTIVE) return;
+          var code=(e&&e.code)||0, why=(e&&e.message)||'error';
+          var jp = code===1 ? '位置情報が許可されていません（ブラウザ設定で「許可」に。HTTPSが必要です）'
+                 : code===2 ? '現在地を取得できません（電波・GPSの状態を確認）'
+                 : code===3 ? '位置情報の取得がタイムアウトしました（屋内では取れないことがあります）'
+                 : ('位置情報エラー（'+why+'）');
+          showBar('🧭 '+jp+'<br><span style="opacity:.8">電波の良い場所で再開してください</span>',true);
+          navBarExtra(); },
         {enableHighAccuracy:true,maximumAge:2000,timeout:20000});
       }catch(e){ ACTIVE=false; return 'watch-err'; }
       return 'started';
@@ -9902,7 +9989,10 @@ function boot(){ apply(); addBtn2(); label(); }
     function stop(){
       ACTIVE=false;
       try{ if(wid!=null&&navigator.geolocation) navigator.geolocation.clearWatch(wid); }catch(e){}
-      wid=null; uncov(); hideBar(); return 'stopped';
+      wid=null; uncov(); hideBar(); NAVF=true; NAVWHY='stopped'; navLast=null;
+      try{ window.__kmLivePause173=false; }catch(e){}
+      try{ var b2=document.getElementById('kmNavFollowWrap174'); if(b2&&b2.parentNode) b2.parentNode.removeChild(b2); }catch(e){}
+      return 'stopped';
     }
 
     function esc(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -10323,7 +10413,7 @@ function boot(){ apply(); addBtn2(); label(); }
   function el(id){ return document.getElementById(id); }
 
   function readout(){
-    var st=el('kmLv173State'), inf=el('kmLv173Info'), b=el('kmLv173Follow');
+    var st=el('kmLv174State'), inf=el('kmLv174Info'), b=el('kmLv174Follow');
     if(!st) return;
     if(nFix===0){ st.textContent='📡 測位待ち…'; inf.textContent = nErr? ('エラー '+nErr+' 件') : '位置情報の許可を確認してください'; }
     else{
@@ -10360,7 +10450,7 @@ function boot(){ apply(); addBtn2(); label(); }
     if(follow){ var m=MAP();
       var drawing=false; try{ drawing = !!(window.KM_DRAW_STATE && window.KM_DRAW_STATE.mode && window.KM_DRAW_STATE.mode!=='pan'); }catch(e){}
       var nowT=Date.now();
-      if(!drawing && (nowT-(window.__kmPan172||0))>350){ window.__kmPan172=nowT; if(m){ try{ m.panTo(curLL,{animate:false}); }catch(e){} } } }
+      if(!drawing && !window.__kmLivePause173 && (nowT-(window.__kmPan172||0))>350){ window.__kmPan172=nowT; if(m){ try{ m.panTo(curLL,{animate:false}); }catch(e){} } } }
   }
 
   function animate(){
@@ -10436,17 +10526,17 @@ function boot(){ apply(); addBtn2(); label(); }
   function buildUI(){
     if(el('kmLive172')) return;
     var d=document.createElement('div'); d.id='kmLive172';
-    d.innerHTML='<div style="display:flex;align-items:center;gap:6px"><b id="kmLv173State">📡 測位待ち…</b><span id="kmLv173X" style="margin-left:auto;cursor:pointer;font-weight:700;color:#c62828;padding:0 5px">✕</span></div>'
-      +'<div id="kmLv173Info" style="margin:2px 0 4px">位置情報の許可を確認してください</div>'
-      +'<button id="kmLv173Follow" style="font:11px system-ui;padding:3px 8px;border:1px solid #1e88e5;background:#fff;color:#1565c0;border-radius:8px;margin-right:4px">🎯 追従 ON</button>'
-      +'<button id="kmLv173Center" style="font:11px system-ui;padding:3px 8px;border:1px solid #90a4ae;background:#fff;color:#37474f;border-radius:8px">📍 現在地へ</button>';
+    d.innerHTML='<div style="display:flex;align-items:center;gap:6px"><b id="kmLv174State">📡 測位待ち…</b><span id="kmLv174X" style="margin-left:auto;cursor:pointer;font-weight:700;color:#c62828;padding:0 5px">✕</span></div>'
+      +'<div id="kmLv174Info" style="margin:2px 0 4px">位置情報の許可を確認してください</div>'
+      +'<button id="kmLv174Follow" style="font:11px system-ui;padding:3px 8px;border:1px solid #1e88e5;background:#fff;color:#1565c0;border-radius:8px;margin-right:4px">🎯 追従 ON</button>'
+      +'<button id="kmLv174Center" style="font:11px system-ui;padding:3px 8px;border:1px solid #90a4ae;background:#fff;color:#37474f;border-radius:8px">📍 現在地へ</button>';
     document.body.appendChild(d);
-    el('kmLv173X').addEventListener('click', function(){ d.style.display='none'; });
-    el('kmLv173Follow').addEventListener('click', function(){
+    el('kmLv174X').addEventListener('click', function(){ d.style.display='none'; });
+    el('kmLv174Follow').addEventListener('click', function(){
       follow=!follow; readout();
       if(follow && curLL){ var m=MAP(); if(m) m.setView(curLL, Math.max(m.getZoom(),16)); }
     });
-    el('kmLv173Center').addEventListener('click', function(){
+    el('kmLv174Center').addEventListener('click', function(){
       d.style.display='block'; follow=true; restartIfStale();
       if(curLL){ var m=MAP(); if(m) m.setView(curLL, Math.max(m.getZoom(),16)); }
       readout();
@@ -10471,7 +10561,7 @@ function boot(){ apply(); addBtn2(); label(); }
   window.__kmLiveTest172=onFix;
   window.__kmLiveStart=start;
   window.__kmLiveGet=function(){
-    return { ver:'v173', follow:follow, nFix:nFix, errs:nErr, legacyOK:legacyOK,
+    return { ver:'v174', follow:follow, nFix:nFix, errs:nErr, legacyOK:legacyOK,
       cur: curLL?[curLL[0],curLL[1]]:null, target: tgtLL?[tgtLL[0],tgtLL[1]]:null,
       lastFix:lastFix, acc:lastAcc, speed:lastSpeed, bearing:lastBearing,
       marker: (myM&&myM._map)?[myM.getLatLng().lat,myM.getLatLng().lng]:null,
