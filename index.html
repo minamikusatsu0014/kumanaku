@@ -7213,7 +7213,7 @@ setTimeout(hideSplash, 3500);
         else { map.fitBounds(L.latLngBounds(bb).pad(0.25)); }
         try{ redraw(); }catch(e){}
         return 2; }catch(e){ return -1; } };
-    window.__kmDrawAPI.fixVer='v174';
+    window.__kmDrawAPI.fixVer='v175';
   }catch(e){}
 
 
@@ -8241,7 +8241,7 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v174 09/28 12:00';
+  var BUILD='v175 09/28 12:00';
   var BTAG=(function(m){ return m?m[0]:'v153'; })(/v([0-9]+)/.exec(BUILD||'v153'));
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
@@ -9963,8 +9963,8 @@ function boot(){ apply(); addBtn2(); label(); }
       try{ window.__kmLivePause173=true; }catch(e){}
       try{
         var mp=window.map;
-        if(mp && mp.on && !window.__kmNavEv174){
-          window.__kmNavEv174=1;
+        if(mp && mp.on && !window.__kmNavEv175){
+          window.__kmNavEv175=1;
           mp.on('dragstart', function(){ setTimeout(function(){ navHold(); navBarExtra(); },60); });
           mp.on('zoomstart', function(){ try{ if(mp._animatingZoom) return; }catch(e){} setTimeout(function(){ navHold(); navBarExtra(); },60); });
         }
@@ -10387,7 +10387,7 @@ function boot(){ apply(); addBtn2(); label(); }
 </script>
 <style>
 .kmArr172{color:#1e88e5;font-size:16px;line-height:20px;text-align:center;text-shadow:0 0 2px #fff,0 0 2px #fff,0 0 2px #fff;transform-origin:50% 50%;display:block}
-#kmLive172{position:fixed;left:8px;bottom:104px;z-index:9998;background:rgba(255,255,255,.94);border:1px solid #cfd8dc;border-radius:10px;padding:6px 8px;font:11px/1.5 system-ui,-apple-system,sans-serif;color:#263238;box-shadow:0 2px 10px rgba(0,0,0,.18);max-width:250px}
+#kmLive172{position:fixed;left:6px;bottom:162px;z-index:9000;background:rgba(255,255,255,.94);border:1px solid #cfd8dc;border-radius:10px;padding:5px 7px;font:11px/1.5 system-ui,-apple-system,sans-serif;color:#263238;box-shadow:0 2px 10px rgba(0,0,0,.18);max-width:196px}
 </style>
 <script>
 
@@ -10413,7 +10413,7 @@ function boot(){ apply(); addBtn2(); label(); }
   function el(id){ return document.getElementById(id); }
 
   function readout(){
-    var st=el('kmLv174State'), inf=el('kmLv174Info'), b=el('kmLv174Follow');
+    var st=el('kmLv175State'), inf=el('kmLv175Info'), b=el('kmLv175Follow');
     if(!st) return;
     if(nFix===0){ st.textContent='📡 測位待ち…'; inf.textContent = nErr? ('エラー '+nErr+' 件') : '位置情報の許可を確認してください'; }
     else{
@@ -10526,17 +10526,17 @@ function boot(){ apply(); addBtn2(); label(); }
   function buildUI(){
     if(el('kmLive172')) return;
     var d=document.createElement('div'); d.id='kmLive172';
-    d.innerHTML='<div style="display:flex;align-items:center;gap:6px"><b id="kmLv174State">📡 測位待ち…</b><span id="kmLv174X" style="margin-left:auto;cursor:pointer;font-weight:700;color:#c62828;padding:0 5px">✕</span></div>'
-      +'<div id="kmLv174Info" style="margin:2px 0 4px">位置情報の許可を確認してください</div>'
-      +'<button id="kmLv174Follow" style="font:11px system-ui;padding:3px 8px;border:1px solid #1e88e5;background:#fff;color:#1565c0;border-radius:8px;margin-right:4px">🎯 追従 ON</button>'
-      +'<button id="kmLv174Center" style="font:11px system-ui;padding:3px 8px;border:1px solid #90a4ae;background:#fff;color:#37474f;border-radius:8px">📍 現在地へ</button>';
+    d.innerHTML='<div style="display:flex;align-items:center;gap:6px"><b id="kmLv175State">📡 測位待ち…</b><span id="kmLv175X" style="margin-left:auto;cursor:pointer;font-weight:700;color:#c62828;padding:0 5px">✕</span></div>'
+      +'<div id="kmLv175Info" style="margin:2px 0 4px">位置情報の許可を確認してください</div>'
+      +'<button id="kmLv175Follow" style="font:11px system-ui;padding:3px 8px;border:1px solid #1e88e5;background:#fff;color:#1565c0;border-radius:8px;margin-right:4px">🎯 追従 ON</button>'
+      +'<button id="kmLv175Center" style="font:11px system-ui;padding:3px 8px;border:1px solid #90a4ae;background:#fff;color:#37474f;border-radius:8px">📍 現在地へ</button>';
     document.body.appendChild(d);
-    el('kmLv174X').addEventListener('click', function(){ d.style.display='none'; });
-    el('kmLv174Follow').addEventListener('click', function(){
+    el('kmLv175X').addEventListener('click', function(){ d.style.display='none'; });
+    el('kmLv175Follow').addEventListener('click', function(){
       follow=!follow; readout();
       if(follow && curLL){ var m=MAP(); if(m) m.setView(curLL, Math.max(m.getZoom(),16)); }
     });
-    el('kmLv174Center').addEventListener('click', function(){
+    el('kmLv175Center').addEventListener('click', function(){
       d.style.display='block'; follow=true; restartIfStale();
       if(curLL){ var m=MAP(); if(m) m.setView(curLL, Math.max(m.getZoom(),16)); }
       readout();
@@ -10561,7 +10561,7 @@ function boot(){ apply(); addBtn2(); label(); }
   window.__kmLiveTest172=onFix;
   window.__kmLiveStart=start;
   window.__kmLiveGet=function(){
-    return { ver:'v174', follow:follow, nFix:nFix, errs:nErr, legacyOK:legacyOK,
+    return { ver:'v175', follow:follow, nFix:nFix, errs:nErr, legacyOK:legacyOK,
       cur: curLL?[curLL[0],curLL[1]]:null, target: tgtLL?[tgtLL[0],tgtLL[1]]:null,
       lastFix:lastFix, acc:lastAcc, speed:lastSpeed, bearing:lastBearing,
       marker: (myM&&myM._map)?[myM.getLatLng().lat,myM.getLatLng().lng]:null,
@@ -10640,6 +10640,64 @@ function boot(){ apply(); addBtn2(); label(); }
   try{ var m=MAP(); if(m) m.on('moveend', function(){ setTimeout(check, 200); }); }catch(e){}
   window.addEventListener('load', function(){ setTimeout(check,1500); setTimeout(announce,3200); });
   window.__kmLineFixState=function(){ return { lines:(API()?API().count():-1), drawn:palCount(), fallback:!!fb, fbFor:fbFor, retry:(window.__kmRetry173||0), inView:inView() }; };
+})();
+</script>
+<script>
+/* KM_UIFIX_V175 : パネルを閉じたまま操作層が残り、タップを飲み込む問題への対処 */
+(function(){
+  if(window.__kmUIFix175) return; window.__kmUIFix175=1;
+  function ST(){ try{ return window.KM_DRAW_STATE||null; }catch(e){ return null; } }
+  function EL(id){ return document.getElementById(id); }
+  function vis(e){ if(!e) return false;
+    try{ var c=getComputedStyle(e), r=e.getBoundingClientRect();
+      return c.display!=='none' && c.visibility!=='hidden' && r.width>0 && r.height>0; }catch(x){ return false; } }
+  function panels(){ var ids=['kmDrawPanel','kmEdPanel','kmDvPanel','drawPanel','kmPickPanel','kmTracePanel'], a=[];
+    for(var i=0;i<ids.length;i++){ var e=EL(ids[i]); if(e) a.push(e); } return a; }
+  function anyOpen(){ var p=panels(); for(var i=0;i<p.length;i++){ if(vis(p[i])) return true; } return false; }
+  /* 1) 描画パネルが閉じている間は描画モードを解除（透明な操作層を残さない） */
+  function panBtn(){ var ids=['kmDvPan','kmDvMov','kmDvMove','kmPickPan']; for(var i=0;i<ids.length;i++){ var e=EL(ids[i]); if(e) return e; } return null; }
+  function release(){
+    try{
+      var st=ST(); if(!st) return;
+      if(anyOpen()) return;                        /* パネルが開いている間は触らない */
+      if(st.mode && st.mode!=='pan'){
+        var b=panBtn();
+        if(b){ try{ b.click(); }catch(e){} }        /* アプリ本来の手順で地図移動モードへ戻す */
+        try{ if(ST().mode!=='pan'){ st.mode='pan'; } }catch(e){}
+      }
+      /* 万一モードだけ戻って操作層が残っていた場合の保険 */
+      try{ if(window.map){ if(window.map.dragging) window.map.dragging.enable();
+             var c=window.map.getContainer&&window.map.getContainer(); if(c) c.style.touchAction='pan-x pan-y'; } }catch(e){}
+    }catch(e){}
+  }
+  setInterval(release, 700);
+  /* 2) 上のメニュー（付箋メモ・写真など）を押す前に、まず描画モードを解除 */
+  var MENU=['memoBtn','memoListBtn','photoBtn','locBtn','expBtn','impBtn','kmSyncBtn','addBtn'];
+  document.addEventListener('pointerdown', function(ev){
+    try{
+      var t=ev.target;
+      while(t&&t!==document){ if(t.id && MENU.indexOf(t.id)>=0){ release(); break; } t=t.parentNode; }
+    }catch(e){}
+  }, true);
+  /* 3) 手描きボタン／最小化チップは「必ず開く」 */
+  function openPanel(){
+    var p=panels(); if(!p.length) return false;
+    var t=p[0];
+    try{ t.style.display='block'; t.style.visibility='visible'; t.style.opacity='1'; t.style.pointerEvents='auto'; }catch(e){}
+    try{ var st=ST(); if(st) st.mode='pan'; }catch(e){}
+    return true;
+  }
+  document.addEventListener('click', function(ev){
+    try{
+      var t=ev.target, id=null;
+      while(t&&t!==document){ if(t.id){ id=t.id; break; } t=t.parentNode; }
+      if(id==='drawBtn'||id==='kmDrawMin'){
+        if(!anyOpen()){ openPanel(); setTimeout(openPanel,150); setTimeout(openPanel,500); }
+      }
+    }catch(e){}
+  }, true);
+  window.__kmUIFixState175=function(){ return { mode:((ST()||{}).mode)||null, panelOpen:anyOpen(),
+    lines:((ST()||{}).lines?ST().lines.length:null) }; };
 })();
 </script>
 </body>
