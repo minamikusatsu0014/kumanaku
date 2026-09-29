@@ -1,6 +1,6 @@
 /* 街道ウォーキング Service Worker v125 */
-var CACHE='kumanaku-v179';
-var TILE='kumanaku-tiles-v179';
+var CACHE='kumanaku-v180';
+var TILE='kumanaku-tiles-v180';
 var TILE_CAP=260;
 var CORE=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png'];
 var TILE_HOSTS=['cyberjapandata.gsi.go.jp','tile.openstreetmap.org','maps.gsi.go.jp'];
@@ -46,7 +46,7 @@ self.addEventListener('fetch', function(e){
   if(isDoc){
     e.respondWith(caches.open(CACHE).then(function(c){
       if(fresh){ try{ caches.keys().then(function(ks){ ks.forEach(function(k){ caches.delete(k); }); }); }catch(_){} }
-      var base = fetch(req,{cache:'no-store'}).catch(function(){ return c.match(req); });   /* v179: HTMLは常にネット優先 */
+      var base = fetch(req,{cache:'no-store'}).catch(function(){ return c.match(req); });   /* v180: HTMLは常にネット優先 */
       return base.then(function(res){
         if(!fresh){ try{ if(res&&res.ok) c.put(req,res.clone()); }catch(_){} }
         try{
