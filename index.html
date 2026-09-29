@@ -7213,7 +7213,7 @@ setTimeout(hideSplash, 3500);
         else { map.fitBounds(L.latLngBounds(bb).pad(0.25)); }
         try{ redraw(); }catch(e){}
         return 2; }catch(e){ return -1; } };
-    window.__kmDrawAPI.fixVer='v177';
+    window.__kmDrawAPI.fixVer='v178';
   }catch(e){}
 
 
@@ -7537,13 +7537,13 @@ setTimeout(hideSplash, 3500);
       var t0=st.lines.reduce(function(a,l){return a+l.pts.length;},0); eraseAt(ll);
       var t1=st.lines.reduce(function(a,l){return a+l.pts.length;},0); return t0-t1; }catch(e){ return 'ERR '+e.message; } };
   function __kmSkipDraw(e){try{var st0=window.KM_DRAW_STATE;if(window.__kmIconMode&&st0&&(st0.mode==='icon'||st0.mode==='move'))return true;var t=e.target;if(t&&t.closest&&t.closest('#kmDrawPanel,#kmDrawMin,#kmTracePanel,.leaflet-control,button,[role="button"],input,select,textarea,a'))return true;}catch(x){}return false;} window.__kmSkipDraw=__kmSkipDraw;
-/* ===== v177: 消しゴムを確実に効かせる（入力・保存・復活防止） ===== */
+/* ===== v178: 消しゴムを確実に効かせる（入力・保存・復活防止） ===== */
 (function(){
   function uiT(e){ try{ var t=e.target; if(t&&t.closest&&t.closest('#kmDrawPanel,#kmDrawMin,#kmTracePanel,.leaflet-control,button,[role="button"],input,select,textarea,a')) return true; }catch(x){} return false; }
   function erMode(){ try{ var s=window.KM_DRAW_STATE; return !!(s && s.mode==='eraser'); }catch(e){ return false; } }
   function llAt(cx,cy){ var m=window.map; if(!m) return null;
     try{ var r=m.getContainer().getBoundingClientRect(); return m.containerPointToLatLng([cx-r.left, cy-r.top]); }catch(e){ return null; } }
-  window.kmEraseDiag=function(){ var d={ver:'v177'};
+  window.kmEraseDiag=function(){ var d={ver:'v178'};
     try{ var s=window.KM_DRAW_STATE||{}; d.lines=(s.lines||[]).length; d.pts=(s.lines||[]).reduce(function(a,l){return a+((l.pts||[]).length);},0); d.mode=s.mode; }catch(e){}
     try{ var o=JSON.parse(localStorage.getItem(LS)||'null'); d.ls=(o&&o.lines)?o.lines.length:0; }catch(e){ d.ls='n/a'; }
     try{ var M=window.__kmMan||window.KM_MINE||window.kmMine; var D=M&&M.D; var n=0; if(D&&D.man){ for(var k in D.man){ n+=(D.man[k]||[]).length; } } d.man=n; }catch(e){ d.man='n/a'; }
@@ -8285,7 +8285,7 @@ setTimeout(hideSplash, 3500);
 (function(){
   var LS='km_panel_main';
   var API={}; window.__kmPanel=API;
-  var BUILD='v177 09/28 12:00';
+  var BUILD='v178 09/28 12:00';
   var BTAG=(function(m){ return m?m[0]:'v153'; })(/v([0-9]+)/.exec(BUILD||'v153'));
   /* v100: 版が変わった端末は旧キャッシュを捨てて1回だけ強制リロード（?fresh=付与・ループ防止つき） */
   try{
@@ -10007,8 +10007,8 @@ function boot(){ apply(); addBtn2(); label(); }
       try{ window.__kmLivePause173=true; }catch(e){}
       try{
         var mp=window.map;
-        if(mp && mp.on && !window.__kmNavEv177){
-          window.__kmNavEv177=1;
+        if(mp && mp.on && !window.__kmNavEv178){
+          window.__kmNavEv178=1;
           mp.on('dragstart', function(){ setTimeout(function(){ navHold(); navBarExtra(); },60); });
           mp.on('zoomstart', function(){ try{ if(mp._animatingZoom) return; }catch(e){} setTimeout(function(){ navHold(); navBarExtra(); },60); });
         }
@@ -10033,8 +10033,8 @@ function boot(){ apply(); addBtn2(); label(); }
     function stop(){
       ACTIVE=false;
       try{ if(wid!=null&&navigator.geolocation) navigator.geolocation.clearWatch(wid); }catch(e){}
-      wid=null; uncov(); hideBar(); NAVF=true; NAVWHY='stopped'; navLast=null;
-      try{ window.__kmLivePause173=false; }catch(e){}
+      wid=null; uncov(); hideBar(); NAVF=false; NAVWHY='stopped'; navLast=null;
+      try{ window.__kmLivePause173=true; window.__kmNavStoppedAt=Date.now(); }catch(e){}
       try{ var b2=document.getElementById('kmNavFollowWrap174'); if(b2&&b2.parentNode) b2.parentNode.removeChild(b2); }catch(e){}
       return 'stopped';
     }
@@ -10457,7 +10457,7 @@ function boot(){ apply(); addBtn2(); label(); }
   function el(id){ return document.getElementById(id); }
 
   function readout(){
-    var st=el('kmLv177State'), inf=el('kmLv177Info'), b=el('kmLv177Follow');
+    var st=el('kmLv178State'), inf=el('kmLv178Info'), b=el('kmLv178Follow');
     if(!st) return;
     if(nFix===0){ st.textContent='📡 測位待ち…'; inf.textContent = nErr? ('エラー '+nErr+' 件') : '位置情報の許可を確認してください'; }
     else{
@@ -10570,17 +10570,17 @@ function boot(){ apply(); addBtn2(); label(); }
   function buildUI(){
     if(el('kmLive172')) return;
     var d=document.createElement('div'); d.id='kmLive172';
-    d.innerHTML='<div style="display:flex;align-items:center;gap:6px"><b id="kmLv177State">📡 測位待ち…</b><span id="kmLv177X" style="margin-left:auto;cursor:pointer;font-weight:700;color:#c62828;padding:0 5px">✕</span></div>'
-      +'<div id="kmLv177Info" style="margin:2px 0 4px">位置情報の許可を確認してください</div>'
-      +'<button id="kmLv177Follow" style="font:11px system-ui;padding:3px 8px;border:1px solid #1e88e5;background:#fff;color:#1565c0;border-radius:8px;margin-right:4px">🎯 追従 ON</button>'
-      +'<button id="kmLv177Center" style="font:11px system-ui;padding:3px 8px;border:1px solid #90a4ae;background:#fff;color:#37474f;border-radius:8px">📍 現在地へ</button>';
+    d.innerHTML='<div style="display:flex;align-items:center;gap:6px"><b id="kmLv178State">📡 測位待ち…</b><span id="kmLv178X" style="margin-left:auto;cursor:pointer;font-weight:700;color:#c62828;padding:0 5px">✕</span></div>'
+      +'<div id="kmLv178Info" style="margin:2px 0 4px">位置情報の許可を確認してください</div>'
+      +'<button id="kmLv178Follow" style="font:11px system-ui;padding:3px 8px;border:1px solid #1e88e5;background:#fff;color:#1565c0;border-radius:8px;margin-right:4px">🎯 追従 ON</button>'
+      +'<button id="kmLv178Center" style="font:11px system-ui;padding:3px 8px;border:1px solid #90a4ae;background:#fff;color:#37474f;border-radius:8px">📍 現在地へ</button>';
     document.body.appendChild(d);
-    el('kmLv177X').addEventListener('click', function(){ d.style.display='none'; });
-    el('kmLv177Follow').addEventListener('click', function(){
+    el('kmLv178X').addEventListener('click', function(){ d.style.display='none'; });
+    el('kmLv178Follow').addEventListener('click', function(){
       follow=!follow; readout();
       if(follow && curLL){ var m=MAP(); if(m) m.setView(curLL, Math.max(m.getZoom(),16)); }
     });
-    el('kmLv177Center').addEventListener('click', function(){
+    el('kmLv178Center').addEventListener('click', function(){
       d.style.display='block'; follow=true; restartIfStale();
       if(curLL){ var m=MAP(); if(m) m.setView(curLL, Math.max(m.getZoom(),16)); }
       readout();
@@ -10605,7 +10605,7 @@ function boot(){ apply(); addBtn2(); label(); }
   window.__kmLiveTest172=onFix;
   window.__kmLiveStart=start;
   window.__kmLiveGet=function(){
-    return { ver:'v177', follow:follow, nFix:nFix, errs:nErr, legacyOK:legacyOK,
+    return { ver:'v178', follow:follow, nFix:nFix, errs:nErr, legacyOK:legacyOK,
       cur: curLL?[curLL[0],curLL[1]]:null, target: tgtLL?[tgtLL[0],tgtLL[1]]:null,
       lastFix:lastFix, acc:lastAcc, speed:lastSpeed, bearing:lastBearing,
       marker: (myM&&myM._map)?[myM.getLatLng().lat,myM.getLatLng().lng]:null,
@@ -10704,6 +10704,8 @@ function boot(){ apply(); addBtn2(); label(); }
     try{
       var st=ST(); if(!st) return;
       if(anyOpen()) return;                        /* パネルが開いている間は触らない */
+      /* v178: ユーザーが明示的に選んだペン／消しゴムは、パネル検出ミスで勝手に解除しない */
+      try{ var _m0=(ST()||{}).mode; if((_m0==='pen'||_m0==='eraser')&&(Date.now()-(window.__kmUserModeAt||0))<36e5) return; }catch(e){}
       if(st.mode && st.mode!=='pan'){
         var b=panBtn();
         if(b){ try{ b.click(); }catch(e){} }        /* アプリ本来の手順で地図移動モードへ戻す */
@@ -10742,6 +10744,46 @@ function boot(){ apply(); addBtn2(); label(); }
   }, true);
   window.__kmUIFixState175=function(){ return { mode:((ST()||{}).mode)||null, panelOpen:anyOpen(),
     lines:((ST()||{}).lines?ST().lines.length:null) }; };
+})();
+</script>
+
+<script>
+/* KM_DRAWGUARD_V178 : ナビ停止後もペン／消しゴムを維持し、描画中は地図を動かさない */
+(function(){
+  if(window.__kmDrawGuard178) return; window.__kmDrawGuard178=1;
+  function ST(){ try{ return window.KM_DRAW_STATE||null; }catch(e){ return null; } }
+  function MAP(){ try{ return window.map||null; }catch(e){ return null; } }
+  function drawable(m){ return (m==='pen'||m==='eraser'||m==='select'||m==='move'||m==='icon'); }
+  function guard(){
+    try{
+      var st=ST(), mp=MAP(); if(!st||!mp) return;
+      var c=mp.getContainer&&mp.getContainer(); if(!c) return;
+      var dr=drawable(st.mode);
+      if(dr){
+        try{ if(mp.dragging) mp.dragging.disable(); }catch(e){}
+        try{ c.style.touchAction='none'; c.style.cursor=(st.mode==='eraser')?'cell':'crosshair'; }catch(e){}
+      }
+      window.__kmDrawGuardState={mode:st.mode,drawable:!!dr,
+        drag:(mp.dragging?(mp.dragging.enabled?!!mp.dragging.enabled():null):null), ta:c.style.touchAction,
+        navStoppedAt:window.__kmNavStoppedAt||0, livePause:!!window.__kmLivePause173};
+    }catch(e){}
+  }
+  function idOf(ev){ try{ var t=ev.target; while(t&&t!==document){ if(t.id) return t.id; t=t.parentNode; } }catch(e){} return null; }
+  document.addEventListener('click', function(ev){
+    try{
+      var id=idOf(ev);
+      if(id==='kmDvPen'||id==='kmDvEra'||id==='kmDvPan'){ window.__kmUserModeAt=Date.now(); if(id==='kmDvPan') window.__kmPanReqAt=Date.now(); }
+      if(id==='locBtn'){ window.__kmLivePause173=false; }
+    }catch(e){}
+  }, true);
+  document.addEventListener('pointerdown', function(ev){
+    try{ var st=ST(); if(!st) return;
+      if(st.mode==='pen'||st.mode==='eraser'){ window.__kmUserModeAt=Date.now(); } }catch(e){}
+  }, true);
+  setInterval(guard, 500); setTimeout(guard,300); setTimeout(guard,1200);
+  window.__kmDrawGuard178State=function(){ return window.__kmDrawGuardState||null; };
+  window.__kmUserMode178=function(){ return {at:window.__kmUserModeAt||0, panReq:window.__kmPanReqAt||0,
+    panBlocked:(window.__kmPanBlockCount||0)}; };
 })();
 </script>
 </body>
