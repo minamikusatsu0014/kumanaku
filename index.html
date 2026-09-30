@@ -11895,6 +11895,104 @@ function boot(){ apply(); addBtn2(); label(); }
 })();
 </script>
 
+<script id="kmv193">
+(function(){
+if(window.__kmV193)return;window.__kmV193=true;
+try{window.__kmCompact187=undefined;}catch(e){}
+try{window.__kmLight187=undefined;}catch(e){}
+try{window.km187Go=undefined;}catch(e){}
+function h(a,b){var R=6371000,t=Math.PI/180,d1=(b[0]-a[0])*t,d2=(b[1]-a[1])*t;
+ var x=Math.sin(d1/2)*Math.sin(d1/2)+Math.cos(a[0]*t)*Math.cos(b[0]*t)*Math.sin(d2/2)*Math.sin(d2/2);
+ return 2*R*Math.asin(Math.min(1,Math.sqrt(x)));}
+function dv(p,a,b){var t=Math.PI/180,lat0=((a[0]+b[0])/2)*t,k=111320,cl=Math.cos(lat0);
+ var bx=(b[1]-a[1])*k*cl,by=(b[0]-a[0])*k,px=(p[1]-a[1])*k*cl,py=(p[0]-a[0])*k;
+ var L2=bx*bx+by*by;if(L2===0)return Math.sqrt(px*px+py*py);
+ var u=Math.max(0,Math.min(1,(px*bx+py*by)/L2));var ex=px-u*bx,ey=py-u*by;
+ return Math.sqrt(ex*ex+ey*ey);}
+function stats(lines){var n=0,pts=0,sm=0,ch=0,devs=[],i,j;
+ for(i=0;i<lines.length;i++){var p=(lines[i]&&lines[i].pts)||[];if(p.length<2)continue;
+  n++;pts+=p.length;for(j=0;j<p.length-1;j++)sm+=h(p[j],p[j+1]);ch+=h(p[0],p[p.length-1]);
+  if(p.length>=4){var m=0;for(j=1;j<p.length-1;j++){var d=dv(p[j],p[0],p[p.length-1]);if(d>m)m=d;}devs.push(m);}}
+ devs.sort(function(a,b){return a-b});
+ var med=devs.length?devs[Math.floor(devs.length/2)]:0,mx=devs.length?devs[devs.length-1]:0,c=0,q;
+ for(q=0;q<devs.length;q++)if(devs[q]>=60)c++;
+ return {n:n,pts:pts,lenKm:sm/1000,chordKm:ch/1000,ratio:(ch>0.001?sm/ch:0),med:med,max:mx,ge60:c};}
+function judge(s){if(s.n===0)return{ok:false,txt:'⚠ 線がありません（0本）'};
+ if(s.med>=5||s.max>=60||s.ratio>=1.15)return{ok:true,txt:'★ 曲線データ（線 '+s.n+'本／ふくらみ中央値 '+s.med.toFixed(1)+'m）'};
+ return{ok:false,txt:'⚠ ほぼ直線（壊れたデータの疑い）'};}
+function readKey(k){var r=localStorage.getItem(k);if(!r)return null;try{return JSON.parse(r);}catch(e){return null;}}
+function shp(o){if(o===null)return null;
+ if(Object.prototype.toString.call(o)==='[object Array]')return{kind:'arr',arr:o,obj:null};
+ if(o&&typeof o==='object'&&Object.prototype.toString.call(o.lines)==='[object Array]')return{kind:'obj',arr:o.lines,obj:o};
+ return null;}
+function sig(L){var p=(L&&L.pts)||[];if(!p.length)return 'x';
+ return p.length+'|'+p[0][0]+','+p[0][1]+'|'+p[p.length-1][0]+','+p[p.length-1][1];}
+function addLines(newLines){
+ var cur=readKey('km_draw_mine_v1'),s=shp(cur),arr,obj,kind;
+ if(s&&s.kind==='arr'){kind='arr';arr=s.arr;obj=null;}
+ else if(s&&s.kind==='obj'){kind='obj';obj=s.obj;arr=s.obj.lines;}
+ else{kind='obj';obj={lines:[]};arr=obj.lines;}
+ var before=arr.length,bp=0,i;for(i=0;i<arr.length;i++)bp+=((arr[i]&&arr[i].pts)||[]).length;
+ var seen={};for(i=0;i<arr.length;i++)seen[sig(arr[i])]=1;
+ var added=0;for(i=0;i<newLines.length;i++){var g=sig(newLines[i]);if(!seen[g]){arr.push(newLines[i]);seen[g]=1;added++;}}
+ var ap=0;for(i=0;i<arr.length;i++)ap+=((arr[i]&&arr[i].pts)||[]).length;
+ try{localStorage.setItem('km_pre_restore193',JSON.stringify({at:new Date().toISOString(),mine:localStorage.getItem('km_draw_mine_v1'),main:localStorage.getItem('km_draw_main')}));}catch(e){}
+ localStorage.setItem('km_draw_mine_v1',kind==='arr'?JSON.stringify(arr):JSON.stringify(obj));
+ try{localStorage.setItem('km_app_ver','v193');}catch(e){}
+ return{added:added,before:before,after:arr.length,beforePts:bp,afterPts:ap};}
+var pending=null;
+function build(){
+ if(window.__kmUI193)return;window.__kmUI193=true;
+ var w=document.createElement('div');w.id='km193';
+ w.setAttribute('style','position:fixed;right:6px;bottom:150px;z-index:2147483600;background:#0f1c33;color:#fff;border:2px solid #4c8bf5;border-radius:10px;padding:9px;font:12px/1.45 system-ui,sans-serif;max-width:310px;box-shadow:0 6px 20px rgba(0,0,0,.55)');
+ w.innerHTML='<div style="font-weight:700;font-size:13px;margin-bottom:5px">🧭 保存ファイルから線を戻す v193 ／ 追加のみ</div>'
+ +'<input id="km193File" type="file" accept=".json,application/json" style="position:absolute;left:-10000px;width:1px;height:1px;opacity:0">'
+ +'<button id="km193Pick" style="display:block;width:100%;min-height:48px;padding:10px;font-size:14px;font-weight:700;background:#2e7d32;color:#fff;border:0;border-radius:8px">📂 保存ファイルを読む</button>'
+ +'<div id="km193Verdict" style="margin-top:6px;padding:7px;border-radius:6px;background:#22314f;color:#ffd54f;font-weight:700">読込んだファイルの判定：未読込</div>'
+ +'<div id="km193Info" style="margin-top:5px;color:#9fb6dd;font-size:11px">既存の線は消しません（追加＋重複除外）</div>'
+ +'<button id="km193Go" disabled style="display:block;width:100%;min-height:50px;margin-top:6px;padding:10px;font-size:14px;font-weight:700;background:#616161;color:#fff;border:0;border-radius:8px">📥 このファイルの線を追加する</button>';
+ document.documentElement.appendChild(w);
+ var fi=document.getElementById('km193File'),pk=document.getElementById('km193Pick'),
+  go=document.getElementById('km193Go'),vd=document.getElementById('km193Verdict'),inf=document.getElementById('km193Info');
+ pk.onclick=function(){fi.click();};
+ fi.onchange=function(){var f=fi.files&&fi.files[0];if(!f)return;var rd=new FileReader();
+  rd.onload=function(){var d=null;try{d=JSON.parse(rd.result);}catch(e){}
+   var ls=(d&&d.draw&&d.draw.lines)?d.draw.lines:(d&&d.lines?d.lines:null);
+   if(!ls){vd.textContent='読込んだファイルの判定：⚠ 形式が違います';vd.style.color='#ff8a80';return;}
+   ls=ls.filter(function(L){return L&&L.pts&&L.pts.length>=2;});
+   var s=stats(ls),j=judge(s);pending=ls;window.__km193Pending=ls.length;
+   vd.textContent='読込んだファイルの判定：'+j.txt;vd.style.color=j.ok?'#a5d6a7':'#ff8a80';
+   inf.textContent='線 '+s.n+'本／'+s.pts+'点 ・ 描いた長さ '+s.lenKm.toFixed(1)+'km ・ 直線比 '+s.ratio.toFixed(2)
+    +' ・ ふくらみ中央値 '+s.med.toFixed(1)+'m／最大 '+s.max.toFixed(0)+'m ・ 60m以上の区間 '+s.ge60+'本';
+   go.disabled=false;go.style.background='#1565c0';window.__km193Verdict=j.txt;window.__km193Stat=s;};
+  rd.readAsText(f);};
+ go.onclick=function(){if(!pending)return;
+  var r=addLines(pending);window.__km193Last=r;
+  inf.textContent='追加しました：'+r.added+'本（'+r.before+'→'+r.after+'本 ／ '+r.beforePts+'→'+r.afterPts+'点）';
+  setTimeout(function(){try{location.reload();}catch(e){}},1500);};
+}
+function inPanel(e){var n=e;while(n){if(n.id==='km193')return true;n=n.parentNode;}return false;}
+function kill(){try{
+ var ids=['kmEK190','kmEastkoya','km187Go','kmCompactBtn'];
+ for(var i=0;i<ids.length;i++){var e=document.getElementById(ids[i]);if(e&&e.parentNode)e.parentNode.removeChild(e);}
+ var all=document.documentElement.getElementsByTagName('*');
+ for(var j=0;j<all.length;j++){var el=all[j];
+  if(inPanel(el))continue;
+  var t=(el.textContent||'').trim();
+  if(t.length<70&&(t.indexOf('軽くできます')>=0||t.indexOf('一括で軽く')>=0||t.indexOf('軽くする')>=0)){
+   if(el.tagName==='A'||el.tagName==='BUTTON'||el.tagName==='DIV'||el.tagName==='SPAN'){
+    el.style.display='none';el.style.visibility='hidden';el.style.pointerEvents='none';
+    if(el.disabled!==undefined)el.disabled=true;window.__km193Killed=(window.__km193Killed||0)+1;}}
+  if(t.indexOf('v192')===0){el.textContent=t.replace('v192','v193');}}
+}catch(e){}}
+try{build();}catch(e){}
+try{kill();}catch(e){}
+function boost(){try{if(!document.getElementById('km193')){window.__kmUI193=false;build();}kill();}catch(e){}}
+setTimeout(boost,300);setTimeout(boost,1200);setTimeout(boost,3000);setTimeout(boost,6000);
+try{setInterval(boost,2500);}catch(e){}
+window.__kmV193API={addLines:addLines,stats:stats,judge:judge,version:'v193'};
+})();
+</script>
 </body>
 
 
