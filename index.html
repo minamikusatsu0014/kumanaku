@@ -7110,7 +7110,7 @@ setTimeout(hideSplash, 3500);
   var st={mode:'pan',color:COLORS[0],width:3,lines:[],redo:[],delBase:{}};
   var hist=[], map=null, Lg=null, layer=null, live=null, stroke=null, armed=false, erasing=false, raf=false, lastErase=null;
   window.KM_DRAW_STATE=st;
-  window.KM_DRAW_VER='v213';
+  window.KM_DRAW_VER='v214';
   /* v213: 右メニューの「読込」など別の処理からも、手描きの線を復元できるようにする。
      保存先のキー(km_draw_main)は v213 以降ずっと同じ。ここでは中身の操作だけを公開する。 */
   window.__kmDrawAPI={
@@ -7173,7 +7173,7 @@ setTimeout(hideSplash, 3500);
         else { map.fitBounds(L.latLngBounds(bb).pad(0.25)); }
         try{ redraw(); }catch(e){}
         return 2; }catch(e){ return -1; } };
-    window.__kmDrawAPI.fixVer='v213';
+    window.__kmDrawAPI.fixVer='v214';
   }catch(e){}
 
 
@@ -7503,7 +7503,7 @@ setTimeout(hideSplash, 3500);
   function erMode(){ try{ var s=window.KM_DRAW_STATE; return !!(s && s.mode==='eraser'); }catch(e){ return false; } }
   function llAt(cx,cy){ var m=window.map; if(!m) return null;
     try{ var r=m.getContainer().getBoundingClientRect(); return m.containerPointToLatLng([cx-r.left, cy-r.top]); }catch(e){ return null; } }
-  window.kmEraseDiag=function(){ var d={ver:'v213'};
+  window.kmEraseDiag=function(){ var d={ver:'v214'};
     try{ var s=window.KM_DRAW_STATE||{}; d.lines=(s.lines||[]).length; d.pts=(s.lines||[]).reduce(function(a,l){return a+((l.pts||[]).length);},0); d.mode=s.mode; }catch(e){}
     try{ var o=JSON.parse(localStorage.getItem(LS)||'null'); d.ls=(o&&o.lines)?o.lines.length:0; }catch(e){ d.ls='n/a'; }
     try{ var M=window.__kmMan||window.KM_MINE||window.kmMine; var D=M&&M.D; var n=0; if(D&&D.man){ for(var k in D.man){ n+=(D.man[k]||[]).length; } } d.man=n; }catch(e){ d.man='n/a'; }
@@ -9720,7 +9720,7 @@ function boot(){ apply(); addBtn2(); label(); }
   window.__kmLiveTest172=onFix;
   window.__kmLiveStart=start;
   window.__kmLiveGet=function(){
-    return { ver:'v213', follow:follow, nFix:nFix, errs:nErr, legacyOK:legacyOK,
+    return { ver:'v214', follow:follow, nFix:nFix, errs:nErr, legacyOK:legacyOK,
       cur: curLL?[curLL[0],curLL[1]]:null, target: tgtLL?[tgtLL[0],tgtLL[1]]:null,
       lastFix:lastFix, acc:lastAcc, speed:lastSpeed, bearing:lastBearing,
       marker: (myM&&myM._map)?[myM.getLatLng().lat,myM.getLatLng().lng]:null,
@@ -9882,7 +9882,7 @@ function boot(){ apply(); addBtn2(); label(); }
   }
   setInterval(badge, 600); setTimeout(badge, 400); setTimeout(badge, 1500);
   window.__kmT179=function(){ var m=MAP();
-    return { ver:'v213', mode:(ST()||{}).mode,
+    return { ver:'v214', mode:(ST()||{}).mode,
       drag:(m&&m.dragging&&m.dragging.enabled)?!!m.dragging.enabled():null,
       ta:(m&&m.getContainer().style.touchAction)||'', last:window.__kmT179Last||null,
       center:(function(){ try{ var c=m.getCenter(); return [+c.lat.toFixed(7),+c.lng.toFixed(7)]; }catch(e){ return null; } })() };
@@ -9969,7 +9969,7 @@ function boot(){ apply(); addBtn2(); label(); }
       b.style.cssText='width:100%;margin-top:4px;padding:7px;border:0;border-radius:7px;background:#0b7a3b;color:#fff;font:bold 12px system-ui';
       b.onclick=function(){ try{
         var st=window.KM_DRAW_STATE||{}, all=scan();
-        var pack={ver:'v213', at:new Date().toISOString(), cur:{lines:st.lines||[]},
+        var pack={ver:'v214', at:new Date().toISOString(), cur:{lines:st.lines||[]},
                   sources:all.map(function(x){ return {key:x.key, lines:x.lines}; })};
         var blob=new Blob([JSON.stringify(pack)],{type:'application/json'});
         var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
@@ -10075,7 +10075,7 @@ function boot(){ apply(); addBtn2(); label(); }
     return res; }
 
   function report(){ var r=scan();
-    try{ var pack={ver:'v213', at:new Date().toISOString(),
+    try{ var pack={ver:'v214', at:new Date().toISOString(),
         ua:(navigator.userAgent||'').slice(0,120),
         entries:r.map(function(x){ return {key:x.key,bytes:x.bytes,shape:x.shape,lines:x.lines,pts:x.pts,names:x.names}; }),
         blocked:window.__kmBlocked182||[] };
@@ -10927,48 +10927,38 @@ setTimeout(tick,500);setTimeout(tick,1400);setTimeout(tick,3000);setTimeout(tick
 setInterval(tick,1500);
 })();
 </script>
-<script>/* KM_PANEL_V213 : 手描きトレースパネルの唯一の所有者（開閉・寸法・中身）
+<script>/* KM_PANEL_V214 : 手描きトレースパネルの唯一の所有者（開閉・寸法・中身）
    方針: DOMを書き換えない（他層のMutationObserverを起こさない）／自分のMutationObserverも持たない／
         他層からの style 書き込みは受け付けない。 */
 (function(){
-if(window.__km213){return;} window.__km213=1;
-window.__km213stats={own:0,blocked:0,enforce:0,want:true};
-window.__km213log=[];
-var WANT=true,OWN=false,BLOCKED=0,OWNW=0,BOUND=false,DEB=null,CSS=false;
+if(window.__km214){return;} window.__km214=1;
+window.__km214stats={own:0,blocked:0,enforce:0,want:true,big:false};
+window.__km214log=[];
+var WANT=true,OWN=false,BLOCKED=0,OWNW=0,BOUND=false,DEB=null,CSS=false,BIG=false;
 function P(){return document.getElementById('kmDrawPanel')||document.getElementById('kmTracePanel');}
 function VH(){try{if(window.visualViewport&&window.visualViewport.height)return window.visualViewport.height;}catch(e){}return window.innerHeight||640;}
 function VW(){try{if(window.visualViewport&&window.visualViewport.width)return window.visualViewport.width;}catch(e){}return window.innerWidth||390;}
 function vis(p){if(!p)return false;try{var s=getComputedStyle(p);return s.display!=='none'&&s.visibility!=='hidden';}catch(e){return false;}}
 function bx(p){if(!p)return null;var r=p.getBoundingClientRect();return [Math.round(r.left),Math.round(r.top),Math.round(r.width),Math.round(r.height)];}
-function log(a){try{window.__km213log.push({t:Date.now(),a:a,vis:vis(P()),box:bx(P())});if(window.__km213log.length>300)window.__km213log.shift();}catch(e){}}
+function log(a){try{window.__km214log.push({t:Date.now(),a:a,vis:vis(P()),box:bx(P())});if(window.__km214log.length>300)window.__km214log.shift();}catch(e){}}
 function css(){if(CSS)return;CSS=true;try{
- var s=document.createElement('style');s.id='km213css';
- s.textContent='html,body{transform:none !important;}'
- +'#kmDrawPanel,#kmTracePanel{position:fixed !important;left:6px !important;right:6px !important;'
- +'width:auto !important;min-width:0 !important;max-width:none !important;bottom:112px !important;top:auto !important;'
- +'height:auto !important;max-height:calc(100vh - 200px) !important;transform:none !important;'
- +'z-index:2147483600 !important;box-sizing:border-box !important;overflow-y:auto !important;overflow-x:hidden !important;'
- +'touch-action:pan-y !important;margin:0 !important;display:block !important;visibility:visible !important;opacity:1 !important;'
- +'pointer-events:auto !important;}'
- +'#km213tag{position:fixed !important;left:6px !important;top:6px !important;z-index:2147483647 !important;'
- +'background:#065f46 !important;color:#fff !important;font:700 11px/1.4 system-ui,sans-serif !important;'
- +'padding:2px 7px !important;border-radius:9px !important;pointer-events:none !important;}';
- (document.head||document.documentElement).appendChild(s);}catch(e){}}
-function tag(){try{if(document.getElementById('km213tag'))return;var d=document.createElement('div');d.id='km213tag';d.textContent='KM v213';(document.body||document.documentElement).appendChild(d);}catch(e){}}
+ var s=document.createElement('style');s.id='km214css';
+ s.textContent='html,body{transform:none !important;}#kmDrawPanel,#kmTracePanel{position:fixed !important;left:6px !important;right:auto !important;width:300px !important;min-width:0 !important;max-width:calc(100vw - 12px) !important;bottom:104px !important;top:auto !important;height:auto !important;max-height:52vh !important;transform:none !important;z-index:2147483600 !important;box-sizing:border-box !important;overflow-y:auto !important;overflow-x:hidden !important;touch-action:pan-y !important;margin:0 !important;display:block !important;visibility:visible !important;opacity:1 !important;pointer-events:auto !important;padding:5px 6px !important;border-radius:12px !important;font:600 11px/1.25 system-ui,sans-serif !important;}#kmDrawPanel .hd{font-size:12px !important;}#kmDrawPanel .hd span{font-size:10px !important;}#kmDrawPanel .row{gap:4px !important;margin-top:4px !important;}#kmDrawPanel button.big{min-height:32px !important;font-size:11.5px !important;border-width:1.5px !important;border-radius:8px !important;}#kmDrawPanel button.sm{min-height:26px !important;font-size:10.5px !important;border-width:1.5px !important;border-radius:7px !important;}#kmDrawPanel .sw{width:24px !important;height:22px !important;}#kmDrawPanel .mz{width:28px !important;height:22px !important;font-size:12px !important;}#kmDrawPanel .hint{font-size:9.5px !important;line-height:1.25 !important;}#km214tag{position:fixed !important;left:6px !important;top:6px !important;z-index:2147483647 !important;background:#065f46 !important;color:#fff !important;font:700 11px/1.4 system-ui,sans-serif !important;padding:2px 7px !important;border-radius:9px !important;pointer-events:auto !important;}';(document.head||document.documentElement).appendChild(s);}catch(e){}}
+function tag(){try{if(document.getElementById('km214tag'))return;var d=document.createElement('div');d.id='km214tag';d.textContent='KM v214 ・ パネル小';d.style.pointerEvents='auto';d.style.cursor='pointer';d.addEventListener('click',function(ev){try{ev.preventDefault();ev.stopPropagation();BIG=!BIG;window.__km214stats.big=BIG;apply('badge');}catch(e){}},true);(document.body||document.documentElement).appendChild(d);}catch(e){}}
 var PROPS=['display','visibility','opacity','position','left','right','top','bottom','width','minWidth','maxWidth','height','maxHeight','transform','zIndex','overflowY','pointerEvents','boxSizing','margin'];
 function lock(p){
- if(!p||p.__km213lock)return; p.__km213lock=1;
+ if(!p||p.__km214lock)return; p.__km214lock=1;
  for(var i=0;i<PROPS.length;i++){
   (function(name){
    var d=null; try{d=Object.getOwnPropertyDescriptor(CSSStyleDeclaration.prototype,name);}catch(e){}
    if(!d||!d.set)return;
    try{Object.defineProperty(p.style,name,{configurable:true,enumerable:d.enumerable,
     get:function(){return d.get.call(this);},
-    set:function(v){if(!OWN){BLOCKED++;window.__km213stats.blocked=BLOCKED;return;}return d.set.call(this,v);}});}catch(e){}
+    set:function(v){if(!OWN){BLOCKED++;window.__km214stats.blocked=BLOCKED;return;}return d.set.call(this,v);}});}catch(e){}
   })(PROPS[i]);
  }
  try{var sp=p.style.setProperty;
-  p.style.setProperty=function(n,v,pr){if(!OWN){BLOCKED++;window.__km213stats.blocked=BLOCKED;return;}return sp.call(this,n,v,pr);};
+  p.style.setProperty=function(n,v,pr){if(!OWN){BLOCKED++;window.__km214stats.blocked=BLOCKED;return;}return sp.call(this,n,v,pr);};
   var rp=p.style.removeProperty;
   p.style.removeProperty=function(n){if(!OWN){return '';}return rp.call(this,n);};}catch(e){}
 }
@@ -10978,14 +10968,14 @@ function write(p){
  own(function(){
   p.style.setProperty('position','fixed','important');
   p.style.setProperty('left','6px','important');
-  p.style.setProperty('right','6px','important');
+  p.style.setProperty('right',BIG?'6px':'auto','important');
   p.style.setProperty('top','auto','important');
   p.style.setProperty('bottom','112px','important');
-  p.style.setProperty('width',(Math.max(240,VW())-12)+'px','important');
+  p.style.setProperty('width',(BIG?Math.max(240,VW())-12:Math.min(300,Math.max(240,VW())-12))+'px','important');
   p.style.setProperty('min-width','0','important');
   p.style.setProperty('max-width','none','important');
   p.style.setProperty('height','auto','important');
-  p.style.setProperty('max-height',Math.max(150,VH()-200)+'px','important');
+  p.style.setProperty('max-height',(BIG?Math.max(150,VH()-200):Math.max(180,Math.round(Math.min(VH()*0.52,460))))+'px','important');
   p.style.setProperty('overflow-y','auto','important');
   p.style.setProperty('overflow-x','hidden','important');
   p.style.setProperty('touch-action','pan-y','important');
@@ -10997,15 +10987,15 @@ function write(p){
   p.style.setProperty('pointer-events','auto','important');
   p.style.setProperty('display',WANT?'block':'none','important');
  });
- OWNW++;window.__km213stats.own=OWNW;
+ OWNW++;window.__km214stats.own=OWNW;
 }
 function apply(why){var p=P();if(!p)return;css();tag();
  if(p.parentNode!==document.documentElement){try{document.documentElement.appendChild(p);}catch(e){}}
  write(p);
  p.removeAttribute('data-km196hide');p.removeAttribute('data-km195hide');p.removeAttribute('data-km213off');
  var a=p.parentNode,n=0;while(a&&a.nodeType===1&&n<12){try{a.removeAttribute('data-km196hide');a.removeAttribute('data-km195hide');}catch(e){}a=a.parentNode;n++;}
- log((WANT?'open:':'close:')+why);}
-function setWant(v,why){WANT=!!v;window.__km213stats.want=WANT;apply(why||'set');}
+ try{var tb=document.getElementById('km214tag');if(tb)tb.textContent=BIG?'KM v214 ・ パネル大':'KM v214 ・ パネル小';}catch(e){}log((WANT?'open:':'close:')+why);}
+function setWant(v,why){WANT=!!v;window.__km214stats.want=WANT;apply(why||'set');}
 function bind(){if(BOUND)return;BOUND=true;
  window.addEventListener('click',function(ev){try{
   var t=ev.target,n=0,txt='',inPanel=false,p=P();
@@ -11015,12 +11005,12 @@ function bind(){if(BOUND)return;BOUND=true;
  }catch(e){}},true);
  window.addEventListener('resize',function(){if(DEB)clearTimeout(DEB);DEB=setTimeout(function(){apply('resize');},220);},false);
  window.addEventListener('orientationchange',function(){setTimeout(function(){apply('rotate');},320);},false);}
-function boot(why){try{var p=P();if(!p)return;bind();apply(why);}catch(e){window.__km213err=String(e);}}
-window.__km213={open:function(){setWant(true,'api');},close:function(){setWant(false,'api');},toggle:function(){setWant(!WANT,'api');},
- state:function(){var p=P();return {want:WANT,vis:vis(p),box:bx(p),own:OWNW,blocked:BLOCKED};},
- stats:function(){return window.__km213stats;},log:function(){return window.__km213log;}};
+function boot(why){try{var p=P();if(!p)return;bind();apply(why);}catch(e){window.__km214err=String(e);}}
+window.__km214={open:function(){setWant(true,'api');},big:function(v){BIG=!!v;window.__km214stats.big=BIG;apply('big');},close:function(){setWant(false,'api');},toggle:function(){setWant(!WANT,'api');},
+ state:function(){var p=P();return {want:WANT,vis:vis(p),box:bx(p),own:OWNW,blocked:BLOCKED,big:BIG};},
+ stats:function(){return window.__km214stats;},log:function(){return window.__km214log;}};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){boot('dcl');});else boot('now');
-var EN=0,iv=setInterval(function(){EN++;window.__km213stats.enforce=EN;
+var EN=0,iv=setInterval(function(){EN++;window.__km214stats.enforce=EN;
  try{var p=P();if(p){lock(p);if(WANT&&!vis(p))apply('enforce');}}catch(e){}
  if(EN>=40)clearInterval(iv);},250);
 [400,1200,2600,5000,9000,15000,22000,30000].forEach(function(t){setTimeout(function(){boot('settle');},t);});
@@ -11505,7 +11495,7 @@ window.addEventListener('load',function(){setTimeout(function(){boot('load');},5
   }
   function exp(){
     try{
-      var out={id:'km_edit',ver:'v213',datum:'WGS84',lines:E.lines,delSigs:(window.kmOvExport?window.kmOvExport():[])};
+      var out={id:'km_edit',ver:'v214',datum:'WGS84',lines:E.lines,delSigs:(window.kmOvExport?window.kmOvExport():[])};
       var a=document.createElement('a');
       a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(out));
       a.download='km_edit_v100.json'; document.body.appendChild(a); a.click(); a.remove();
@@ -13647,7 +13637,7 @@ window.addEventListener('load',function(){setTimeout(function(){boot('load');},5
         var l=document.getElementById('km191List'); if(l) l.scrollIntoView(); }; } }catch(e){} }
   var t=0,iv=setInterval(function(){ if(build()) { chipMake(); relabel(); clearInterval(iv); } if(++t>80) clearInterval(iv); },500);
   [1500,3000,6000,10000].forEach(function(ms){ setTimeout(function(){ build(); chipMake(); relabel(); },ms); });
-  window.__km191={ scan:scan, build:build, addToStore:addToStore, replaceStore:replaceStore, keys:keys, version:'v213' };
+  window.__km191={ scan:scan, build:build, addToStore:addToStore, replaceStore:replaceStore, keys:keys, version:'v214' };
 })();
 </script>
 <script>/* KM_SAFE192 : 復元ボタンがチップに隠れて押せない問題を解消し、読み込んだファイルの
