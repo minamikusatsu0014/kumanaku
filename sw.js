@@ -1,5 +1,5 @@
 /* 街道ウォーキング Service Worker v125 */
-var CACHE='kumanaku-v222';
+var CACHE='kumanaku-v223';
 var TILE='kumanaku-tiles-v187';
 var TILE_CAP=260;
 var CORE=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png'];
