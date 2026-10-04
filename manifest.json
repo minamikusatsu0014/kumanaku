@@ -1,32 +1,24 @@
 {
   "name": "街道ウォーキング",
   "short_name": "街道ウォーク",
+  "lang": "ja",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "orientation": "any",
-  "background_color": "#101418",
+  "background_color": "#ffffff",
   "theme_color": "#2e7d32",
-  "lang": "ja",
-  "description": "日本全国を歩いた場所を100mメッシュで塗りつぶし、市町村・名所の踏破を記録する地図アプリ",
   "icons": [
     {
-      "src": "./icon-192.png",
+      "src": "icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "./icon-512.png",
+      "src": "icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
-    },
-    {
-      "src": "./icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
     }
   ]
 }

@@ -1,84 +1,45 @@
-/* 街道ウォーキング Service Worker v125 */
-var CACHE='kumanaku-v228';
-var TILE='kumanaku-tiles-v187';
-var TILE_CAP=260;
-var CORE=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png'];
-var TILE_HOSTS=['cyberjapandata.gsi.go.jp','tile.openstreetmap.org','maps.gsi.go.jp'];
-
-self.addEventListener('install', function(e){
-  try{ self.skipWaiting(); }catch(_){}
-  e.waitUntil(caches.open(CACHE).then(function(c){ return c.addAll(CORE).catch(function(){}); }).catch(function(){}));
+/* 街道ウォーキング: repair 2026-10-04 */
+'use strict';
+const APP_PREFIX='kumanaku-';
+const CACHE='kumanaku-repair-20261004-1';
+const TILE='kumanaku-tiles-v187';
+const TILE_CAP=260;
+const CORE=['./','./index.html','./kaido_data.json','./manifest.json','./icon-192.png','./icon-512.png'];
+const TILE_HOSTS=['cyberjapandata.gsi.go.jp','tile.openstreetmap.org','maps.gsi.go.jp'];
+const scopeURL=new URL(self.registration.scope);
+function owned(k){return k.startsWith(APP_PREFIX);}
+async function put(cache,req,res){if(res&&(res.ok||res.type==='opaque'))await cache.put(req,res.clone());}
+async function prune(cache){const keys=await cache.keys();await Promise.all(keys.slice(0,Math.max(0,keys.length-TILE_CAP)).map(k=>cache.delete(k)));}
+self.addEventListener('install',e=>{
+ e.waitUntil((async()=>{const c=await caches.open(CACHE);await Promise.all(CORE.map(async path=>{
+  const u=new URL(path,scopeURL).href;try{await put(c,u,await fetch(u,{cache:'reload'}));}catch(_){}
+ }));await self.skipWaiting();})());
 });
-self.addEventListener('activate', function(e){
-  e.waitUntil(caches.keys().then(function(ks){
-    return Promise.all(ks.map(function(k){ return (k===CACHE||k===TILE)?null:caches.delete(k); }));
-  }).then(function(){ return self.clients.claim(); }).catch(function(){}));
+self.addEventListener('activate',e=>{
+ e.waitUntil((async()=>{const keys=await caches.keys();await Promise.all(keys.filter(k=>owned(k)&&k!==CACHE&&k!==TILE).map(k=>caches.delete(k)));await self.clients.claim();})());
 });
-function verOf(t){ try{ var m=/BTAG\s*=\s*['"](v[0-9]+)['"]/.exec(t); if(m) return m[1]; }catch(_){} return null; }
-function isTile(u){ try{ return TILE_HOSTS.indexOf(new URL(u).hostname)>=0; }catch(_){ return false; } }
-/* 古いタイルから削除（上限付き） */
-function prune(c){
-  return c.keys().then(function(ks){
-    if(ks.length<=TILE_CAP) return;
-    return Promise.all(ks.slice(0, ks.length-TILE_CAP).map(function(k){ return c.delete(k); }));
-  }).catch(function(){});
-}
-self.addEventListener('fetch', function(e){
-  var req=e.request;
-  if(req.method!=='GET') return;
-  var url; try{ url=new URL(req.url); }catch(_){ return; }
-
-  /* --- 地図タイル: キャッシュ優先 + 上限付き --- */
-  if(isTile(req.url)){
-    e.respondWith(caches.open(TILE).then(function(c){
-      return c.match(req).then(function(hit){
-        if(hit){ if(url.search.indexOf('__noupd')<0){ fetch(req).then(function(r){ try{ if(r&&r.ok){ c.put(req,r.clone()); prune(c); } }catch(_){} }).catch(function(){}); } return hit; }
-        return fetch(req).then(function(r){ try{ if(r&&r.ok){ c.put(req,r.clone()); prune(c); } }catch(_){} return r; })
-          .catch(function(){ return new Response('',{status:504}); });
-      });
-    }));
-    return;
+self.addEventListener('fetch',e=>{
+ const req=e.request;if(req.method!=='GET')return;const url=new URL(req.url);
+ if(TILE_HOSTS.includes(url.hostname)){
+  e.respondWith((async()=>{const c=await caches.open(TILE),hit=await c.match(req);if(hit)return hit;
+   try{const r=await fetch(req);e.waitUntil(put(c,req,r).then(()=>prune(c)).catch(()=>{}));return r;}catch(_){return new Response('',{status:504});}
+  })());return;
+ }
+ if(url.origin!==scopeURL.origin||!url.pathname.startsWith(scopeURL.pathname))return;
+ const doc=req.mode==='navigate'||/\.html?$/.test(url.pathname)||url.pathname.endsWith('/');
+ e.respondWith((async()=>{
+  const c=await caches.open(CACHE);
+  try{const r=await fetch(req,{cache:doc?'no-store':'default'});if(r.ok){e.waitUntil(put(c,req,r).catch(()=>{}));return r;}
+   const hit=await c.match(req);return hit||r;
+  }catch(_){const hit=await c.match(req);if(hit)return hit;
+   if(doc){const home=await c.match(new URL('index.html',scopeURL).href);if(home)return home;}
+   return new Response('オフラインです。オンラインで一度アプリを開いてください。',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});
   }
-  if(url.origin!==location.origin) return;
-
-  var fresh=false; try{ fresh=url.search.indexOf('fresh=1')>=0; }catch(_){}
-  var isDoc = req.mode==='navigate' || /\.html?$/.test(url.pathname) || url.pathname.slice(-1)==='/';
-  if(isDoc){
-    e.respondWith(caches.open(CACHE).then(function(c){
-      if(fresh){ try{ caches.keys().then(function(ks){ ks.forEach(function(k){ caches.delete(k); }); }); }catch(_){} }
-      var base = fetch(req,{cache:'no-store'}).catch(function(){ return c.match(req); });   /* v182: HTMLは常にネット優先 */
-      return base.then(function(res){
-        if(!fresh){ try{ if(res&&res.ok) c.put(req,res.clone()); }catch(_){} }
-        try{
-          res.clone().text().then(function(cur){
-            fetch(req,{cache:'no-store'}).then(function(r){ return r.text(); }).then(function(txt){
-              var a=verOf(cur), b=verOf(txt);
-              if(b&&a&&a!==b){
-                c.put(req, new Response(txt,{status:200,headers:{'Content-Type':'text/html; charset=utf-8'}})).catch(function(){});
-                self.clients.matchAll({type:'window',includeUncontrolled:true}).then(function(cs){
-                  cs.forEach(function(cl){ try{ cl.postMessage({type:'km-update-ready',version:b}); }catch(_){} });
-                }).catch(function(){});
-              }
-            }).catch(function(){});
-          }).catch(function(){});
-        }catch(_){}
-        return res;
-      }).catch(function(){ return c.match(req).then(function(h){ return h||c.match('./index.html').then(function(h2){ return h2||new Response('offline',{status:503}); }); }); });
-    }));
-    return;
-  }
-  e.respondWith(caches.open(CACHE).then(function(c){
-    return c.match(req).then(function(hit){
-      if(hit){ fetch(req).then(function(r){ try{ if(r&&r.ok) c.put(req,r.clone()); }catch(_){} }).catch(function(){}); return hit; }
-      return fetch(req).then(function(r){ try{ if(r&&r.ok) c.put(req,r.clone()); }catch(_){} return r; }).catch(function(){ return new Response('',{status:503}); });
-    });
-  }));
+ })());
 });
-self.addEventListener('message', function(e){
-  try{ var d=e.data||{};
-    if(d.type==='km-skip-waiting') self.skipWaiting();
-    if(d.type==='km-clear-cache'){ caches.keys().then(function(ks){ ks.forEach(function(k){ caches.delete(k); }); }); }
-    if(d.type==='km-tile-stats'){ caches.open(TILE).then(function(c){ return c.keys().then(function(ks){
-      self.clients.matchAll({type:'window'}).then(function(cs){ cs.forEach(function(cl){ try{ cl.postMessage({type:'km-tile-stats',count:ks.length}); }catch(_){} }); }); }); }); }
-  }catch(_){}
+self.addEventListener('message',e=>{
+ const d=e.data||{};
+ if(d.type==='km-skip-waiting')e.waitUntil(self.skipWaiting());
+ if(d.type==='km-clear-cache')e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(owned).map(k=>caches.delete(k)))));
+ if(d.type==='km-tile-stats')e.waitUntil((async()=>{const c=await caches.open(TILE),keys=await c.keys();const clients=await self.clients.matchAll({type:'window'});clients.forEach(cl=>cl.postMessage({type:'km-tile-stats',count:keys.length}));})());
 });
