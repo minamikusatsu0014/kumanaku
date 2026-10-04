@@ -1924,7 +1924,7 @@ window.kmEl=function(id){ var e=document.getElementById(id); if(e) return e;
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版5</span><span style="font-size:11px;color:#999;margin-left:4px">10/04</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版6</span><span style="font-size:11px;color:#999;margin-left:4px">10/04</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -5709,7 +5709,7 @@ function ownRender(){
  });
  info('手描きの街道 '+ALL.length+' 件。名前を押すと、その線の場所へ移動します。');
 }
-window.__kmOwnRoutes={rows:ownRows,importText:ownImportText,refresh:function(){renderList();},version:'20261004-own-5'};
+window.__kmOwnRoutes={rows:ownRows,importText:ownImportText,refresh:function(){renderList();},version:'20261004-own-6'};
 
 function renderListCore(){return ownRender();}
 function renderList(){return ownRender();}
@@ -9803,7 +9803,40 @@ function boot(){ apply(); addBtn2(); label(); }
       return (Math.atan2(y,x)*180/Math.PI+360)%360; }
     function dname(d){ return ['北','北東','東','南東','南','南西','西','北西'][Math.round(((d%360)+360)%360/45)%8]; }
 
-    var CUSTOM_ROUTES=null;
+    var CUSTOM_ROUTES=null, RUN_ROUTE=null, DIRECTION_READY=false, REVERSED=false;
+    var VISITED=new Set(), ARRIVED=false, NEXT_ROUTE=null;
+    function routeKey(p){ var a=JSON.stringify(p),b=JSON.stringify(p.slice().reverse()); return a<b?a:b; }
+    function currentLine(){ return RUN_ROUTE||LINES[SEL]; }
+    function orient(lat,lng){
+      if(DIRECTION_READY)return;
+      var l=LINES[SEL];if(!l)return;
+      var p=l.pts.map(function(q){return q.slice();}),here=[lat,lng];
+      REVERSED=hv(here,p[p.length-1])<hv(here,p[0]);
+      if(REVERSED)p.reverse();
+      RUN_ROUTE={name:l.name,pts:p};DIRECTION_READY=true;
+    }
+    function nearestNext(here){
+      var all=[],seen=new Set(),best=null;
+      if(window.__kmOwnRoutes&&window.__kmOwnRoutes.rows){
+        window.__kmOwnRoutes.rows().forEach(function(r){r.segs.forEach(function(p,i){all.push({name:r.name+(r.segs.length>1?' 区間 '+(i+1):''),pts:p});});});
+      }else all=collect();
+      all=all.concat(CUSTOM_ROUTES||[]);
+      all.forEach(function(l){
+        if(!l.pts||l.pts.length<2)return;
+        var key=routeKey(l.pts);if(VISITED.has(key)||seen.has(key))return;seen.add(key);
+        var d=Math.min(hv(here,l.pts[0]),hv(here,l.pts[l.pts.length-1]));
+        if(!best||d<best.distance)best={name:l.name,pts:l.pts.map(function(p){return p.slice();}),distance:d};
+      });return best;
+    }
+    function nextPrompt(){
+      if(!ARRIVED)return;
+      var d=document.createElement('div');d.style.cssText='margin-top:8px;padding-top:8px;border-top:1px solid #9ca3af';
+      var t=document.createElement('div');
+      t.textContent=NEXT_ROUTE?'次に近い線：'+NEXT_ROUTE.name+'（端まで直線で約 '+Math.round(NEXT_ROUTE.distance)+'m）':'未案内の線はありません。';d.appendChild(t);
+      if(NEXT_ROUTE){var bt=document.createElement('button');bt.id='kmNavNextRoute';bt.type='button';bt.textContent='この線を案内';bt.style.cssText='margin-top:6px;padding:10px;border:0;border-radius:8px;background:#16a34a;color:white;font-weight:700';
+        bt.onclick=function(ev){ev.preventDefault();ev.stopPropagation();var n=NEXT_ROUTE;if(!n)return;stop();CUSTOM_ROUTES=[{name:n.name,pts:n.pts}];SEL=0;localStorage.setItem(SELKEY,'0');start();};d.appendChild(bt);}
+      bark().appendChild(d);
+    }
     function collect(){
       if(CUSTOM_ROUTES)return CUSTOM_ROUTES;
       var j=J(raw(K)), out=[], L=(j&&j.lines)||[];
@@ -9831,7 +9864,7 @@ function boot(){ apply(); addBtn2(); label(); }
     }
     function calc(lat,lng){
       if(!LINES.length) return {ok:false, why:'no-lines'};
-      var L=LINES[SEL]; if(!L||L.pts.length<2) return {ok:false, why:'no-line'};
+      var L=currentLine(); if(!L||L.pts.length<2) return {ok:false, why:'no-line'};
       var P=[lat,lng], best=null, acc=0, cumAt=[0];
       for(var i=0;i<L.pts.length-1;i++){
         var r=proj(P,L.pts[i],L.pts[i+1]);
@@ -9846,7 +9879,7 @@ function boot(){ apply(); addBtn2(); label(); }
       }
       if(ni<0) ni=L.pts.length-1;
       var nv=L.pts[ni], dn=hv(P,nv), db=brg(P,nv);
-      return {ok:true, dist:best.dist, off:(best.dist>OFF_TH), progress:best.progress, total:total,
+      return {ok:true, dist:best.dist, off:(best.dist>OFF_TH), progress:best.progress, seg:best.seg, total:total,
         remain:Math.max(0,total-best.progress), pct:(total>0?Math.min(100,(best.progress/total)*100):0),
         nextIdx:ni, nextM:dn, nextDir:dname(db), goal:(ni===L.pts.length-1), name:L.name};
     }
@@ -9927,7 +9960,7 @@ function boot(){ apply(); addBtn2(); label(); }
     function cover(P){
       try{
         var mp=window.map, Lg=window.L; if(!mp||!Lg||!mp.addLayer) return;
-        var L=LINES[SEL]; if(!L) return;
+        var L=currentLine(); if(!L) return;
         var r=calc(P[0],P[1]); if(!r.ok) return;
         var pts=L.pts.slice(0,r.seg+1).concat([[P[0],P[1]]]);
         if(cov){ try{ mp.removeLayer(cov); }catch(e){} cov=null; }
@@ -9958,29 +9991,35 @@ function boot(){ apply(); addBtn2(); label(); }
 
     function apply(lat,lng){
       if(!ACTIVE) return {ok:false, why:'inactive'};
+      if(!isN(lat)||!isN(lng))return {ok:false,why:'invalid-position'};
+      orient(lat,lng);
       var r=calc(lat,lng); lastC=r;
       if(!r.ok){ showBar('🧭 手描きの線がありません。先に線を描いてください。',true); return r; }
-      var head='🧭 <b>'+r.name+'</b>　線まで <b>'+Math.round(r.dist)+'m</b>　次の折れ点 <b>'+Math.round(r.nextM)+'m</b> '+r.nextDir+(r.goal?'（終点）':'');
+      var head='🧭 <b>'+esc(r.name)+'</b>　線まで <b>'+Math.round(r.dist)+'m</b>　次の折れ点 <b>'+Math.round(r.nextM)+'m</b> '+r.nextDir+(r.goal?'（終点）':'');
       var sub='進んだ '+Math.round(r.progress)+'m / '+Math.round(r.total)+'m（'+r.pct.toFixed(0)+'%）　残り '+Math.round(r.remain)+'m';
       if(r.off) head='⚠ <b>線から外れています</b>（'+Math.round(r.dist)+'m）　最寄りへ '+r.nextDir+' '+Math.round(r.dist)+'m';
       showBar(head+'<br><span style="opacity:.85">'+sub+'</span>', r.off);
       navLast=[lat,lng]; navFollow(lat,lng); navBarExtra();
       cover([lat,lng]);
+      if(!r.off && r.goal && r.nextM<=GOAL && r.pct>=80 && !ARRIVED){ARRIVED=true;VISITED.add(routeKey(currentLine().pts));NEXT_ROUTE=nearestNext([lat,lng]);}
+      if(ARRIVED){NEXT_ROUTE=nearestNext([lat,lng]);nextPrompt();}
       var now=Date.now();
       if(r.off && now-lastOff>20000){ lastOff=now; beep(420,0.18); speak('線から外れています'); }
       if(!r.off){
         var key='b'+r.nextIdx;
         if(r.nextM<=NEAR && !spoke[key]){ spoke[key]=1; beep(r.goal?980:880,0.13); speak(r.goal?'まもなく終点です':'まもなく折れ点、'+r.nextDir+'です'); }
-        if(r.goal && r.nextM<=GOAL && !spoke.g){ spoke.g=1; beep(1046,0.22); speak('終点に到着しました'); }
+        if(ARRIVED && !spoke.g){ spoke.g=1; beep(1046,0.22); speak('終点に到着しました'); }
       }
       return r;
     }
 
     function start(){
-      reload();
+      stop();reload();
+      RUN_ROUTE=null;DIRECTION_READY=false;REVERSED=false;ARRIVED=false;NEXT_ROUTE=null;
       if(!LINES.length){ showBar('🧭 手描きの線がありません。先に線を描いてください。',true); return 'no-lines'; }
       if(!(window.navigator&&navigator.geolocation)){ showBar('🧭 この端末では位置情報が使えません',true); return 'no-geo'; }
       ACTIVE=true; spoke={}; lastOff=0;
+      showBar('🧭 現在地を取得中です。近い端から案内を始めます。',false);
       NAVF=true; NAVWHY='on'; NAVT=0; NAVREADY=false; NAVFIX=0; navLast=null;
       try{ window.__kmLivePause173=true; }catch(e){}
       try{
@@ -10002,6 +10041,7 @@ function boot(){ apply(); addBtn2(); label(); }
                  : code===2 ? '現在地を取得できません（電波・GPSの状態を確認）'
                  : code===3 ? '位置情報の取得がタイムアウトしました（屋内では取れないことがあります）'
                  : ('位置情報エラー（'+why+'）');
+          if(code===1)stop();
           showBar('🧭 '+jp+'<br><span style="opacity:.8">電波の良い場所で再開してください</span>',true);
           navBarExtra(); },
         {enableHighAccuracy:true,maximumAge:2000,timeout:20000});
@@ -10011,7 +10051,7 @@ function boot(){ apply(); addBtn2(); label(); }
     function stop(){
       ACTIVE=false;
       try{ if(wid!=null&&navigator.geolocation) navigator.geolocation.clearWatch(wid); }catch(e){}
-      wid=null; uncov(); hideBar(); NAVF=false; NAVWHY='stopped'; navLast=null;
+      wid=null;RUN_ROUTE=null;DIRECTION_READY=false; uncov(); hideBar(); NAVF=false; NAVWHY='stopped'; navLast=null;
       try{ window.__kmLivePause173=true; window.__kmNavStoppedAt=Date.now(); }catch(e){}
       try{ var b2=document.getElementById('kmNavFollowWrap174'); if(b2&&b2.parentNode) b2.parentNode.removeChild(b2); }catch(e){}
       return 'stopped';
@@ -10043,7 +10083,7 @@ function boot(){ apply(); addBtn2(); label(); }
       pn.style.cssText='position:fixed;inset:0;z-index:2147483600;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:12px';
       pn.innerHTML='<button id="knNavX165" title="閉じる" style="position:fixed;top:10px;right:10px;width:54px;height:54px;z-index:2147483647;background:#dc2626;color:#fff;border:0;border-radius:12px;font-size:26px;font-weight:800;line-height:1;box-shadow:0 3px 12px rgba(0,0,0,.55)">✕</button><div style="background:#fff;color:#111;border-radius:12px;max-width:520px;width:100%;max-height:86vh;overflow:auto;padding:12px">'
         +'<div style="font-weight:800;font-size:15px;margin-bottom:6px">🧭 線ナビ（手描きの線を案内）</div>'
-        +'<div style="font-size:12px;color:#555;margin-bottom:8px">案内する線を選んで「開始」を押してください。歩いた区間は地図上で緑に塗られます。</div>'
+        +'<div style="font-size:12px;color:#555;margin-bottom:8px">選んだ線の現在地に近い端から案内します。終点では次に近い未案内の線を提案し、「この線を案内」を押すと続けます。線の間の道路経路は案内しません。</div>'
         +'<select id="knNavSel165" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:8px;margin-bottom:8px"></select>'
         +'<div id="knNavInfo165" style="font-size:12px;line-height:1.6;background:#f3f4f6;border-radius:8px;padding:8px;margin-bottom:8px"></div>'
         +'<div style="display:flex;gap:8px;margin-bottom:8px">'
@@ -10070,7 +10110,7 @@ function boot(){ apply(); addBtn2(); label(); }
       try{ pn.querySelector('#knNavX165').addEventListener('click',function(ev){ try{ev.stopPropagation();ev.preventDefault();}catch(e){} closePn(); }); }catch(e){}
       try{ pn.querySelector('#knNavClose165').addEventListener('click',function(ev){ try{ev.stopPropagation();ev.preventDefault();}catch(e){} closePn(); }); }catch(e){}
       try{ pn.addEventListener('click',function(ev){ if(ev.target===pn) closePn(); }); }catch(e){}
-      pn.querySelector('#knNavSel165').onchange=function(){ SEL=parseInt(this.value,10)||0; try{ localStorage.setItem(SELKEY,String(SEL)); }catch(e){} spoke={}; sync(); };
+      pn.querySelector('#knNavSel165').onchange=function(){ stop();VISITED.clear();SEL=parseInt(this.value,10)||0; try{ localStorage.setItem(SELKEY,String(SEL)); }catch(e){} spoke={}; sync(); };
       pn.querySelector('#knNavGo165').onclick=function(){ var r=start(); sync(); this.blur(); };
       pn.querySelector('#knNavStop165').onclick=function(){ stop(); sync(); this.blur(); };
       pn.querySelector('#knNavGpx165').onclick=function(){ var t=gpx(), ok=!!t&&dl('kumanaku_line_'+(SEL+1)+'.gpx',t,'application/gpx+xml'), b=this; b.textContent=ok?'✅ 書き出しました':'⚠ 線がありません'; setTimeout(function(){ b.textContent='⬇ GPX書き出し'; },1800); };
@@ -10118,9 +10158,10 @@ function boot(){ apply(); addBtn2(); label(); }
     try{ window.addEventListener('popstate',function(){ try{ if(pn&&pn.style.display==='flex') pn.style.display='none'; }catch(e){} }); }catch(e){}
     try{ window.addEventListener('keydown',function(ev){ try{ if(ev.key==='Escape'&&pn&&pn.style.display==='flex') pn.style.display='none'; }catch(e){} }); }catch(e){}
     window.__kmNav165OpenRoute=function(segs,name){
-      stop();CUSTOM_ROUTES=segs.filter(function(p){return Array.isArray(p)&&p.length>1;}).map(function(p,i){return {name:name+(segs.length>1?' 区間 '+(i+1):''),pts:p.map(function(q){return [q[0],q[1]];})};});
+      stop();VISITED.clear();CUSTOM_ROUTES=segs.filter(function(p){return Array.isArray(p)&&p.length>1;}).map(function(p,i){return {name:name+(segs.length>1?' 区間 '+(i+1):''),pts:p.map(function(q){return [q[0],q[1]];})};});
       localStorage.setItem(SELKEY,'0');SEL=0;open();
     };
+    window.__kmNavNearestState=function(){return {directionReady:DIRECTION_READY,reversed:REVERSED,arrived:ARRIVED,visited:VISITED.size,next:NEXT_ROUTE?{name:NEXT_ROUTE.name,distance:NEXT_ROUTE.distance}:null,pts:RUN_ROUTE?RUN_ROUTE.pts:null};};
     window.__kmNav165Open=open;
     window.__kmNav165Start=start;
     window.__kmNav165Stop=stop;
