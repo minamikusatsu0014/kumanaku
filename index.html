@@ -1924,7 +1924,7 @@ window.kmEl=function(id){ var e=document.getElementById(id); if(e) return e;
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版</span><span style="font-size:11px;color:#999;margin-left:4px">10/04</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版5</span><span style="font-size:11px;color:#999;margin-left:4px">10/04</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -5628,7 +5628,7 @@ function kaidoPopupHTML(nm){
 
 function drawStreet(s,on){ return trRenderStreet(s,on); }
 function bboxOf(s){if(BB[s.id])return BB[s.id];var p=[];(s.segs||[]).forEach(function(g){p=p.concat(g);});MANSEGS(s.name).forEach(function(g){p=p.concat(g);});if(!p.length)return null;BB[s.id]=L.latLngBounds(p);return BB[s.id];}
-function closeKaidoPanel(){try{el("kaidoModal").classList.remove("on");}catch(e){}}
+function closeKaidoPanel(){try{var modal=el('kaidoModal');modal.classList.remove('on');modal.style.setProperty('display','none','important');}catch(e){}}
 function fitStreet(s){var b=bboxOf(s);if(!b){info("「"+s.name+"」は実線データ未収録です（推測の線は描画していません）。");return;}
   ON[s.id]=1;drawStreet(s,true);saveOn();closeKaidoPanel();
   try{ map.flyToBounds(b,{padding:[40,40],duration:0.8,maxZoom:16}); }catch(e){ map.fitBounds(b,{padding:[40,40]}); }
@@ -5683,7 +5683,13 @@ function ownImportControl(){
  input.onchange=function(){var f=this.files&&this.files[0];this.value='';if(!f)return;info('読み込み中… '+f.name);var r=new FileReader();r.onload=function(){try{var n=ownImportText(r.result);renderList();info('手描きの線を '+n+' 本追加しました。');}catch(e){info('読み込みできませんでした。'+e.message);}};r.onerror=function(){info('ファイルを読み込めませんでした。');};r.readAsText(f);};
  label.appendChild(input);return label;
 }
-function ownFit(row){var bounds=L.latLngBounds(row.segs.flat());closeKaidoPanel();map.fitBounds(bounds,{padding:[36,36],maxZoom:16});}
+function ownFit(row){
+ try{var bounds=L.latLngBounds(row.segs.flat());if(!bounds.isValid())throw new Error('線の座標を確認できません');
+ window.__kmLivePause173=true;if(window.__kmNavFollowSet174)window.__kmNavFollowSet174(false);
+ if(window.__km216)window.__km216.close();closeKaidoPanel();
+ map.fitBounds(bounds,{padding:[36,36],maxZoom:16,animate:false});
+ }catch(e){info('地図へ移動できませんでした。'+e.message);}
+}
 function ownRender(){
  ALL=ownRows();RAW=ALL;BB={};var q=(el('kaidoSearch').value||'').trim(),list=el('kaidoList');list.replaceChildren();
  var actions=document.createElement('div');actions.style.cssText='display:flex;gap:8px;flex-wrap:wrap;padding:10px';
@@ -5703,22 +5709,24 @@ function ownRender(){
  });
  info('手描きの街道 '+ALL.length+' 件。名前を押すと、その線の場所へ移動します。');
 }
-window.__kmOwnRoutes={rows:ownRows,importText:ownImportText,refresh:function(){renderList();},version:'20261004-own-3'};
+window.__kmOwnRoutes={rows:ownRows,importText:ownImportText,refresh:function(){renderList();},version:'20261004-own-5'};
 
 function renderListCore(){return ownRender();}
 function renderList(){return ownRender();}
 
 function applySaved(){}
 function openPanel(){
- el("kaidoModal").classList.add("on");
+ if(window.__kmClosedClear)window.__kmClosedClear('kaidoModal');
+ var modal=el('kaidoModal');modal.style.setProperty('display','flex','important');
+ modal.classList.add('on');
  if(LOADED){ window.feedManual&&window.feedManual(); renderTabs(); renderList(); applySaved(); return; }
  loadKaidoAll(function(err){
    if(err){ info("kaido_data.json を読み込めませんでした。GitHub に kaido_data.json をアップロードし、オンラインで再起動してください。"); return; }
    LOADED=true; window.feedManual&&window.feedManual(); renderTabs(); renderList(); applySaved();
  });
 }
-el("kaidoClose").onclick=function(){el("kaidoModal").classList.remove("on");};
-el("kaidoModal").addEventListener("click",function(e){if(e.target===el("kaidoModal"))el("kaidoModal").classList.remove("on");});
+el("kaidoClose").onclick=closeKaidoPanel;
+el("kaidoModal").addEventListener("click",function(e){if(e.target===el("kaidoModal"))closeKaidoPanel();});
 el("kaidoSearch").oninput=function(){if(LOADED)renderList();};
 el("kaidoAll").onclick=function(){if(!LOADED)return;var q=(el("kaidoSearch").value||"").trim();
  ALL.forEach(function(s){if(!s.geo)return;if(CURREG!=="すべて"&&s.region!==CURREG)return;if(q&&s.name.indexOf(q)<0)return;ON[s.id]=1;});saveOn();renderList();};
@@ -10313,7 +10321,7 @@ function boot(){ apply(); addBtn2(); label(); }
     var t=ev.target; if(!t||!t.closest) return;
     var b=t.closest('button,a,[role=button]'); if(!b) return;
     var id=b.id||'', tx=(b.textContent||'').trim();
-    if(id==='drawBtn'||id==='pnlChip_kmDrawPanel'||id==='kmDrawMin'||/手描き/.test(tx)){
+    if(id==='drawBtn'||id==='pnlChip_kmDrawPanel'||id==='kmDrawMin'||tx==='✏️ 手描き'||tx==='手描き'||tx==='手描きトレース'){
       ev.preventDefault(); ev.stopImmediatePropagation();
       /* 迷いを無くす：押したら必ず開く（閉じるはパネル内の✕／最小化だけ） */
       try{ if(window.__kmDrawOpen167) window.__kmDrawOpen167(); }catch(e){}
