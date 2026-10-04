@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>街道ウォーキング v2</title>
+<link rel="preconnect" href="https://cyberjapandata.gsi.go.jp" crossorigin>
+<style>.leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0;}.leaflet-container{overflow:hidden;}.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow{-webkit-user-select:none;-moz-user-select:none;user-select:none;-webkit-user-drag:none;}.leaflet-tile::selection{background:transparent;}.leaflet-safari .leaflet-tile{image-rendering:-webkit-optimize-contrast;}.leaflet-safari .leaflet-tile-container{width:1600px;height:1600px;-webkit-transform-origin:0 0;}.leaflet-marker-icon,.leaflet-marker-shadow{display:block;}.leaflet-container .leaflet-overlay-pane svg{max-width:none !important;max-height:none !important;}.leaflet-container .leaflet-marker-pane img,.leaflet-container .leaflet-shadow-pane img,.leaflet-container .leaflet-tile-pane img,.leaflet-container img.leaflet-image-layer,.leaflet-container .leaflet-tile{max-width:none !important;max-height:none !important;width:auto;padding:0;}.leaflet-container img.leaflet-tile{mix-blend-mode:plus-lighter;}.leaflet-container.leaflet-touch-zoom{-ms-touch-action:pan-x pan-y;touch-action:pan-x pan-y;}.leaflet-container.leaflet-touch-drag{-ms-touch-action:pinch-zoom;touch-action:none;touch-action:pinch-zoom;}.leaflet-container.leaflet-touch-drag.leaflet-touch-zoom{-ms-touch-action:none;touch-action:none;}.leaflet-container{-webkit-tap-highlight-color:transparent;}.leaflet-container a{-webkit-tap-highlight-color:rgba(51,181,229,0.4);}.leaflet-tile{filter:inherit;visibility:hidden;}.leaflet-tile-loaded{visibility:inherit;}.leaflet-zoom-box{width:0;height:0;-moz-box-sizing:border-box;box-sizing:border-box;z-index:800;}.leaflet-overlay-pane svg{-moz-user-select:none;}.leaflet-pane{z-index:400;}.leaflet-tile-pane{z-index:200;}.leaflet-overlay-pane{z-index:400;}.leaflet-shadow-pane{z-index:500;}.leaflet-marker-pane{z-index:600;}.leaflet-tooltip-pane{z-index:650;}.leaflet-popup-pane{z-index:700;}.leaflet-map-pane canvas{z-index:100;}.leaflet-map-pane svg{z-index:200;}.leaflet-vml-shape{width:1px;height:1px;}.lvml{behavior:url(#default#VML);display:inline-block;position:absolute;}.leaflet-control{position:relative;z-index:800;pointer-events:visiblePainted;pointer-events:auto;}.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none;}.leaflet-top{top:0;}.leaflet-right{right:0;}.leaflet-bottom{bottom:0;}.leaflet-left{left:0;}.leaflet-control{float:left;clear:both;}.leaflet-right .leaflet-control{float:right;}.leaflet-top .leaflet-control{margin-top:10px;}.leaflet-bottom .leaflet-control{margin-bottom:10px;}.leaflet-left .leaflet-control{margin-left:10px;}.leaflet-right .leaflet-control{margin-right:10px;}.leaflet-fade-anim .leaflet-popup{opacity:0;-webkit-transition:opacity 0.2s linear;-moz-transition:opacity 0.2s linear;transition:opacity 0.2s linear;}.leaflet-fade-anim .leaflet-map-pane .leaflet-popup{opacity:1;}.leaflet-zoom-animated{-webkit-transform-origin:0 0;-ms-transform-origin:0 0;transform-origin:0 0;}svg.leaflet-zoom-animated{will-change:transform;}.leaflet-zoom-anim .leaflet-zoom-animated{-webkit-transition:-webkit-transform 0.25s cubic-bezier(0,0,0.25,1);-moz-transition:-moz-transform 0.25s cubic-bezier(0,0,0.25,1);transition:transform 0.25s cubic-bezier(0,0,0.25,1);}.leaflet-zoom-anim .leaflet-tile,.leaflet-pan-anim .leaflet-tile{-webkit-transition:none;-moz-transition:none;transition:none;}.leaflet-zoom-anim .leaflet-zoom-hide{visibility:hidden;}.leaflet-interactive{cursor:pointer;}.leaflet-grab{cursor:-webkit-grab;cursor:-moz-grab;cursor:grab;}.leaflet-crosshair,.leaflet-crosshair .leaflet-interactive{cursor:crosshair;}.leaflet-popup-pane,.leaflet-control{cursor:auto;}.leaflet-dragging .leaflet-grab,.leaflet-dragging .leaflet-grab .leaflet-interactive,.leaflet-dragging .leaflet-marker-draggable{cursor:move;cursor:-webkit-grabbing;cursor:-moz-grabbing;cursor:grabbing;}.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-image-layer,.leaflet-pane>svg path,.leaflet-tile-container{pointer-events:none;}.leaflet-marker-icon.leaflet-interactive,.leaflet-image-layer.leaflet-interactive,.leaflet-pane>svg path.leaflet-interactive,svg.leaflet-image-layer.leaflet-interactive path{pointer-events:visiblePainted;pointer-events:auto;}.leaflet-container{background:#ddd;outline-offset:1px;}.leaflet-container a{color:#0078A8;}.leaflet-zoom-box{border:2px dotted #38f;background:rgba(255,255,255,0.5);}.leaflet-container{font-family:"Helvetica Neue",Arial,Helvetica,sans-serif;font-size:12px;font-size:0.75rem;line-height:1.5;}.leaflet-bar{box-shadow:0 1px 5px rgba(0,0,0,0.65);border-radius:4px;}.leaflet-bar a{background-color:#fff;border-bottom:1px solid #ccc;width:26px;height:26px;line-height:26px;display:block;text-align:center;text-decoration:none;color:black;}.leaflet-bar a,.leaflet-control-layers-toggle{background-position:50% 50%;background-repeat:no-repeat;display:block;}.leaflet-bar a:hover,.leaflet-bar a:focus{background-color:#f4f4f4;}.leaflet-bar a:first-child{border-top-left-radius:4px;border-top-right-radius:4px;}.leaflet-bar a:last-child{border-bottom-left-radius:4px;border-bottom-right-radius:4px;border-bottom:none;}.leaflet-bar a.leaflet-disabled{cursor:default;background-color:#f4f4f4;color:#bbb;}.leaflet-touch .leaflet-bar a{width:30px;height:30px;line-height:30px;}.leaflet-touch .leaflet-bar a:first-child{border-top-left-radius:2px;border-top-right-radius:2px;}.leaflet-touch .leaflet-bar a:last-child{border-bottom-left-radius:2px;border-bottom-right-radius:2px;}.leaflet-control-zoom-in,.leaflet-control-zoom-out{font:bold 18px 'Lucida Console',Monaco,monospace;text-indent:1px;}.leaflet-touch .leaflet-control-zoom-in,.leaflet-touch .leaflet-control-zoom-out{font-size:22px;}.leaflet-control-layers{box-shadow:0 1px 5px rgba(0,0,0,0.4);background:#fff;border-radius:5px;}.leaflet-control-layers-toggle{background-image:url(images/layers.png);width:36px;height:36px;}.leaflet-retina .leaflet-control-layers-toggle{background-image:url(images/layers-2x.png);background-size:26px 26px;}.leaflet-touch .leaflet-control-layers-toggle{width:44px;height:44px;}.leaflet-control-layers .leaflet-control-layers-list,.leaflet-control-layers-expanded .leaflet-control-layers-toggle{display:none;}.leaflet-control-layers-expanded .leaflet-control-layers-list{display:block;position:relative;}.leaflet-control-layers-expanded{padding:6px 10px 6px 6px;color:#333;background:#fff;}.leaflet-control-layers-scrollbar{overflow-y:scroll;overflow-x:hidden;padding-right:5px;}.leaflet-control-layers-selector{margin-top:2px;position:relative;top:1px;}.leaflet-control-layers label{display:block;font-size:13px;font-size:1.08333em;}.leaflet-control-layers-separator{height:0;border-top:1px solid #ddd;margin:5px -10px 5px -6px;}.leaflet-default-icon-path{background-image:url(images/marker-icon.png);}.leaflet-container .leaflet-control-attribution{background:#fff;background:rgba(255,255,255,0.8);margin:0;}.leaflet-control-attribution,.leaflet-control-scale-line{padding:0 5px;color:#333;line-height:1.4;}.leaflet-control-attribution a{text-decoration:none;}.leaflet-control-attribution a:hover,.leaflet-control-attribution a:focus{text-decoration:underline;}.leaflet-attribution-flag{display:inline !important;vertical-align:baseline !important;width:1em;height:0.6669em;}.leaflet-left .leaflet-control-scale{margin-left:5px;}.leaflet-bottom .leaflet-control-scale{margin-bottom:5px;}.leaflet-control-scale-line{border:2px solid #777;border-top:none;line-height:1.1;padding:2px 5px 1px;white-space:nowrap;-moz-box-sizing:border-box;box-sizing:border-box;background:rgba(255,255,255,0.8);text-shadow:1px 1px #fff;}.leaflet-control-scale-line:not(:first-child){border-top:2px solid #777;border-bottom:none;margin-top:-2px;}.leaflet-control-scale-line:not(:first-child):not(:last-child){border-bottom:2px solid #777;}.leaflet-touch .leaflet-control-attribution,.leaflet-touch .leaflet-control-layers,.leaflet-touch .leaflet-bar{box-shadow:none;}.leaflet-touch .leaflet-control-layers,.leaflet-touch .leaflet-bar{border:2px solid rgba(0,0,0,0.2);background-clip:padding-box;}.leaflet-popup{position:absolute;text-align:center;margin-bottom:20px;}.leaflet-popup-content-wrapper{padding:1px;text-align:left;border-radius:12px;}.leaflet-popup-content{margin:13px 24px 13px 20px;line-height:1.3;font-size:13px;font-size:1.08333em;min-height:1px;}.leaflet-popup-content p{margin:17px 0;margin:1.3em 0;}.leaflet-popup-tip-container{width:40px;height:20px;position:absolute;left:50%;margin-top:-1px;margin-left:-20px;overflow:hidden;pointer-events:none;}.leaflet-popup-tip{width:17px;height:17px;padding:1px;margin:-10px auto 0;pointer-events:auto;-webkit-transform:rotate(45deg);-moz-transform:rotate(45deg);-ms-transform:rotate(45deg);transform:rotate(45deg);}.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:white;color:#333;box-shadow:0 3px 14px rgba(0,0,0,0.4);}.leaflet-container a.leaflet-popup-close-button{position:absolute;top:0;right:0;border:none;text-align:center;width:24px;height:24px;font:16px/24px Tahoma,Verdana,sans-serif;color:#757575;text-decoration:none;background:transparent;}.leaflet-container a.leaflet-popup-close-button:hover,.leaflet-container a.leaflet-popup-close-button:focus{color:#585858;}.leaflet-popup-scrolled{overflow:auto;}.leaflet-oldie .leaflet-popup-content-wrapper{-ms-zoom:1;}.leaflet-oldie .leaflet-popup-tip{width:24px;margin:0 auto;-ms-filter:"progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678,M12=0.70710678,M21=-0.70710678,M22=0.70710678)";filter:progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678,M12=0.70710678,M21=-0.70710678,M22=0.70710678);}.leaflet-oldie .leaflet-control-zoom,.leaflet-oldie .leaflet-control-layers,.leaflet-oldie .leaflet-popup-content-wrapper,.leaflet-oldie .leaflet-popup-tip{border:1px solid #999;}.leaflet-div-icon{background:#fff;border:1px solid #666;}.leaflet-tooltip{position:absolute;padding:6px;background-color:#fff;border:1px solid #fff;border-radius:3px;color:#222;white-space:nowrap;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,0.4);}.leaflet-tooltip.leaflet-interactive{cursor:pointer;pointer-events:auto;}.leaflet-tooltip-top:before,.leaflet-tooltip-bottom:before,.leaflet-tooltip-left:before,.leaflet-tooltip-right:before{position:absolute;pointer-events:none;border:6px solid transparent;background:transparent;content:"";}.leaflet-tooltip-bottom{margin-top:6px;}.leaflet-tooltip-top{margin-top:-6px;}.leaflet-tooltip-bottom:before,.leaflet-tooltip-top:before{left:50%;margin-left:-6px;}.leaflet-tooltip-top:before{bottom:0;margin-bottom:-12px;border-top-color:#fff;}.leaflet-tooltip-bottom:before{top:0;margin-top:-12px;margin-left:-6px;border-bottom-color:#fff;}.leaflet-tooltip-left{margin-left:-6px;}.leaflet-tooltip-right{margin-left:6px;}.leaflet-tooltip-left:before,.leaflet-tooltip-right:before{top:50%;margin-top:-6px;}.leaflet-tooltip-left:before{right:0;margin-right:-12px;border-left-color:#fff;}.leaflet-tooltip-right:before{left:0;margin-left:-12px;border-right-color:#fff;}@media print{.leaflet-control{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style>
+<style>*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;padding:0;height:100%;overflow:hidden;font-family:-apple-system,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif}#map{position:absolute;inset:0;background:#dfe7ee}#hud{position:fixed;left:6px;top:6px;z-index:1200;background:rgba(255,255,255,.95);border:2px solid #12314f;border-radius:10px;padding:5px 9px;max-width:60vw;box-shadow:0 2px 6px rgba(0,0,0,.25)}#hudT{font-size:12px;font-weight:700;color:#12314f;white-space:nowrap}#hudS{font-size:11px;color:#333;margin-top:2px}#tools{position:fixed;right:5px;top:6px;z-index:1200;display:flex;flex-direction:column;gap:4px}.t{width:44px;height:44px;font-size:19px;line-height:1;border:2px solid #fff;border-radius:11px;background:#12314f;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.35);padding:0}.t.on{background:#f5b400;color:#111;border-color:#12314f}#sheet{position:fixed;left:0;right:0;bottom:0;z-index:1500;background:#fff;border-radius:14px 14px 0 0;box-shadow:0 -3px 14px rgba(0,0,0,.3);transform:translateY(105%);transition:transform .18s ease-out;max-height:64vh;display:flex;flex-direction:column}#sheet.open{transform:translateY(0)}#sHead{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid #e3e3e3}#sTitle{font-size:13px;color:#12314f}#sClose{width:36px;height:36px;font-size:16px;border:2px solid #12314f;border-radius:9px;background:#fff;color:#12314f}#sBody{padding:9px 10px 18px;overflow:auto;-webkit-overflow-scrolling:touch;font-size:13px}#sBody button{font-size:13px;padding:9px 11px;margin:3px 4px 3px 0;border:2px solid #12314f;border-radius:9px;background:#f4f7fa;color:#12314f;font-weight:700}#sBody button.primary{background:#12314f;color:#fff}#sBody button.danger{background:#b00020;color:#fff;border-color:#fff}#sBody textarea{width:100%;font-size:14px;padding:8px;border:2px solid #c9d4de;border-radius:8px}#sBody .row{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}#sBody .kv{display:flex;justify-content:space-between;border-bottom:1px dashed #ddd;padding:5px 0}#sBody .item{display:flex;gap:8px;align-items:center;border-bottom:1px solid #eee;padding:6px 0}#sBody .item img{width:46px;height:46px;object-fit:cover;border-radius:6px;border:1px solid #ccc}#sBody .muted{color:#666;font-size:12px;line-height:1.5}#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:78px;z-index:2000;background:rgba(17,17,17,.92);color:#fff;font-size:13px;padding:8px 13px;border-radius:10px;max-width:90vw;opacity:0;transition:opacity .2s;pointer-events:none;text-align:center}#toast.show{opacity:1}#err{position:fixed;left:5px;right:5px;bottom:5px;z-index:2000;background:#b00020;color:#fff;font-size:12px;padding:7px 9px;border-radius:9px;display:none;white-space:pre-wrap;max-height:26vh;overflow:auto}#navBar{position:fixed;left:5px;right:5px;bottom:6px;z-index:1400;background:rgba(255,255,255,.96);border:2px solid #12314f;border-radius:11px;padding:7px 9px;display:none}#navBar.show{display:block}#navT{font-size:13px;font-weight:700;color:#12314f}#navS{font-size:11px;color:#444;margin-top:2px}#navBar button{font-size:12px;padding:7px 9px;margin-top:5px;margin-right:4px;border:2px solid #12314f;border-radius:8px;background:#12314f;color:#fff;font-weight:700}#navBar button.alt{background:#fff;color:#12314f}.leaflet-popup-content{font-size:12px;line-height:1.45}.pdot{width:16px;height:16px;border-radius:50%;background:#1e88e5;border:3px solid #fff;box-shadow:0 0 0 2px rgba(30,136,229,.5)}</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="hud"><div id="hudT">街道ウォーキング <b id="ver">v2.1</b></div><div id="hudS">起動中…</div></div>
+<div id="tools">
+<button class="t" id="bPen" title="ペン">✏️</button>
+<button class="t" id="bEra" title="消しゴム">🧹</button>
+<button class="t on" id="bPan" title="地図移動">✋</button>
+<button class="t" id="bUndo" title="戻す">↶</button>
+<button class="t" id="bRedo" title="やり直し">↷</button>
+<button class="t" id="bStyle" title="色と太さ">🎨</button>
+<button class="t" id="bPoi" title="名所">👁</button>
+<button class="t" id="bPhoto" title="写真">📷</button>
+<button class="t" id="bMemo" title="メモ">📝</button>
+<button class="t" id="bNav" title="線ナビ">🧭</button>
+<button class="t" id="bRec" title="記録">●</button>
+<button class="t" id="bSum" title="まとめ">📊</button>
+<button class="t" id="bData" title="保存・書き出し">💾</button>
+</div>
+<div id="sheet"><div id="sHead"><b id="sTitle"></b><button id="sClose">✕</button></div><div id="sBody"></div></div>
+<div id="toast"></div>
+<div id="err"></div>
+<div id="navBar"><div id="navT">ナビ：停止中</div><div id="navS"></div><button id="navF">追従：ON</button><button id="navX" class="alt">停止</button></div>
+<input id="fJson" type="file" accept=".json,.gpx,.kml,application/json" style="display:none">
+<input id="fPhoto" type="file" accept="image/*" capture="environment" style="display:none">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';document.head.appendChild(s);"></script>
+<script>window.KM2_POIS = {"v":2,"count":1175,"pois":[{"n":"清水寺","k":"寺","lat":34.9949,"lng":135.7847},{"n":"金閣寺(鹿苑寺)","k":"寺","lat":35.0394,"lng":135.7292},{"n":"銀閣寺(慈照寺)","k":"寺","lat":35.0268,"lng":135.7982},{"n":"龍安寺","k":"寺","lat":35.0345,"lng":135.7183},{"n":"仁和寺","k":"寺","lat":35.0311,"lng":135.7139},{"n":"妙心寺","k":"寺","lat":35.0228,"lng":135.7197},{"n":"大徳寺","k":"寺","lat":35.0437,"lng":135.7455},{"n":"今宮神社","k":"社","lat":35.0446,"lng":135.7467},{"n":"平野神社","k":"社","lat":35.0319,"lng":135.7397},{"n":"北野天満宮","k":"社","lat":35.0308,"lng":135.7352},{"n":"上賀茂神社","k":"社","lat":35.0603,"lng":135.7528},{"n":"下鴨神社","k":"社","lat":35.0389,"lng":135.7729},{"n":"相国寺","k":"寺","lat":35.0344,"lng":135.7625},{"n":"晴明神社","k":"社","lat":35.0269,"lng":135.7561},{"n":"白峯神宮","k":"社","lat":35.0239,"lng":135.7514},{"n":"廬山寺","k":"寺","lat":35.02,"lng":135.7642},{"n":"梨木神社","k":"社","lat":35.0186,"lng":135.7672},{"n":"聖護院","k":"寺","lat":35.0181,"lng":135.7736},{"n":"吉田神社","k":"社","lat":35.0264,"lng":135.7822},{"n":"真如堂","k":"寺","lat":35.0236,"lng":135.7914},{"n":"金戒光明寺","k":"寺","lat":35.0208,"lng":135.7903},{"n":"南禅寺","k":"寺","lat":35.0112,"lng":135.7936},{"n":"永観堂(禅林寺)","k":"寺","lat":35.015,"lng":135.7953},{"n":"法然院","k":"寺","lat":35.0214,"lng":135.7977},{"n":"安楽寺","k":"寺","lat":35.0197,"lng":135.795},{"n":"平安神宮","k":"社","lat":35.0159,"lng":135.7822},{"n":"八坂神社","k":"社","lat":35.0036,"lng":135.7785},{"n":"知恩院","k":"寺","lat":35.0044,"lng":135.7832},{"n":"青蓮院","k":"寺","lat":35.0081,"lng":135.7861},{"n":"高台寺","k":"寺","lat":35.0006,"lng":135.7811},{"n":"法観寺(八坂の塔)","k":"寺","lat":34.9986,"lng":135.7792},{"n":"建仁寺","k":"寺","lat":34.9999,"lng":135.7753},{"n":"六角堂(頂法寺)","k":"寺","lat":35.0072,"lng":135.7603},{"n":"本能寺","k":"寺","lat":35.0103,"lng":135.7647},{"n":"御金神社","k":"社","lat":35.0117,"lng":135.7628},{"n":"錦天満宮","k":"社","lat":35.005,"lng":135.7647},{"n":"行願寺(革堂)","k":"寺","lat":35.0172,"lng":135.7619},{"n":"護王神社","k":"社","lat":35.0233,"lng":135.7603},{"n":"菅原院天満宮神社","k":"社","lat":35.0189,"lng":135.76},{"n":"火除天満宮","k":"社","lat":35.0117,"lng":135.7486},{"n":"神泉苑","k":"寺","lat":35.0158,"lng":135.7486},{"n":"千本釈迦堂(大報恩寺)","k":"寺","lat":35.0303,"lng":135.7447},{"n":"東本願寺","k":"寺","lat":34.9914,"lng":135.7594},{"n":"西本願寺","k":"寺","lat":34.9922,"lng":135.7517},{"n":"東寺(教王護国寺)","k":"寺","lat":34.9814,"lng":135.7478},{"n":"三十三間堂","k":"寺","lat":34.9878,"lng":135.7717},{"n":"東福寺","k":"寺","lat":34.9767,"lng":135.7736},{"n":"泉涌寺","k":"寺","lat":34.9756,"lng":135.7794},{"n":"雲龍院","k":"寺","lat":34.9739,"lng":135.7817},{"n":"勝林寺","k":"寺","lat":34.9717,"lng":135.7661},{"n":"伏見稲荷大社","k":"社","lat":34.9671,"lng":135.7727},{"n":"藤森神社","k":"社","lat":34.9575,"lng":135.7703},{"n":"城南宮","k":"社","lat":34.9486,"lng":135.7472},{"n":"醍醐寺","k":"寺","lat":34.9517,"lng":135.8194},{"n":"随心院","k":"寺","lat":34.9614,"lng":135.8164},{"n":"勧修寺","k":"寺","lat":34.9589,"lng":135.8125},{"n":"御香宮神社","k":"社","lat":34.9289,"lng":135.7639},{"n":"大原野神社","k":"社","lat":34.9642,"lng":135.6708},{"n":"鈴虫寺(華厳寺)","k":"寺","lat":35.0008,"lng":135.6842},{"n":"松尾大社","k":"社","lat":34.9997,"lng":135.6853},{"n":"西芳寺(苔寺)","k":"寺","lat":34.9919,"lng":135.6831},{"n":"車折神社","k":"社","lat":35.0133,"lng":135.6914},{"n":"野宮神社","k":"社","lat":35.0173,"lng":135.6678},{"n":"天龍寺","k":"寺","lat":35.0157,"lng":135.6744},{"n":"常寂光寺","k":"寺","lat":35.0224,"lng":135.6687},{"n":"二尊院","k":"寺","lat":35.0225,"lng":135.6664},{"n":"祇王寺","k":"寺","lat":35.0247,"lng":135.6633},{"n":"化野念仏寺","k":"寺","lat":35.0264,"lng":135.6572},{"n":"愛宕念仏寺","k":"寺","lat":35.03,"lng":135.6578},{"n":"高山寺","k":"寺","lat":35.0606,"lng":135.6775},{"n":"神護寺","k":"寺","lat":35.06,"lng":135.6667},{"n":"西明寺","k":"寺","lat":35.0681,"lng":135.6667},{"n":"広隆寺","k":"寺","lat":35.0158,"lng":135.7078},{"n":"大覚寺","k":"寺","lat":35.03,"lng":135.7128},{"n":"清凉寺(嵯峨釈迦堂)","k":"寺","lat":35.0233,"lng":135.6967},{"n":"木島神社(蚕ノ社)","k":"社","lat":35.0119,"lng":135.7167},{"n":"等持院","k":"寺","lat":35.0269,"lng":135.7328},{"n":"上御霊神社","k":"社","lat":35.0347,"lng":135.7567},{"n":"詩仙堂","k":"寺","lat":35.045,"lng":135.7967},{"n":"圓光寺","k":"寺","lat":35.0522,"lng":135.8019},{"n":"曼殊院","k":"寺","lat":35.0547,"lng":135.8072},{"n":"大原三千院","k":"寺","lat":35.1197,"lng":135.8344},{"n":"寂光院","k":"寺","lat":35.1339,"lng":135.8319},{"n":"貴船神社","k":"社","lat":35.1222,"lng":135.7617},{"n":"鞍馬寺","k":"寺","lat":35.1139,"lng":135.77},{"n":"平等院","k":"寺","lat":34.8892,"lng":135.8076},{"n":"萬福寺","k":"寺","lat":34.9136,"lng":135.8058},{"n":"三室戸寺","k":"寺","lat":34.8997,"lng":135.8183},{"n":"石清水八幡宮","k":"社","lat":34.8797,"lng":135.7},{"n":"長岡天満宮","k":"社","lat":34.9264,"lng":135.6994},{"n":"向日神社","k":"社","lat":34.9456,"lng":135.7008},{"n":"光明寺","k":"寺","lat":34.9364,"lng":135.6572},{"n":"善峯寺","k":"寺","lat":34.9447,"lng":135.6503},{"n":"二条城","k":"城","lat":35.0142,"lng":135.7482},{"n":"京都御所","k":"史","lat":35.0254,"lng":135.7621},{"n":"蛤御門","k":"史","lat":35.0197,"lng":135.7547},{"n":"本能寺跡碑","k":"史","lat":35.00594,"lng":135.75367},{"n":"聚楽第跡(聚楽公園)","k":"史","lat":35.0339,"lng":135.7425},{"n":"室町第跡(花の御所)","k":"史","lat":35.0222,"lng":135.7531},{"n":"平安宮朱雀門跡","k":"史","lat":35.0203,"lng":135.7408},{"n":"羅城門(羅生門)跡","k":"史","lat":34.9894,"lng":135.7444},{"n":"新選組屯所跡(旧前川邸)","k":"史","lat":35.0031,"lng":135.7422},{"n":"池田屋事件跡","k":"史","lat":35.0086,"lng":135.7681},{"n":"近江屋跡","k":"史","lat":35.0078,"lng":135.7656},{"n":"蹴上インクライン","k":"史","lat":35.0072,"lng":135.79},{"n":"一乗寺下り松","k":"史","lat":35.0442,"lng":135.7878},{"n":"首塚大明神","k":"史","lat":35.0364,"lng":135.7439},{"n":"高瀬川一之船入","k":"史","lat":35.0089,"lng":135.7697},{"n":"伏見城跡","k":"史","lat":34.9372,"lng":135.7789},{"n":"淀城跡公園","k":"史","lat":34.8956,"lng":135.7239},{"n":"天王山(山崎の合戦場)","k":"史","lat":34.9008,"lng":135.6789},{"n":"勝竜寺城公園","k":"史","lat":34.9303,"lng":135.7039},{"n":"桂離宮","k":"史","lat":35.0003,"lng":135.7097},{"n":"修学院離宮","k":"史","lat":35.0525,"lng":135.8069},{"n":"五条大橋","k":"史","lat":34.9961,"lng":135.7675},{"n":"六道珍皇寺・冥界通いの井戸","k":"史","lat":34.9967,"lng":135.7756},{"n":"三条大橋","k":"道","lat":35.0092,"lng":135.7717},{"n":"旧東海道・山科宿","k":"道","lat":34.9922,"lng":135.8158},{"n":"逢坂山関跡","k":"道","lat":34.9783,"lng":135.8597},{"n":"旧東海道・淀宿","k":"道","lat":34.8953,"lng":135.7247},{"n":"旧東海道・伏見宿","k":"道","lat":34.9356,"lng":135.7603},{"n":"西国街道・山崎宿","k":"道","lat":34.9008,"lng":135.685},{"n":"鯖街道・出町(出町枡形)","k":"道","lat":35.0303,"lng":135.7731},{"n":"鞍馬街道・鞍馬口","k":"道","lat":35.0353,"lng":135.7597},{"n":"周山街道(京北方面)","k":"道","lat":35.1644,"lng":135.6311},{"n":"老ノ坂峠(旧山陰道)","k":"道","lat":34.9575,"lng":135.6817},{"n":"旧朱雀大路・千本通","k":"道","lat":35.0086,"lng":135.7422},{"n":"旧五条大路・五条通","k":"道","lat":34.9967,"lng":135.7597},{"n":"豊国廟(豊臣秀吉の墓)","k":"墓","lat":34.9892,"lng":135.7742},{"n":"坂本龍馬の墓(霊山護国神社)","k":"墓","lat":34.9989,"lng":135.7808},{"n":"中岡慎太郎の墓","k":"墓","lat":34.9989,"lng":135.7811},{"n":"木戸孝允(桂小五郎)の墓","k":"墓","lat":34.9986,"lng":135.7806},{"n":"明智光秀の首塚(谷性寺)","k":"墓","lat":35.0417,"lng":135.6861},{"n":"新選組隊士の墓(壬生塚)","k":"墓","lat":35.0036,"lng":135.7419},{"n":"斎藤道三の廟(大徳寺総見院)","k":"墓","lat":35.0444,"lng":135.7458},{"n":"平清盛塚","k":"墓","lat":34.9958,"lng":135.7761},{"n":"壬生寺","k":"寺","lat":35.0036,"lng":135.7422},{"n":"六波羅蜜寺","k":"寺","lat":34.9964,"lng":135.7739},{"n":"豊国神社","k":"社","lat":34.9919,"lng":135.7728},{"n":"方広寺","k":"寺","lat":34.9917,"lng":135.7722},{"n":"粟田神社","k":"社","lat":35.0194,"lng":135.7867},{"n":"五稜郭","k":"城","lat":41.7969,"lng":140.757},{"n":"北海道神宮","k":"社","lat":43.0614,"lng":141.3064},{"n":"弘前城","k":"城","lat":40.6081,"lng":140.4642},{"n":"三内丸山遺跡","k":"史","lat":40.8106,"lng":140.6972},{"n":"中尊寺","k":"寺","lat":39.0006,"lng":141.0997},{"n":"盛岡城跡(岩手公園)","k":"城","lat":39.7,"lng":141.1503},{"n":"瑞巌寺","k":"寺","lat":38.3722,"lng":141.0589},{"n":"仙台城跡(青葉城)","k":"城","lat":38.2547,"lng":140.8553},{"n":"大崎八幡宮","k":"社","lat":38.2725,"lng":140.845},{"n":"鶴ヶ城(会津若松城)","k":"城","lat":37.4878,"lng":139.9297},{"n":"大内宿","k":"史","lat":37.3283,"lng":139.8631},{"n":"偕楽園","k":"史","lat":36.3722,"lng":140.4522},{"n":"鹿島神宮","k":"社","lat":35.9694,"lng":140.6314},{"n":"牛久大仏","k":"史","lat":35.9828,"lng":140.2203},{"n":"日光東照宮","k":"社","lat":36.7581,"lng":139.5989},{"n":"日光二荒山神社","k":"社","lat":36.7583,"lng":139.5969},{"n":"水澤観世音","k":"寺","lat":36.3308,"lng":139.0039},{"n":"川越 時の鐘","k":"史","lat":35.9239,"lng":139.4853},{"n":"秩父神社","k":"社","lat":35.9978,"lng":139.0844},{"n":"浅草寺","k":"寺","lat":35.7147,"lng":139.7967},{"n":"明治神宮","k":"社","lat":35.6764,"lng":139.6993},{"n":"江戸城跡(皇居)","k":"城","lat":35.6852,"lng":135.7521},{"n":"増上寺","k":"寺","lat":35.6574,"lng":139.7483},{"n":"高徳院(鎌倉大仏)","k":"寺","lat":35.3167,"lng":139.5358},{"n":"鶴岡八幡宮","k":"社","lat":35.3261,"lng":139.5564},{"n":"小田原城","k":"城","lat":35.2508,"lng":139.1536},{"n":"箱根神社","k":"社","lat":35.2042,"lng":139.0253},{"n":"弥彦神社","k":"社","lat":37.7028,"lng":138.8317},{"n":"春日山城跡","k":"城","lat":37.1467,"lng":138.2086},{"n":"瑞龍寺","k":"寺","lat":36.7358,"lng":137.0106},{"n":"金沢城公園","k":"城","lat":36.5658,"lng":136.6597},{"n":"兼六園","k":"史","lat":36.5622,"lng":136.6625},{"n":"永平寺","k":"寺","lat":36.0825,"lng":136.3553},{"n":"一乗谷朝倉氏遺跡","k":"史","lat":36.0136,"lng":136.2956},{"n":"武田神社","k":"社","lat":35.6886,"lng":138.5719},{"n":"身延山久遠寺","k":"寺","lat":35.3817,"lng":138.4239},{"n":"善光寺","k":"寺","lat":36.6617,"lng":138.1878},{"n":"松本城","k":"城","lat":36.2386,"lng":137.9689},{"n":"上田城跡","k":"城","lat":36.4028,"lng":138.2444},{"n":"妻籠宿","k":"道","lat":35.5764,"lng":137.5678},{"n":"馬籠宿","k":"道","lat":35.5269,"lng":137.4878},{"n":"岐阜城(金華山)","k":"城","lat":35.4339,"lng":136.7822},{"n":"白川郷(荻町集落)","k":"史","lat":36.2578,"lng":136.9061},{"n":"久能山東照宮","k":"社","lat":34.9592,"lng":138.4667},{"n":"三保の松原","k":"史","lat":34.9961,"lng":138.5222},{"n":"名古屋城","k":"城","lat":35.1856,"lng":136.8994},{"n":"熱田神宮","k":"社","lat":35.1281,"lng":136.9072},{"n":"犬山城","k":"城","lat":35.3883,"lng":136.9392},{"n":"岡崎城","k":"城","lat":34.9564,"lng":137.1589},{"n":"伊勢神宮 内宮","k":"社","lat":34.455,"lng":136.7258},{"n":"二見浦(二見興玉神社)","k":"社","lat":34.5097,"lng":136.7883},{"n":"彦根城","k":"城","lat":35.2764,"lng":136.2519},{"n":"延暦寺","k":"寺","lat":35.0706,"lng":135.8414},{"n":"大阪城","k":"城","lat":34.6872,"lng":135.5258},{"n":"住吉大社","k":"社","lat":34.6128,"lng":135.4931},{"n":"四天王寺","k":"寺","lat":34.6531,"lng":135.5164},{"n":"姫路城","k":"城","lat":34.8394,"lng":134.6939},{"n":"有馬温泉","k":"史","lat":34.7969,"lng":135.2478},{"n":"東大寺","k":"寺","lat":34.6889,"lng":135.8397},{"n":"春日大社","k":"社","lat":34.6814,"lng":135.8483},{"n":"法隆寺","k":"寺","lat":34.6142,"lng":135.7342},{"n":"金剛峯寺(高野山)","k":"寺","lat":34.2142,"lng":135.5844},{"n":"和歌山城","k":"城","lat":34.2286,"lng":135.1714},{"n":"熊野那智大社","k":"社","lat":33.6697,"lng":135.8903},{"n":"鳥取砂丘","k":"史","lat":35.54,"lng":134.2358},{"n":"白兎神社","k":"社","lat":35.5167,"lng":134.2833},{"n":"出雲大社","k":"社","lat":35.4019,"lng":132.6856},{"n":"松江城","k":"城","lat":35.475,"lng":133.0506},{"n":"岡山城(烏城)","k":"城","lat":34.6653,"lng":133.9361},{"n":"後楽園","k":"史","lat":34.6675,"lng":133.9364},{"n":"倉敷美観地区","k":"史","lat":34.5967,"lng":133.7719},{"n":"厳島神社","k":"社","lat":34.2958,"lng":132.3197},{"n":"原爆ドーム","k":"史","lat":34.3956,"lng":132.4536},{"n":"錦帯橋","k":"史","lat":34.1678,"lng":132.1803},{"n":"瑠璃光寺五重塔","k":"史","lat":34.1908,"lng":131.4731},{"n":"防府天満宮","k":"社","lat":34.0528,"lng":131.575},{"n":"霊山寺","k":"寺","lat":34.1319,"lng":134.5308},{"n":"鳴門の渦潮(大鳴門橋)","k":"史","lat":34.2383,"lng":134.6514},{"n":"金刀比羅宮","k":"社","lat":34.1839,"lng":133.8072},{"n":"栗林公園","k":"史","lat":34.33,"lng":134.0444},{"n":"高松城(玉藻公園)","k":"城","lat":34.3508,"lng":134.0522},{"n":"松山城","k":"城","lat":33.8456,"lng":132.7656},{"n":"道後温泉本館","k":"史","lat":33.8367,"lng":132.7617},{"n":"高知城","k":"城","lat":33.5608,"lng":133.5314},{"n":"桂浜","k":"史","lat":33.4969,"lng":133.5772},{"n":"太宰府天満宮","k":"社","lat":33.5217,"lng":130.535},{"n":"福岡城跡(舞鶴公園)","k":"城","lat":33.5847,"lng":130.3797},{"n":"櫛田神社","k":"社","lat":33.5939,"lng":130.4106},{"n":"吉野ヶ里遺跡","k":"史","lat":33.3244,"lng":130.3847},{"n":"祐徳稲荷神社","k":"社","lat":33.0722,"lng":130.0264},{"n":"平和公園","k":"史","lat":32.7731,"lng":129.8631},{"n":"出島","k":"史","lat":32.7439,"lng":129.8731},{"n":"大浦天主堂","k":"寺","lat":32.7342,"lng":129.8703},{"n":"熊本城","k":"城","lat":32.8061,"lng":130.7056},{"n":"阿蘇神社","k":"社","lat":32.9731,"lng":131.1178},{"n":"宇佐神宮","k":"社","lat":33.5264,"lng":131.3747},{"n":"高千穂神社","k":"社","lat":32.7056,"lng":131.3069},{"n":"青島神社","k":"社","lat":31.8056,"lng":131.475},{"n":"照国神社","k":"社","lat":31.5967,"lng":130.555},{"n":"仙厳園","k":"史","lat":31.6181,"lng":130.5764},{"n":"首里城","k":"城","lat":26.2172,"lng":127.7194},{"n":"斎場御嶽","k":"史","lat":26.1697,"lng":127.8264},{"n":"小樽運河","k":"史","lat":43.1972,"lng":141.0011},{"n":"札幌時計台","k":"史","lat":43.0625,"lng":141.3536},{"n":"函館 元町教会群","k":"史","lat":41.7628,"lng":140.7122},{"n":"松前城(福山城)","k":"城","lat":41.4292,"lng":140.1078},{"n":"五稜郭タワー前・奉行所","k":"史","lat":41.7972,"lng":140.7569},{"n":"平内町 大森勝山遺跡","k":"史","lat":41.0619,"lng":140.6531},{"n":"十和田湖 乙女の像","k":"史","lat":40.4294,"lng":140.8994},{"n":"弘前 最勝院五重塔","k":"史","lat":40.6011,"lng":140.4647},{"n":"角館 武家屋敷","k":"史","lat":39.5994,"lng":140.5586},{"n":"なまはげ館(男鹿)","k":"史","lat":39.9667,"lng":139.7333},{"n":"毛越寺","k":"寺","lat":38.9886,"lng":141.1081},{"n":"猊鼻渓","k":"史","lat":38.9836,"lng":141.2789},{"n":"山寺(立石寺)","k":"寺","lat":38.3158,"lng":140.435},{"n":"出羽三山神社","k":"社","lat":38.5306,"lng":139.9836},{"n":"上杉神社","k":"社","lat":37.9139,"lng":140.1086},{"n":"松島 五大堂","k":"寺","lat":38.3711,"lng":141.0661},{"n":"鹽竈神社","k":"社","lat":38.3181,"lng":141.0128},{"n":"白石城","k":"城","lat":38.0039,"lng":140.6181},{"n":"飯盛山","k":"寺","lat":37.4931,"lng":139.9544},{"n":"霞ヶ城(二本松城)","k":"城","lat":37.5872,"lng":140.4328},{"n":"五色沼","k":"史","lat":37.6528,"lng":140.0756},{"n":"常陸国出雲大社","k":"社","lat":36.3639,"lng":140.6125},{"n":"袋田の滝","k":"史","lat":36.7656,"lng":140.3903},{"n":"足利学校","k":"史","lat":36.3408,"lng":139.4547},{"n":"日光山輪王寺","k":"寺","lat":36.7572,"lng":139.6019},{"n":"華厳の滝","k":"史","lat":36.7778,"lng":139.5886},{"n":"富岡製糸場","k":"史","lat":36.2553,"lng":138.8878},{"n":"榛名神社","k":"社","lat":36.4633,"lng":138.8528},{"n":"少林山達磨寺","k":"寺","lat":36.355,"lng":139.0111},{"n":"川越 菓子屋横丁","k":"史","lat":35.9239,"lng":139.4856},{"n":"久伊豆神社","k":"社","lat":36.0058,"lng":139.7522},{"n":"羊山公園 芝桜","k":"史","lat":35.9975,"lng":139.0972},{"n":"成田山新勝寺","k":"寺","lat":35.7861,"lng":140.3186},{"n":"佐倉城址公園","k":"城","lat":35.7228,"lng":140.2164},{"n":"国府台(里見公園)","k":"史","lat":35.7439,"lng":139.8964},{"n":"上野 東照宮","k":"社","lat":35.7178,"lng":139.7728},{"n":"東京大神宮","k":"社","lat":35.6997,"lng":139.7464},{"n":"靖國神社","k":"社","lat":35.6942,"lng":139.7433},{"n":"柴又帝釈天","k":"寺","lat":35.7583,"lng":139.8789},{"n":"深大寺","k":"寺","lat":35.6678,"lng":139.5519},{"n":"高尾山 薬王院","k":"寺","lat":35.6311,"lng":139.2428},{"n":"鎌倉 建長寺","k":"寺","lat":35.3314,"lng":139.5561},{"n":"鎌倉 円覚寺","k":"寺","lat":35.3358,"lng":139.5478},{"n":"鎌倉 長谷寺","k":"寺","lat":35.3125,"lng":139.535},{"n":"横浜 赤レンガ倉庫","k":"史","lat":35.4522,"lng":139.6425},{"n":"横浜中華街 関帝廟","k":"史","lat":35.4433,"lng":139.6456},{"n":"大山阿夫利神社","k":"社","lat":35.4406,"lng":139.2589},{"n":"鎌倉 銭洗弁天","k":"社","lat":35.3139,"lng":139.5336},{"n":"高田城址公園","k":"城","lat":37.1083,"lng":138.2542},{"n":"北方文化博物館","k":"史","lat":37.8542,"lng":139.2272},{"n":"白山神社","k":"社","lat":37.9122,"lng":139.0367},{"n":"佐渡 金山跡","k":"史","lat":38.0381,"lng":138.2561},{"n":"五箇山 合掌造り","k":"史","lat":36.4261,"lng":136.9342},{"n":"高岡大仏","k":"寺","lat":36.7408,"lng":137.0194},{"n":"雨晴海岸","k":"史","lat":36.7956,"lng":137.0589},{"n":"気多大社","k":"社","lat":37.0753,"lng":136.8581},{"n":"東尋坊","k":"史","lat":36.2378,"lng":136.1319},{"n":"養浩館庭園","k":"史","lat":36.0672,"lng":136.2208},{"n":"諏訪大社 上社本宮","k":"社","lat":36.0464,"lng":138.1172},{"n":"諏訪大社 下社秋宮","k":"社","lat":36.0719,"lng":138.0931},{"n":"高遠城址公園","k":"城","lat":35.8328,"lng":138.0631},{"n":"臥竜公園","k":"史","lat":36.3264,"lng":138.4178},{"n":"別所温泉 安楽寺","k":"寺","lat":36.3517,"lng":138.1836},{"n":"恵林寺","k":"寺","lat":35.7236,"lng":138.7083},{"n":"富士山本宮浅間大社","k":"社","lat":35.2264,"lng":138.61},{"n":"伊豆山神社","k":"社","lat":35.0944,"lng":139.0306},{"n":"修善寺","k":"寺","lat":34.9717,"lng":138.9331},{"n":"城ヶ崎海岸","k":"史","lat":34.8703,"lng":139.1283},{"n":"沼津御用邸","k":"史","lat":35.0194,"lng":138.9444},{"n":"三嶋大社","k":"社","lat":35.1231,"lng":138.9183},{"n":"浜松城","k":"城","lat":34.7114,"lng":137.7247},{"n":"豊川稲荷","k":"寺","lat":34.8386,"lng":137.3933},{"n":"伊賀上野城","k":"城","lat":34.7703,"lng":136.1269},{"n":"熊野速玉大社","k":"社","lat":33.7303,"lng":135.9839},{"n":"伊賀流忍者博物館","k":"史","lat":34.77,"lng":136.1278},{"n":"鳥羽城跡","k":"城","lat":34.4806,"lng":136.845},{"n":"多賀大社","k":"社","lat":35.2211,"lng":136.2861},{"n":"日吉大社","k":"社","lat":35.0711,"lng":135.8636},{"n":"近江八幡 八幡堀","k":"史","lat":35.1294,"lng":136.0989},{"n":"長浜城(豊公園)","k":"城","lat":35.3792,"lng":136.2644},{"n":"安土城跡","k":"城","lat":35.1564,"lng":136.1394},{"n":"百済寺","k":"寺","lat":35.0719,"lng":136.3206},{"n":"今井町(重要伝建群)","k":"史","lat":34.56,"lng":135.7861},{"n":"吉野山 金峯山寺","k":"寺","lat":34.3689,"lng":135.8581},{"n":"橿原神宮","k":"社","lat":34.4922,"lng":135.7858},{"n":"大神神社","k":"社","lat":34.5353,"lng":135.8528},{"n":"興福寺","k":"寺","lat":34.6831,"lng":135.8311},{"n":"唐招提寺","k":"寺","lat":34.6756,"lng":135.7847},{"n":"薬師寺","k":"寺","lat":34.6683,"lng":135.7844},{"n":"白浜温泉 円月島","k":"史","lat":33.6783,"lng":135.335},{"n":"那智の滝","k":"史","lat":33.6747,"lng":135.8925},{"n":"湯浅町 伝建地区","k":"史","lat":33.5781,"lng":135.1789},{"n":"粉河寺","k":"寺","lat":34.2589,"lng":135.3542},{"n":"大阪 四天王寺 五重塔","k":"寺","lat":34.6536,"lng":135.5167},{"n":"住吉大社 反橋","k":"社","lat":34.6133,"lng":135.4928},{"n":"大坂城 豊国神社","k":"社","lat":34.6872,"lng":135.5264},{"n":"道明寺天満宮","k":"社","lat":34.6069,"lng":135.6139},{"n":"高槻城跡","k":"城","lat":34.8511,"lng":135.6172},{"n":"大坂夏の陣 三光神社","k":"史","lat":34.6753,"lng":135.5308},{"n":"神戸 北野異人館","k":"史","lat":34.7022,"lng":135.19},{"n":"生田神社","k":"社","lat":34.6947,"lng":135.1922},{"n":"明石城","k":"城","lat":34.6528,"lng":135.0072},{"n":"赤穂城跡","k":"城","lat":34.7486,"lng":134.3892},{"n":"竹田城跡","k":"城","lat":35.3003,"lng":134.8289},{"n":"城崎温泉","k":"史","lat":35.6269,"lng":134.8114},{"n":"出石城跡","k":"城","lat":35.4603,"lng":134.8708},{"n":"鳥取城跡(久松公園)","k":"城","lat":35.5072,"lng":134.2394},{"n":"三徳山三佛寺 投入堂","k":"寺","lat":35.3978,"lng":133.9558},{"n":"皆生温泉","k":"史","lat":35.5356,"lng":133.3269},{"n":"八重垣神社","k":"社","lat":35.4375,"lng":132.9711},{"n":"石見銀山 龍源寺間歩","k":"史","lat":35.0917,"lng":132.4356},{"n":"津和野 太皷谷稲成神社","k":"社","lat":34.4686,"lng":131.7711},{"n":"萩 城下町","k":"史","lat":34.4153,"lng":131.3836},{"n":"松下村塾","k":"史","lat":34.4275,"lng":131.4181},{"n":"岩国 吉香公園","k":"史","lat":34.1661,"lng":132.185},{"n":"秋吉台","k":"史","lat":34.2194,"lng":131.2961},{"n":"宮島 弥山","k":"史","lat":34.2794,"lng":132.3136},{"n":"鞆の浦","k":"史","lat":34.3819,"lng":133.3806},{"n":"尾道 千光寺","k":"寺","lat":34.4064,"lng":133.1978},{"n":"福山城","k":"城","lat":34.4886,"lng":133.3622},{"n":"呉 大和ミュージアム","k":"史","lat":34.2414,"lng":132.5558},{"n":"大竹 亀居城跡","k":"城","lat":34.2286,"lng":132.2167},{"n":"金比羅宮 奥社","k":"社","lat":34.1839,"lng":133.8078},{"n":"丸亀城","k":"城","lat":34.2858,"lng":133.8003},{"n":"善通寺","k":"寺","lat":34.2294,"lng":133.7869},{"n":"屋島","k":"史","lat":34.3522,"lng":134.1033},{"n":"讃岐国分寺","k":"寺","lat":34.3028,"lng":133.9572},{"n":"阿波舞踊会館","k":"史","lat":34.0678,"lng":134.5542},{"n":"眉山","k":"史","lat":34.0703,"lng":134.5139},{"n":"大歩危・小歩危","k":"史","lat":33.8986,"lng":133.785},{"n":"祖谷のかずら橋","k":"史","lat":33.8747,"lng":133.8358},{"n":"剣山","k":"史","lat":33.8536,"lng":134.0944},{"n":"石鎚神社","k":"社","lat":33.8486,"lng":133.3103},{"n":"今治城","k":"城","lat":34.06,"lng":132.9894},{"n":"大洲城","k":"城","lat":33.5072,"lng":132.5436},{"n":"宇和島城","k":"城","lat":33.2222,"lng":132.5628},{"n":"内子座","k":"史","lat":33.5494,"lng":132.6589},{"n":"四国八十八箇所 大窪寺","k":"寺","lat":34.1181,"lng":134.1686},{"n":"高知 ひろめ市場","k":"史","lat":33.5583,"lng":133.535},{"n":"五台山 竹林寺","k":"寺","lat":33.5486,"lng":133.5772},{"n":"四万十川 沈下橋","k":"史","lat":33.0039,"lng":132.8728},{"n":"室戸岬","k":"史","lat":33.2419,"lng":134.1794},{"n":"小倉城","k":"城","lat":33.8847,"lng":130.8753},{"n":"光明禅寺","k":"寺","lat":33.5217,"lng":130.5342},{"n":"宗像大社 辺津宮","k":"社","lat":33.835,"lng":130.5228},{"n":"宮地嶽神社","k":"社","lat":33.7794,"lng":130.4861},{"n":"香春岳","k":"史","lat":33.7278,"lng":130.8858},{"n":"柳川 川下り","k":"史","lat":33.1619,"lng":130.4081},{"n":"大宰府政庁跡","k":"史","lat":33.5122,"lng":130.5172},{"n":"唐津城","k":"城","lat":33.4536,"lng":129.9783},{"n":"有田 陶磁器の里","k":"史","lat":33.1792,"lng":129.8628},{"n":"名護屋城跡","k":"城","lat":33.53,"lng":129.8706},{"n":"嬉野温泉","k":"史","lat":33.0981,"lng":129.9881},{"n":"原城跡","k":"史","lat":32.6286,"lng":130.2531},{"n":"雲仙温泉","k":"史","lat":32.7331,"lng":130.2608},{"n":"平戸城","k":"城","lat":33.3681,"lng":129.5556},{"n":"軍艦島(端島)","k":"史","lat":32.6272,"lng":129.7386},{"n":"ハウステンボス","k":"史","lat":33.0903,"lng":129.7886},{"n":"島原城","k":"城","lat":32.7897,"lng":130.3703},{"n":"水前寺成趣園","k":"史","lat":32.7906,"lng":130.735},{"n":"青井阿蘇神社","k":"社","lat":32.2117,"lng":130.8097},{"n":"通潤橋","k":"史","lat":32.655,"lng":130.9808},{"n":"杖立温泉","k":"史","lat":33.0581,"lng":131.2067},{"n":"黒川温泉","k":"史","lat":33.0856,"lng":131.1064},{"n":"別府地獄めぐり","k":"史","lat":33.3167,"lng":131.4722},{"n":"湯布院 金鱗湖","k":"史","lat":33.2639,"lng":131.3586},{"n":"岡城跡","k":"城","lat":32.9811,"lng":131.4153},{"n":"臼杵 石仏","k":"史","lat":33.1231,"lng":131.8069},{"n":"国東半島 両子寺","k":"寺","lat":33.6903,"lng":131.5831},{"n":"飫肥城下町","k":"史","lat":31.6289,"lng":131.3519},{"n":"鵜戸神宮","k":"社","lat":31.6533,"lng":131.4689},{"n":"西都原古墳群","k":"史","lat":32.105,"lng":131.4017},{"n":"天岩戸神社","k":"社","lat":32.7197,"lng":131.3},{"n":"霧島神宮","k":"社","lat":31.8581,"lng":130.8725},{"n":"知覧 武家屋敷","k":"史","lat":31.3783,"lng":130.4419},{"n":"知覧特攻平和会館","k":"史","lat":31.38,"lng":130.4447},{"n":"開聞岳","k":"史","lat":31.18,"lng":130.5283},{"n":"城山","k":"史","lat":31.5986,"lng":130.5506},{"n":"桜島 赤水展望広場","k":"史","lat":31.6117,"lng":130.6058},{"n":"中城城跡","k":"城","lat":26.2836,"lng":127.8006},{"n":"勝連城跡","k":"城","lat":26.3272,"lng":127.8786},{"n":"今帰仁城跡","k":"城","lat":26.6908,"lng":127.9289},{"n":"座喜味城跡","k":"城","lat":26.4083,"lng":127.7439},{"n":"美ら海水族館","k":"史","lat":26.6944,"lng":127.8778},{"n":"万座毛","k":"史","lat":26.5039,"lng":127.8514},{"n":"波上宮","k":"社","lat":26.2192,"lng":127.6708},{"n":"ひめゆりの塔","k":"史","lat":26.0956,"lng":127.69},{"n":"日本橋 道路元標","k":"道","lat":35.6841,"lng":139.7744},{"n":"品川宿 本陣跡","k":"道","lat":35.6136,"lng":139.7408},{"n":"鈴ヶ森刑場跡","k":"道","lat":35.5958,"lng":139.7492},{"n":"川崎宿 本陣跡","k":"道","lat":35.5319,"lng":139.7028},{"n":"神奈川宿 本陣跡","k":"道","lat":35.4683,"lng":139.6358},{"n":"保土ヶ谷宿 本陣跡","k":"道","lat":35.4611,"lng":139.5967},{"n":"戸塚宿 本陣跡","k":"道","lat":35.3967,"lng":139.5344},{"n":"藤沢宿 遊行寺","k":"道","lat":35.3392,"lng":139.4883},{"n":"平塚宿 見付跡","k":"道","lat":35.3289,"lng":139.3506},{"n":"大磯宿 鴫立庵","k":"道","lat":35.3078,"lng":139.3117},{"n":"小田原宿 一里塚","k":"道","lat":35.2564,"lng":139.15},{"n":"箱根関所","k":"道","lat":35.1931,"lng":139.0236},{"n":"旧東海道 箱根杉並木","k":"道","lat":35.2064,"lng":139.0139},{"n":"箱根 甘酒茶屋","k":"道","lat":35.2089,"lng":139.0031},{"n":"三島宿 楽寿園","k":"道","lat":35.1225,"lng":138.9161},{"n":"沼津宿 高尾山古墳","k":"道","lat":35.0956,"lng":138.8667},{"n":"興津宿 清見寺","k":"道","lat":35.0228,"lng":138.5122},{"n":"丸子宿 丁子屋","k":"道","lat":35.1036,"lng":138.4383},{"n":"宇津ノ谷峠 明治のトンネル","k":"道","lat":34.9931,"lng":138.3061},{"n":"島田宿 大井川川越し場","k":"道","lat":34.85,"lng":138.1178},{"n":"掛川宿 掛川城","k":"道","lat":34.7758,"lng":138.0167},{"n":"袋井宿 法多山","k":"道","lat":34.7236,"lng":137.9228},{"n":"磐田宿 見付天神","k":"道","lat":34.7167,"lng":137.8506},{"n":"新居宿 新居関所","k":"道","lat":34.6958,"lng":137.5597},{"n":"吉田宿 豊橋公園","k":"道","lat":34.77,"lng":137.3919},{"n":"藤川宿 上街道との分岐","k":"道","lat":34.9033,"lng":137.2444},{"n":"岡崎宿 二十七曲り","k":"道","lat":34.95,"lng":137.1617},{"n":"池鯉鮒宿(知立) 本陣跡","k":"道","lat":35.0006,"lng":137.05},{"n":"熱田宿 七里の渡し跡","k":"道","lat":35.1178,"lng":136.8925},{"n":"桑名宿 七里の渡し跡","k":"道","lat":35.0636,"lng":136.6936},{"n":"四日市宿 諏訪神社","k":"道","lat":34.9667,"lng":136.6239},{"n":"亀山宿 亀山城","k":"道","lat":34.8556,"lng":136.4506},{"n":"関宿 町並み","k":"道","lat":34.8564,"lng":136.39},{"n":"坂下宿 追分","k":"道","lat":34.9336,"lng":136.33},{"n":"土山宿 鈴鹿関跡","k":"道","lat":34.8797,"lng":136.2819},{"n":"水口宿 本陣跡","k":"道","lat":34.9667,"lng":136.1667},{"n":"石部宿 本陣跡","k":"道","lat":34.9333,"lng":136.0667},{"n":"草津宿 本陣","k":"道","lat":35.0167,"lng":135.9594},{"n":"大津宿 逢坂山","k":"道","lat":35.0044,"lng":135.8833},{"n":"三条大橋 東海道終点碑","k":"道","lat":35.0094,"lng":135.7714},{"n":"板橋宿 縁切榎","k":"道","lat":35.7517,"lng":139.7075},{"n":"蕨宿 わらび機市","k":"道","lat":35.825,"lng":139.6803},{"n":"浦和宿 調神社","k":"道","lat":35.8592,"lng":139.6494},{"n":"大宮宿 氷川神社","k":"道","lat":35.9172,"lng":139.63},{"n":"上尾宿 平方のクス","k":"道","lat":35.9792,"lng":139.5928},{"n":"鴻巣宿 本陣跡","k":"道","lat":36.0608,"lng":139.5225},{"n":"熊谷宿 妻沼聖天山","k":"道","lat":36.1444,"lng":139.3853},{"n":"深谷宿 本陣跡","k":"道","lat":36.1964,"lng":139.2819},{"n":"本庄宿 本陣跡","k":"道","lat":36.2447,"lng":139.1903},{"n":"新町宿 楽山園","k":"道","lat":36.2761,"lng":139.1067},{"n":"倉賀野宿 高崎城","k":"道","lat":36.3125,"lng":138.9967},{"n":"高崎宿 白衣観音","k":"道","lat":36.3236,"lng":138.9897},{"n":"板鼻宿 碓氷峠の麓","k":"道","lat":36.3606,"lng":138.7236},{"n":"松井田宿 松井田城","k":"道","lat":36.3217,"lng":138.8019},{"n":"安中宿 碓氷峠鉄道遺構","k":"道","lat":36.3403,"lng":138.9172},{"n":"碓氷峠 熊野神社","k":"道","lat":36.3433,"lng":138.6594},{"n":"軽井沢宿 旧軽銀座","k":"道","lat":36.3517,"lng":138.5964},{"n":"沓掛宿 追分","k":"道","lat":36.3628,"lng":138.5817},{"n":"小田井宿 藪原","k":"道","lat":35.9861,"lng":137.785},{"n":"藪原宿 おんころばし","k":"道","lat":35.9608,"lng":137.7456},{"n":"宮ノ越宿 木曽福島","k":"道","lat":35.8433,"lng":137.6908},{"n":"上松宿 寝覚の床","k":"道","lat":35.7833,"lng":137.6928},{"n":"須原宿 野尻宿","k":"道","lat":35.7328,"lng":137.6208},{"n":"三留野宿 木曽路","k":"道","lat":35.6731,"lng":137.5897},{"n":"馬籠宿 枡形","k":"道","lat":35.5292,"lng":137.4894},{"n":"落合宿 中津川","k":"道","lat":35.5167,"lng":137.4819},{"n":"中津川宿 栗きんとん","k":"道","lat":35.4947,"lng":137.5},{"n":"大井宿 恵那峡","k":"道","lat":35.4456,"lng":137.4153},{"n":"恵那宿 大湫宿","k":"道","lat":35.4264,"lng":137.5019},{"n":"御嶽宿 細久手","k":"道","lat":35.3739,"lng":137.3719},{"n":"伏見宿(岐阜) 御立峠","k":"道","lat":35.3392,"lng":137.3},{"n":"中津川市 苗木城跡","k":"道","lat":35.5058,"lng":137.4858},{"n":"岩村城跡","k":"道","lat":35.3583,"lng":137.4494},{"n":"美濃太田宿 中山道","k":"道","lat":35.4269,"lng":137.02},{"n":"加納宿 岐阜城下","k":"道","lat":35.4094,"lng":136.7606},{"n":"河渡宿 垂井","k":"道","lat":35.3697,"lng":136.5289},{"n":"垂井宿 南宮大社","k":"道","lat":35.3556,"lng":136.5764},{"n":"関ヶ原 決戦場","k":"道","lat":35.3647,"lng":136.4672},{"n":"今須宿 柏原","k":"道","lat":35.3425,"lng":136.3956},{"n":"醒井宿 居醒の清水","k":"道","lat":35.3272,"lng":136.3469},{"n":"柏原宿 木之本","k":"道","lat":35.4044,"lng":136.2564},{"n":"木之本宿 北国街道","k":"道","lat":35.5011,"lng":136.2167},{"n":"高月宿 賤ヶ岳","k":"道","lat":35.5039,"lng":136.1894},{"n":"甲州街道 小仏峠","k":"道","lat":35.6269,"lng":139.1969},{"n":"甲州街道 上野原宿","k":"道","lat":35.63,"lng":139.1089},{"n":"甲州街道 鶴川宿","k":"道","lat":35.6167,"lng":138.55},{"n":"甲府宿 甲府城","k":"道","lat":35.665,"lng":138.5683},{"n":"日光街道 杉並木","k":"道","lat":36.7042,"lng":139.725},{"n":"日光街道 幸手宿","k":"道","lat":36.0781,"lng":139.725},{"n":"奥州街道 白河宿","k":"道","lat":37.1264,"lng":140.2108},{"n":"奥州街道 白河小峰城","k":"道","lat":37.1333,"lng":140.2139},{"n":"水戸街道 旧取手宿","k":"道","lat":35.895,"lng":140.0503},{"n":"北国街道 善光寺宿","k":"道","lat":36.6611,"lng":138.1928},{"n":"北国街道 海野宿","k":"道","lat":36.3361,"lng":138.2622},{"n":"北陸道 木之本宿","k":"道","lat":35.5,"lng":136.2158},{"n":"織田信長の廟(大徳寺総見院)","k":"墓","lat":35.045,"lng":135.7447},{"n":"豊臣秀吉 豊国廟の大碑","k":"墓","lat":34.9897,"lng":135.7747},{"n":"石田三成の墓(大徳寺三玄院)","k":"墓","lat":35.0439,"lng":135.745},{"n":"真田幸村の墓(九度山 善名称院)","k":"墓","lat":34.3119,"lng":135.5592},{"n":"直江兼続の墓(林泉寺)","k":"墓","lat":37.1486,"lng":138.1986},{"n":"上杉謙信の墓(上杉家廟所)","k":"墓","lat":37.9122,"lng":140.1089},{"n":"伊達政宗の墓(瑞巌寺 瑞鳳殿)","k":"墓","lat":38.2542,"lng":140.8586},{"n":"武田信玄の墓(武田神社)","k":"墓","lat":35.6889,"lng":138.5725},{"n":"山本勘助の墓(来迎寺)","k":"墓","lat":35.69,"lng":138.565},{"n":"徳川家康の墓(久能山)","k":"墓","lat":34.9594,"lng":138.4669},{"n":"徳川家康 日光廟","k":"墓","lat":36.7589,"lng":139.6},{"n":"家康遺言の杉(久能山)","k":"墓","lat":34.9589,"lng":138.4661},{"n":"本多忠勝の墓(妙慶寺)","k":"墓","lat":35.4469,"lng":138.3614},{"n":"黒田官兵衛の墓(崇福寺)","k":"墓","lat":33.5956,"lng":130.4081},{"n":"加藤清正の墓(本妙寺)","k":"墓","lat":32.8031,"lng":130.7197},{"n":"立花道雪の墓(梅岳寺)","k":"墓","lat":33.53,"lng":130.52},{"n":"細川ガラシャの墓(崇禅寺)","k":"墓","lat":34.74,"lng":135.5089},{"n":"千利休の墓(大徳寺聚光院)","k":"墓","lat":35.0447,"lng":135.7444},{"n":"小早川秀秋の墓(霊山寺)","k":"墓","lat":34.7,"lng":134},{"n":"直江景明の墓","k":"墓","lat":37.91,"lng":140.11},{"n":"大石内蔵助の墓(泉岳寺)","k":"墓","lat":35.6378,"lng":139.7372},{"n":"吉良上野介の墓(本所松坂町)","k":"墓","lat":35.69,"lng":139.805},{"n":"宮本武蔵の墓(武蔵塚)","k":"墓","lat":32.8247,"lng":130.7669},{"n":"佐々木小次郎の碑(巌流島)","k":"墓","lat":33.9617,"lng":130.9367},{"n":"武蔵の碑(一乗寺下り松)","k":"墓","lat":35.0444,"lng":135.7881},{"n":"近藤勇の墓(板橋 近藤勇墓所)","k":"墓","lat":35.7531,"lng":139.7053},{"n":"土方歳三の墓(石田寺)","k":"墓","lat":35.69,"lng":139.68},{"n":"沖田総司の墓(専称寺)","k":"墓","lat":35.71,"lng":139.79},{"n":"山南敬助の墓(光縁寺)","k":"墓","lat":35.0039,"lng":135.7436},{"n":"伊東甲子太郎の墓(戒光寺)","k":"墓","lat":34.9786,"lng":135.7778},{"n":"西郷隆盛の墓(南洲墓地)","k":"墓","lat":31.6167,"lng":130.5419},{"n":"大久保利通の墓(青山霊園)","k":"墓","lat":35.6689,"lng":139.7222},{"n":"勝海舟の墓(洗足池公園)","k":"墓","lat":35.6058,"lng":139.69},{"n":"榎本武揚の墓(覚王山日泰寺)","k":"墓","lat":35.17,"lng":136.95},{"n":"高杉晋作の墓(奇兵隊本部跡)","k":"墓","lat":34.0208,"lng":131.0189},{"n":"久坂玄瑞の墓(奇兵隊墓地)","k":"墓","lat":34.0219,"lng":131.0183},{"n":"吉田松陰の墓(松陰神社)","k":"墓","lat":35.65,"lng":139.6567},{"n":"横井小楠の墓(南川墓地)","k":"墓","lat":32.8,"lng":130.71},{"n":"橋本左内の墓(青山霊園)","k":"墓","lat":35.6697,"lng":139.7219},{"n":"頼山陽の墓(大雲院)","k":"墓","lat":35.0069,"lng":135.7733},{"n":"滝沢馬琴の墓(深光寺)","k":"墓","lat":35.73,"lng":139.79},{"n":"十返舎一九の墓(長圓寺)","k":"墓","lat":35.7,"lng":139.75},{"n":"式亭三馬の墓(慈眼寺)","k":"墓","lat":35.73,"lng":139.81},{"n":"曲亭馬琴の別墓","k":"墓","lat":35.74,"lng":139.76},{"n":"井原西鶴の墓(誓願寺)","k":"墓","lat":35.005,"lng":135.7669},{"n":"近松門左衛門の墓(廣徳寺)","k":"墓","lat":34.665,"lng":135.5133},{"n":"松尾芭蕉の墓(義仲寺)","k":"墓","lat":35.0069,"lng":135.8717},{"n":"与謝蕪村の墓(金福寺)","k":"墓","lat":35.0467,"lng":135.795},{"n":"小林一茶の墓(信濃 柏原)","k":"墓","lat":36.86,"lng":138.2},{"n":"正岡子規の墓(正宗寺)","k":"墓","lat":35.71,"lng":139.72},{"n":"夏目漱石の墓(雑司ヶ谷霊園)","k":"墓","lat":35.72,"lng":139.715},{"n":"森鴎外の墓(三縁山広度院)","k":"墓","lat":35.735,"lng":139.725},{"n":"芥川龍之介の墓(染井霊園)","k":"墓","lat":35.735,"lng":139.745},{"n":"太宰治の墓(禅林寺)","k":"墓","lat":35.67,"lng":139.59},{"n":"宮沢賢治の墓(身延山久遠寺 花巻分院)","k":"墓","lat":39.39,"lng":141.11},{"n":"樋口一葉の墓(築地本願寺 和田堀廟所)","k":"墓","lat":35.68,"lng":139.68},{"n":"石川啄木の墓(函館 立待岬)","k":"墓","lat":41.75,"lng":140.7},{"n":"種田山頭火の墓(報恩寺)","k":"墓","lat":34.1,"lng":131.4},{"n":"横須賀 走水神社","k":"史","lat":35.26,"lng":139.73},{"n":"観音崎 日本最初の洋式灯台","k":"史","lat":35.2561,"lng":139.7403},{"n":"浦賀 ペリー上陸記念碑","k":"史","lat":35.235,"lng":139.715},{"n":"三浦 油壺","k":"史","lat":35.16,"lng":139.61},{"n":"江ノ島 岩屋","k":"史","lat":35.2989,"lng":139.4803},{"n":"富士五湖 鳴沢氷穴","k":"史","lat":35.475,"lng":138.7},{"n":"富岳風穴","k":"史","lat":35.4789,"lng":138.6586},{"n":"青木ヶ原樹海 遊歩道","k":"史","lat":35.47,"lng":138.68},{"n":"韮崎 白山平の穴観音","k":"史","lat":35.71,"lng":138.45},{"n":"長野 姨捨の棚田","k":"史","lat":36.49,"lng":138.09},{"n":"戸隠神社 奥社","k":"社","lat":36.765,"lng":138.0789},{"n":"戸隠 忍者からくり屋敷","k":"史","lat":36.77,"lng":138.07},{"n":"地獄谷野猿公苑","k":"史","lat":36.73,"lng":138.46},{"n":"白骨温泉","k":"史","lat":36.2,"lng":137.75},{"n":"上高地 河童橋","k":"史","lat":36.2489,"lng":137.6378},{"n":"乗鞍 畳平","k":"史","lat":36.11,"lng":137.56},{"n":"立山黒部 室堂平","k":"史","lat":36.58,"lng":137.6},{"n":"黒部ダム","k":"史","lat":36.5667,"lng":137.6611},{"n":"宇奈月温泉 黒部峡谷","k":"史","lat":36.87,"lng":137.58},{"n":"魚津 埋没林博物館","k":"史","lat":36.82,"lng":137.42},{"n":"五箇山 村上家","k":"史","lat":36.42,"lng":136.93},{"n":"輪島 千枚田","k":"史","lat":37.42,"lng":137},{"n":"珠洲 見附島","k":"史","lat":37.49,"lng":137.24},{"n":"金沢 忍者寺(妙立寺)","k":"寺","lat":36.555,"lng":136.6489},{"n":"山中温泉 こおろぎ橋","k":"史","lat":36.25,"lng":136.37},{"n":"加賀 山代温泉","k":"史","lat":36.29,"lng":136.37},{"n":"福井 東尋坊 雄島","k":"史","lat":36.235,"lng":136.1283},{"n":"永平寺 傘松閣","k":"寺","lat":36.0833,"lng":136.3567},{"n":"敦賀 氣比神宮","k":"社","lat":35.655,"lng":136.0739},{"n":"若狭 三方五湖","k":"史","lat":35.58,"lng":135.89},{"n":"小浜 蘇洞門","k":"史","lat":35.49,"lng":135.73},{"n":"熊野古道 中辺路 滝尻王子","k":"道","lat":33.75,"lng":135.55},{"n":"熊野古道 大門坂","k":"道","lat":33.67,"lng":135.885},{"n":"熊野古道 発心門王子","k":"道","lat":33.79,"lng":135.8},{"n":"湯の峰温泉 つぼ湯","k":"史","lat":33.86,"lng":135.77},{"n":"白浜 三段壁","k":"史","lat":33.675,"lng":135.33},{"n":"白浜 千畳敷","k":"史","lat":33.68,"lng":135.33},{"n":"橋杭岩","k":"史","lat":33.53,"lng":135.9},{"n":"那智勝浦 マグロの町","k":"史","lat":33.625,"lng":135.94},{"n":"伊勢神宮 外宮","k":"社","lat":34.4889,"lng":136.7078},{"n":"おかげ横丁","k":"史","lat":34.46,"lng":136.725},{"n":"鳥羽 ミキモト真珠島","k":"史","lat":34.48,"lng":136.845},{"n":"熊野市 鬼ヶ城","k":"史","lat":33.92,"lng":136.13},{"n":"熊野市 獅子巖","k":"史","lat":33.9,"lng":136.1},{"n":"松阪 御城番屋敷","k":"史","lat":34.5789,"lng":136.5278},{"n":"伊勢志摩 英虞湾","k":"史","lat":34.31,"lng":136.85},{"n":"鳥羽城跡 潮見公園","k":"史","lat":34.48,"lng":136.8433},{"n":"四日市 四日市コンビナート夜景","k":"史","lat":34.93,"lng":136.61},{"n":"鈴鹿 椿大神社","k":"社","lat":34.97,"lng":136.45},{"n":"伊賀 上野公園","k":"史","lat":34.77,"lng":136.1283},{"n":"名張 赤目四十八滝","k":"史","lat":34.59,"lng":136.08},{"n":"大津 石山寺","k":"寺","lat":34.96,"lng":135.9069},{"n":"近江八幡 ラ コリーナ","k":"史","lat":35.13,"lng":136.09},{"n":"彦根 玄宮園","k":"史","lat":35.2778,"lng":136.2533},{"n":"長浜 黒壁スクエア","k":"史","lat":35.38,"lng":136.2667},{"n":"大津 日吉大社 西本宮","k":"社","lat":35.0722,"lng":135.865},{"n":"米原 中山道 醒井","k":"史","lat":35.3267,"lng":136.3481},{"n":"高島 白髭神社","k":"社","lat":35.3,"lng":136.04},{"n":"近江八幡 ヴォーリズ記念館","k":"史","lat":35.1289,"lng":136.095},{"n":"豊岡 出石皿そば","k":"史","lat":35.46,"lng":134.8739},{"n":"竹田 立雲峡","k":"史","lat":35.3056,"lng":134.83},{"n":"姫路 好古園","k":"史","lat":34.8383,"lng":134.6889},{"n":"明石 魚の棚商店街","k":"史","lat":34.6489,"lng":134.9939},{"n":"西宮 西宮神社","k":"社","lat":34.7378,"lng":135.3386},{"n":"宝塚 清荒神清澄寺","k":"寺","lat":34.84,"lng":135.35},{"n":"有馬温泉 太閤の湯","k":"史","lat":34.7989,"lng":135.25},{"n":"丹波篠山 武家屋敷","k":"史","lat":35.0739,"lng":135.2178},{"n":"洲本温泉","k":"史","lat":34.34,"lng":134.9},{"n":"沼島 おのころ島神社","k":"史","lat":34.17,"lng":134.82},{"n":"奈良 ならまち 元興寺","k":"寺","lat":34.6778,"lng":135.8306},{"n":"明日香 石舞台古墳","k":"史","lat":34.4678,"lng":135.8264},{"n":"明日香 亀石","k":"史","lat":34.47,"lng":135.81},{"n":"明日香 高松塚古墳","k":"史","lat":34.4689,"lng":135.7917},{"n":"橿原 今井町","k":"史","lat":34.56,"lng":135.7867},{"n":"宇陀 松山城","k":"城","lat":34.49,"lng":135.955},{"n":"吉野 金峯山寺 蔵王堂","k":"寺","lat":34.3689,"lng":135.8581},{"n":"吉野 南朝妙法殿","k":"史","lat":34.38,"lng":135.86},{"n":"十津川温泉","k":"史","lat":33.99,"lng":135.79},{"n":"洞川温泉","k":"史","lat":34.24,"lng":135.89},{"n":"岡山 津山城跡","k":"城","lat":35.06,"lng":134},{"n":"備中松山城","k":"城","lat":34.81,"lng":133.6239},{"n":"高梁 吹屋ふるさと村","k":"史","lat":34.86,"lng":133.45},{"n":"倉敷 大原美術館","k":"史","lat":34.5972,"lng":133.7733},{"n":"総社 吉備路 備中国分寺","k":"史","lat":34.675,"lng":133.78},{"n":"吉備津神社","k":"社","lat":34.67,"lng":133.85},{"n":"吉備津彦神社","k":"社","lat":34.665,"lng":133.8689},{"n":"広島 呉 入船山記念館","k":"史","lat":34.235,"lng":132.56},{"n":"尾道 猫の細道","k":"史","lat":34.4089,"lng":133.2},{"n":"竹原 町並み保存地区","k":"史","lat":34.34,"lng":132.91},{"n":"福山 鞆の浦 対潮楼","k":"史","lat":34.3833,"lng":133.3833},{"n":"三次 備後護国神社","k":"史","lat":34.8,"lng":132.85},{"n":"廿日市 宮島 大聖院","k":"寺","lat":34.29,"lng":132.3189},{"n":"岩国 岩国城","k":"城","lat":34.1722,"lng":132.1789},{"n":"萩 松陰神社","k":"社","lat":34.4272,"lng":131.4172},{"n":"長門 元乃隅神社","k":"社","lat":34.42,"lng":131.06},{"n":"角島大橋","k":"史","lat":34.3567,"lng":130.87},{"n":"下関 赤間神宮","k":"社","lat":33.9572,"lng":130.9489},{"n":"下関 唐戸市場","k":"史","lat":33.96,"lng":130.94},{"n":"秋芳洞","k":"史","lat":34.225,"lng":131.3039},{"n":"津和野 殿町通り","k":"史","lat":34.465,"lng":131.7689},{"n":"出雲 稲佐の浜","k":"史","lat":35.38,"lng":132.67},{"n":"松江 小泉八雲旧居","k":"史","lat":35.4739,"lng":133.0533},{"n":"松江 塩見縄手","k":"史","lat":35.4722,"lng":133.0478},{"n":"温泉津 温泉津温泉","k":"史","lat":35.0989,"lng":132.3956},{"n":"鳥取 三朝温泉","k":"史","lat":35.4089,"lng":133.8619},{"n":"倉吉 白壁土蔵群","k":"史","lat":35.43,"lng":133.825},{"n":"境港 水木しげるロード","k":"史","lat":35.54,"lng":133.23},{"n":"大山 大山寺","k":"寺","lat":35.39,"lng":133.53},{"n":"香川 小豆島 エンジェルロード","k":"史","lat":34.4789,"lng":134.19},{"n":"小豆島 二十四の瞳映画村","k":"史","lat":34.49,"lng":134.3056},{"n":"小豆島 寒霞渓","k":"史","lat":34.52,"lng":134.28},{"n":"直島 地中美術館","k":"史","lat":34.45,"lng":133.995},{"n":"豊島 豊島美術館","k":"史","lat":34.49,"lng":134.09},{"n":"徳島 鳴門公園","k":"史","lat":34.24,"lng":134.65},{"n":"阿南 日和佐 大浜海岸","k":"史","lat":33.93,"lng":134.65},{"n":"美馬 脇町 うだつの町並み","k":"史","lat":34.07,"lng":134.16},{"n":"三好 奥祖谷二重かずら橋","k":"史","lat":33.84,"lng":133.78},{"n":"剣山 見ノ越","k":"史","lat":33.85,"lng":134.09},{"n":"愛媛 今治 来島海峡大橋","k":"史","lat":34.12,"lng":132.9989},{"n":"今治 大山祇神社","k":"社","lat":34.24,"lng":132.99},{"n":"大三島 瀬戸田 耕三寺","k":"史","lat":34.29,"lng":133.09},{"n":"松山 道後 坊っちゃん列車","k":"史","lat":33.835,"lng":132.7628},{"n":"大洲 おおず赤煉瓦館","k":"史","lat":33.505,"lng":132.54},{"n":"内子 八日市護国","k":"史","lat":33.55,"lng":132.655},{"n":"宇和島 闘牛","k":"史","lat":33.22,"lng":132.56},{"n":"高知 室戸 中岡慎太郎像","k":"史","lat":33.24,"lng":134.18},{"n":"高知 龍河洞","k":"史","lat":33.6,"lng":133.75},{"n":"高知 四万十川 三里沈下橋","k":"史","lat":33,"lng":132.87},{"n":"高知 足摺岬","k":"史","lat":32.72,"lng":133.01},{"n":"高知 土佐清水 竜串","k":"史","lat":32.79,"lng":132.87},{"n":"福岡 博多 櫛田神社 山笠","k":"社","lat":33.5936,"lng":130.4108},{"n":"福岡 志賀島 金印の浜","k":"史","lat":33.67,"lng":130.3},{"n":"宗像 沖ノ島","k":"史","lat":34.24,"lng":130.1},{"n":"久留米 水天宮","k":"社","lat":33.32,"lng":130.51},{"n":"太宰府 光明禅寺","k":"寺","lat":33.5217,"lng":130.535},{"n":"朝倉 秋月城跡","k":"城","lat":33.46,"lng":130.69},{"n":"飯塚 嘉穂劇場","k":"史","lat":33.64,"lng":130.69},{"n":"佐賀 嬉野 肥前夢街道","k":"史","lat":33.1,"lng":129.99},{"n":"佐賀 伊万里 大川内山","k":"史","lat":33.23,"lng":129.88},{"n":"佐賀 有田 陶山神社","k":"社","lat":33.18,"lng":129.86},{"n":"唐津 虹の松原","k":"史","lat":33.44,"lng":129.98},{"n":"長崎 グラバー園","k":"史","lat":32.735,"lng":129.8689},{"n":"長崎 眼鏡橋","k":"史","lat":32.745,"lng":129.8733},{"n":"長崎 崇福寺","k":"寺","lat":32.7433,"lng":129.8778},{"n":"雲仙 雲仙地獄","k":"史","lat":32.735,"lng":130.2617},{"n":"島原 武家屋敷","k":"史","lat":32.79,"lng":130.37},{"n":"平戸 ザビエル記念教会","k":"史","lat":33.37,"lng":129.55},{"n":"五島 堂崎天主堂","k":"史","lat":32.69,"lng":128.84},{"n":"壱岐 原の辻遺跡","k":"史","lat":33.75,"lng":129.69},{"n":"対馬 和多都美神社","k":"社","lat":34.2,"lng":129.22},{"n":"熊本 天草 大江天主堂","k":"史","lat":32.3,"lng":130},{"n":"天草 崎津教会","k":"史","lat":32.31,"lng":130.03},{"n":"人吉 球磨川下り","k":"史","lat":32.21,"lng":130.76},{"n":"人吉 青井阿蘇神社","k":"社","lat":32.21,"lng":130.81},{"n":"小国 わいた温泉郷","k":"史","lat":33.12,"lng":131.06},{"n":"阿蘇 草千里ヶ浜","k":"史","lat":32.885,"lng":131.0533},{"n":"高森 上色見熊野座神社","k":"社","lat":32.89,"lng":131.16},{"n":"大分 湯平温泉","k":"史","lat":33.19,"lng":131.355},{"n":"由布院 湯の坪街道","k":"史","lat":33.265,"lng":131.36},{"n":"九重 夢大吊橋","k":"史","lat":33.17,"lng":131.17},{"n":"耶馬溪 青の洞門","k":"史","lat":33.43,"lng":131.15},{"n":"中津 福澤諭吉旧居","k":"史","lat":33.6,"lng":131.19},{"n":"日田 豆田町","k":"史","lat":33.32,"lng":130.94},{"n":"宇佐 宇佐八幡宮 上宮","k":"社","lat":33.5264,"lng":131.375},{"n":"宮崎 高千穂峡","k":"史","lat":32.71,"lng":131.3},{"n":"高千穂 天安河原","k":"史","lat":32.7189,"lng":131.2989},{"n":"宮崎 青島 鬼の洗濯板","k":"史","lat":31.805,"lng":131.4736},{"n":"日南 サンメッセ日南","k":"史","lat":31.59,"lng":131.38},{"n":"日南 飫肥 豫章館","k":"史","lat":31.6289,"lng":131.35},{"n":"延岡 今山八幡宮","k":"社","lat":32.58,"lng":131.66},{"n":"鹿児島 指宿 砂むし温泉","k":"史","lat":31.23,"lng":130.63},{"n":"鹿児島 開聞岳 唐船峡","k":"史","lat":31.17,"lng":130.54},{"n":"鹿児島 知覧 武家屋敷通り","k":"史","lat":31.3783,"lng":130.4428},{"n":"鹿児島 出水 ツルの渡来地","k":"史","lat":32.09,"lng":130.35},{"n":"鹿児島 薩摩川内 市比野温泉","k":"史","lat":31.81,"lng":130.29},{"n":"鹿児島 屋久島 縄文杉","k":"史","lat":30.35,"lng":130.53},{"n":"鹿児島 屋久島 白谷雲水峡","k":"史","lat":30.38,"lng":130.57},{"n":"沖縄 那覇 国際通り","k":"史","lat":26.215,"lng":127.685},{"n":"沖縄 首里 金城町石畳","k":"史","lat":26.22,"lng":127.72},{"n":"沖縄 識名園","k":"史","lat":26.2,"lng":127.73},{"n":"沖縄 糸満 平和祈念公園","k":"史","lat":26.095,"lng":127.69},{"n":"沖縄 南城 斎場御嶽","k":"史","lat":26.1689,"lng":127.8264},{"n":"沖縄 今帰仁 今帰仁グスク","k":"史","lat":26.6908,"lng":127.93},{"n":"沖縄 本部 備瀬のフクギ並木","k":"史","lat":26.69,"lng":127.88},{"n":"沖縄 古宇利島 古宇利大橋","k":"史","lat":26.68,"lng":128.01},{"n":"沖縄 石垣島 川平湾","k":"史","lat":24.45,"lng":124.15},{"n":"沖縄 竹富島 集落","k":"史","lat":24.33,"lng":124.08},{"n":"江戸城","k":"城","lat":35.68837,"lng":139.75441},{"n":"丸岡城","k":"城","lat":36.15236,"lng":136.27213},{"n":"安土城","k":"城","lat":35.15586,"lng":136.13932},{"n":"春日山城","k":"城","lat":37.14682,"lng":138.20577},{"n":"七尾城","k":"城","lat":37.02224,"lng":136.9915},{"n":"月山富田城","k":"城","lat":35.36085,"lng":133.18527},{"n":"観音寺城","k":"城","lat":34.96722,"lng":137.15982},{"n":"岐阜城","k":"城","lat":35.43392,"lng":136.78205},{"n":"岡山城","k":"城","lat":34.66518,"lng":133.93604},{"n":"萩城","k":"城","lat":31.72929,"lng":131.07742},{"n":"広島城","k":"城","lat":34.40215,"lng":132.45954},{"n":"会津若松城","k":"城","lat":37.48774,"lng":139.92977},{"n":"仙台城","k":"城","lat":38.25261,"lng":140.85593},{"n":"山中城","k":"城","lat":35.15641,"lng":138.9924},{"n":"赤穂城","k":"城","lat":34.74581,"lng":134.38928},{"n":"高取城","k":"城","lat":34.42952,"lng":135.82696},{"n":"竹田城","k":"城","lat":35.30031,"lng":134.82929},{"n":"篠山城","k":"城","lat":35.61801,"lng":138.65645},{"n":"駿府城","k":"城","lat":34.97767,"lng":138.38527},{"n":"金沢城","k":"城","lat":36.5656,"lng":136.65958},{"n":"一乗谷城","k":"城","lat":35.999,"lng":136.2953},{"n":"人吉城","k":"城","lat":32.21112,"lng":130.76656},{"n":"鹿児島城","k":"城","lat":31.62641,"lng":130.41244},{"n":"岡城","k":"城","lat":34.80729,"lng":137.38116},{"n":"佐賀城","k":"城","lat":33.24535,"lng":130.30284},{"n":"高松城","k":"城","lat":34.35003,"lng":134.05039},{"n":"平安宮跡","k":"史","lat":25.12324,"lng":121.73377},{"n":"長岡宮跡","k":"史","lat":34.94316,"lng":135.70298},{"n":"西寺跡","k":"史","lat":34.98071,"lng":135.73794},{"n":"教王護国寺境内","k":"史","lat":34.98063,"lng":135.74772},{"n":"御土居","k":"史","lat":35.04571,"lng":135.73602},{"n":"方広寺大仏殿跡","k":"史","lat":34.84842,"lng":137.61483},{"n":"大覚寺御所跡","k":"史","lat":35.02868,"lng":135.67948},{"n":"鳥羽殿跡","k":"史","lat":34.95231,"lng":135.75471},{"n":"岩倉具視幽棲旧宅","k":"史","lat":35.07835,"lng":135.783},{"n":"本願寺境内","k":"史","lat":34.99183,"lng":135.75105},{"n":"醍醐寺境内","k":"史","lat":34.95134,"lng":135.82093},{"n":"南禅寺境内","k":"史","lat":35.01153,"lng":135.79272},{"n":"妙心寺境内","k":"史","lat":35.0235,"lng":135.72011},{"n":"大徳寺境内","k":"史","lat":35.04279,"lng":135.74655},{"n":"高山寺境内","k":"史","lat":35.06048,"lng":135.67808},{"n":"仁和寺御所跡","k":"史","lat":35.02981,"lng":135.71415},{"n":"賀茂別雷神社境内","k":"史","lat":35.06047,"lng":135.75226},{"n":"賀茂御祖神社境内","k":"史","lat":35.03699,"lng":135.77245},{"n":"石清水八幡宮境内","k":"史","lat":34.87973,"lng":135.70005},{"n":"物集女城跡","k":"史","lat":34.9628,"lng":135.69513},{"n":"乙訓古墳群","k":"史","lat":34.95802,"lng":135.69959},{"n":"宇治古墳群","k":"史","lat":34.8761,"lng":138.24998},{"n":"久津川車塚古墳","k":"史","lat":34.86479,"lng":135.77884},{"n":"芝ヶ原古墳","k":"史","lat":34.86278,"lng":135.78355},{"n":"森山遺跡","k":"史","lat":34.89305,"lng":135.73908},{"n":"椿井大塚山古墳","k":"史","lat":34.76211,"lng":135.81799},{"n":"大山崎瓦窯跡","k":"史","lat":36.07089,"lng":139.40245},{"n":"神明山古墳","k":"史","lat":35.00886,"lng":135.98919},{"n":"作山古墳","k":"史","lat":34.66436,"lng":133.76859},{"n":"菖蒲塚古墳","k":"史","lat":37.76685,"lng":138.86569},{"n":"私市円山古墳","k":"史","lat":34.69955,"lng":135.78895},{"n":"丹波国分寺跡","k":"史","lat":34.83169,"lng":134.73959},{"n":"丹後国分寺跡","k":"史","lat":35.5792,"lng":135.17903},{"n":"金胎寺境内","k":"史","lat":34.83003,"lng":135.90911},{"n":"大仙陵古墳","k":"史","lat":34.56342,"lng":135.48693},{"n":"織田信長墓(本能寺)","k":"墓","lat":35.01013,"lng":135.7681},{"n":"豊臣秀吉墓(豊国廟)","k":"墓","lat":34.98931,"lng":135.77709},{"n":"徳川家康墓(日光東照宮奥社宝塔)","k":"墓","lat":36.75764,"lng":139.59911},{"n":"坂本龍馬・中岡慎太郎墓","k":"墓","lat":34.99953,"lng":135.78326},{"n":"西郷隆盛墓(南洲墓地)","k":"墓","lat":31.60603,"lng":130.5588},{"n":"伊達政宗墓(瑞鳳殿)","k":"墓","lat":38.25047,"lng":140.86671},{"n":"武田信玄墓(恵林寺)","k":"墓","lat":35.72958,"lng":138.71372},{"n":"上杉謙信墓(林泉寺)","k":"墓","lat":37.15066,"lng":138.21305},{"n":"真田信繁墓(心眼寺)","k":"墓","lat":34.67292,"lng":135.52718},{"n":"近藤勇墓(龍源寺)","k":"墓","lat":39.23153,"lng":140.13103},{"n":"土方歳三墓(石田寺)","k":"墓","lat":35.66819,"lng":139.42438},{"n":"志苔館","k":"城","lat":41.76607,"lng":140.82174},{"n":"上ノ国勝山館","k":"城","lat":41.80136,"lng":140.12093},{"n":"浪岡城","k":"城","lat":40.71768,"lng":140.60432},{"n":"九戸城","k":"城","lat":40.2674,"lng":141.30347},{"n":"脇本城","k":"城","lat":39.90218,"lng":139.88923},{"n":"秋田城","k":"城","lat":39.74031,"lng":140.07922},{"n":"鶴ヶ岡城","k":"城","lat":38.72837,"lng":139.82428},{"n":"米沢城","k":"城","lat":37.90891,"lng":140.10559},{"n":"三春城","k":"城","lat":37.44214,"lng":140.49601},{"n":"向羽黒山城","k":"城","lat":37.44458,"lng":139.90051},{"n":"笠間城","k":"城","lat":36.38261,"lng":140.26745},{"n":"土浦城","k":"城","lat":36.08497,"lng":140.19829},{"n":"唐沢山城","k":"城","lat":36.35389,"lng":139.60083},{"n":"名胡桃城","k":"城","lat":36.66993,"lng":138.99188},{"n":"沼田城","k":"城","lat":36.64849,"lng":139.03846},{"n":"岩櫃城","k":"城","lat":36.55936,"lng":138.80453},{"n":"忍城","k":"城","lat":36.13845,"lng":139.45324},{"n":"杉山城","k":"城","lat":36.06264,"lng":139.31199},{"n":"菅谷館","k":"城","lat":36.03585,"lng":139.32176},{"n":"本佐倉城","k":"城","lat":35.72818,"lng":140.26042},{"n":"大多喜城","k":"城","lat":35.28479,"lng":140.24526},{"n":"滝山城","k":"城","lat":35.65225,"lng":139.25699},{"n":"品川台場","k":"城","lat":35.62999,"lng":139.77545},{"n":"小机城","k":"城","lat":35.51246,"lng":139.59357},{"n":"石垣山城","k":"城","lat":35.2355,"lng":139.12788},{"n":"新府城","k":"城","lat":35.73569,"lng":138.42521},{"n":"龍岡城","k":"城","lat":36.20446,"lng":138.49079},{"n":"高島城","k":"城","lat":36.03979,"lng":138.11201},{"n":"高田城","k":"城","lat":37.11507,"lng":138.25787},{"n":"鮫ケ尾城","k":"城","lat":37.05379,"lng":138.23343},{"n":"富山城","k":"城","lat":36.6932,"lng":137.21083},{"n":"増山城","k":"城","lat":36.65214,"lng":137.03983},{"n":"鳥越城","k":"城","lat":36.36648,"lng":136.60097},{"n":"福井城","k":"城","lat":36.06552,"lng":136.22091},{"n":"越前大野城","k":"城","lat":35.98654,"lng":136.48313},{"n":"佐柿国吉城","k":"城","lat":44.07932,"lng":125.42686},{"n":"玄蕃尾城","k":"城","lat":35.64451,"lng":136.07346},{"n":"郡上八幡城","k":"城","lat":35.75308,"lng":136.96145},{"n":"苗木城","k":"城","lat":35.51316,"lng":137.48526},{"n":"大垣城","k":"城","lat":35.36716,"lng":136.68769},{"n":"諏訪原城","k":"城","lat":34.81786,"lng":138.1206},{"n":"高天神城","k":"城","lat":34.69864,"lng":138.03515},{"n":"小牧山城","k":"城","lat":34.97229,"lng":137.07384},{"n":"古宮城","k":"城","lat":34.97172,"lng":137.42815},{"n":"吉田城","k":"城","lat":34.77029,"lng":137.39387},{"n":"津城","k":"城","lat":34.71731,"lng":136.50721},{"n":"多気北畠氏城館","k":"城","lat":34.7342,"lng":136.51533},{"n":"田丸城","k":"城","lat":34.4906,"lng":136.62805},{"n":"赤木城","k":"城","lat":33.8948,"lng":135.95365},{"n":"鎌刃城","k":"城","lat":35.29838,"lng":136.31401},{"n":"八幡山城","k":"城","lat":35.14358,"lng":136.0835},{"n":"福知山城","k":"城","lat":35.29682,"lng":135.1296},{"n":"芥川山城","k":"城","lat":34.84648,"lng":135.61722},{"n":"飯盛城","k":"城","lat":34.72634,"lng":135.65358},{"n":"岸和田城","k":"城","lat":34.45939,"lng":135.36999},{"n":"出石城・有子山城","k":"城","lat":35.54467,"lng":134.82011},{"n":"黒井城","k":"城","lat":35.17899,"lng":135.10446},{"n":"洲本城","k":"城","lat":34.33771,"lng":134.90288},{"n":"大和郡山城","k":"城","lat":34.64992,"lng":135.77962},{"n":"宇陀松山城","k":"城","lat":34.52822,"lng":135.95269},{"n":"新宮城","k":"城","lat":33.7302,"lng":135.99282},{"n":"若桜鬼ケ城","k":"城","lat":35.33996,"lng":134.40104},{"n":"米子城","k":"城","lat":35.42501,"lng":133.32445},{"n":"浜田城","k":"城","lat":34.7207,"lng":132.02031},{"n":"備中高松城","k":"城","lat":34.80871,"lng":133.62215},{"n":"三原城","k":"城","lat":34.40129,"lng":133.08265},{"n":"大内氏館・高嶺城","k":"城","lat":34.17813,"lng":131.47371},{"n":"一宮城","k":"城","lat":34.03785,"lng":134.46346},{"n":"引田城","k":"城","lat":39.74852,"lng":140.08125},{"n":"能島城","k":"城","lat":34.18296,"lng":133.081},{"n":"河後森城","k":"城","lat":33.22518,"lng":132.70838},{"n":"岡豊城","k":"城","lat":33.59495,"lng":133.62256},{"n":"水城","k":"城","lat":33.51781,"lng":130.49022},{"n":"久留米城","k":"城","lat":33.32815,"lng":130.5078},{"n":"基肄城","k":"城","lat":33.44498,"lng":130.51362},{"n":"金田城","k":"城","lat":34.30016,"lng":129.27539},{"n":"原城","k":"城","lat":32.79387,"lng":130.36526},{"n":"鞠智城","k":"城","lat":33.00207,"lng":130.78814},{"n":"八代城","k":"城","lat":32.50804,"lng":130.59983},{"n":"中津城","k":"城","lat":33.60665,"lng":131.18638},{"n":"角牟礼城","k":"城","lat":33.30977,"lng":131.15428},{"n":"臼杵城","k":"城","lat":33.1222,"lng":131.80413},{"n":"佐伯城","k":"城","lat":32.96013,"lng":131.88969},{"n":"延岡城","k":"城","lat":32.58075,"lng":131.66232},{"n":"佐土原城","k":"城","lat":32.04793,"lng":131.42588},{"n":"志布志城","k":"城","lat":31.49595,"lng":131.08592},{"n":"知覧城","k":"城","lat":31.36648,"lng":130.44295},{"n":"座喜味城","k":"城","lat":26.40845,"lng":127.74161},{"n":"勝連城","k":"城","lat":26.3305,"lng":127.87903},{"n":"孝霊天皇陵","k":"墓","lat":34.58912,"lng":135.70152},{"n":"孝元天皇陵","k":"墓","lat":30.25036,"lng":120.17651},{"n":"崇神天皇陵","k":"墓","lat":34.55757,"lng":135.84919},{"n":"垂仁天皇陵","k":"墓","lat":34.67987,"lng":135.78132},{"n":"仲哀天皇陵","k":"墓","lat":34.56531,"lng":135.59398},{"n":"応神天皇陵","k":"墓","lat":34.55907,"lng":135.61026},{"n":"履中天皇陵","k":"墓","lat":34.5538,"lng":135.47724},{"n":"反正天皇陵","k":"墓","lat":34.57569,"lng":135.48832},{"n":"允恭天皇陵","k":"墓","lat":34.57374,"lng":135.61661},{"n":"安康天皇陵","k":"墓","lat":34.68329,"lng":135.7692},{"n":"函館八幡宮","k":"社","lat":41.755,"lng":140.71},{"n":"善知鳥神社","k":"社","lat":40.5267,"lng":140.0403},{"n":"盛岡八幡宮","k":"社","lat":39.72,"lng":141.13},{"n":"平泉 毛越寺 大泉が池","k":"寺","lat":38.9889,"lng":141.1089},{"n":"宮城 塩竈 志波彦神社","k":"社","lat":38.3186,"lng":141.0117},{"n":"松島 瑞巌寺 宝物館","k":"寺","lat":38.3717,"lng":141.0594},{"n":"山形 出羽神社","k":"社","lat":38.5311,"lng":139.9831},{"n":"米沢 上杉謙信公像","k":"史","lat":37.9139,"lng":140.1092},{"n":"会津 飯盛山 さざえ堂","k":"寺","lat":37.4933,"lng":139.9547},{"n":"会津 阿弥陀寺","k":"寺","lat":37.51,"lng":139.95},{"n":"水戸 弘道館","k":"史","lat":36.375,"lng":140.4667},{"n":"筑波山神社","k":"社","lat":36.3778,"lng":140.1069},{"n":"那須温泉神社","k":"社","lat":37.12,"lng":140.01},{"n":"宇都宮二荒山神社","k":"社","lat":36.5569,"lng":139.885},{"n":"日光 神橋","k":"社","lat":36.7531,"lng":139.605},{"n":"高崎 少林山 達磨堂","k":"寺","lat":36.3553,"lng":139.0108},{"n":"前橋 上野総社神社","k":"社","lat":36.39,"lng":139.06},{"n":"伊香保 伊香保神社","k":"社","lat":36.4972,"lng":138.9247},{"n":"川越 喜多院","k":"寺","lat":35.9167,"lng":139.4778},{"n":"川越 氷川神社","k":"社","lat":35.9236,"lng":139.4889},{"n":"秩父 三峰神社","k":"社","lat":35.93,"lng":138.99},{"n":"埼玉 岩槻 久伊豆神社 本殿","k":"社","lat":36.0061,"lng":139.7525},{"n":"千葉 香取神宮","k":"社","lat":35.8867,"lng":140.5314},{"n":"千葉 佐原 小野川","k":"道","lat":35.895,"lng":140.4967},{"n":"成田 成田山 大本堂","k":"寺","lat":35.7864,"lng":140.3194},{"n":"東京 上野 寛永寺","k":"寺","lat":35.7211,"lng":139.7747},{"n":"東京 日枝神社","k":"社","lat":35.6772,"lng":139.7394},{"n":"東京 深川不動堂","k":"寺","lat":35.6697,"lng":139.7989},{"n":"東京 亀戸天神社","k":"社","lat":35.7,"lng":139.82},{"n":"東京 品川神社","k":"社","lat":35.6061,"lng":139.7428},{"n":"東京 湯島天満宮","k":"社","lat":35.705,"lng":139.77},{"n":"東京 神田明神","k":"社","lat":35.7017,"lng":139.7678},{"n":"東京 芝東照宮","k":"社","lat":35.655,"lng":139.745},{"n":"東京 根津神社","k":"社","lat":35.72,"lng":139.76},{"n":"東京 氷川神社(赤坂)","k":"社","lat":35.6717,"lng":139.725},{"n":"神奈川 寒川神社","k":"社","lat":35.3739,"lng":139.3828},{"n":"神奈川 三浦 三崎港","k":"史","lat":35.135,"lng":139.615},{"n":"神奈川 鎌倉 明月院","k":"寺","lat":35.3339,"lng":139.5536},{"n":"神奈川 鎌倉 浄智寺","k":"寺","lat":35.3381,"lng":139.5472},{"n":"神奈川 江の島 江島神社","k":"社","lat":35.2989,"lng":139.4794},{"n":"神奈川 箱根 九頭龍神社","k":"社","lat":35.205,"lng":139.025},{"n":"神奈川 三嶋大社","k":"社","lat":35.1233,"lng":138.9186},{"n":"新潟 白山神社 本殿","k":"社","lat":37.9125,"lng":139.0361},{"n":"新潟 弥彦神社 宝物館","k":"社","lat":37.7033,"lng":138.8322},{"n":"新潟 佐渡 清水寺","k":"寺","lat":38.02,"lng":138.23},{"n":"富山 高岡 瑞龍寺 仏殿","k":"寺","lat":36.7361,"lng":137.0111},{"n":"富山 射水神社","k":"社","lat":36.78,"lng":137.11},{"n":"石川 金沢 尾山神社","k":"社","lat":36.5672,"lng":136.655},{"n":"石川 金沢 妙立寺","k":"寺","lat":36.5556,"lng":136.6494},{"n":"石川 白山比咩神社","k":"社","lat":36.43,"lng":136.6},{"n":"福井 氣比神宮","k":"社","lat":35.6553,"lng":136.0747},{"n":"福井 永平寺 承陽殿","k":"寺","lat":36.0828,"lng":136.3558},{"n":"山梨 武田神社 宝物館","k":"社","lat":35.6889,"lng":138.5722},{"n":"山梨 河口湖 冨士御室浅間神社","k":"社","lat":35.51,"lng":138.74},{"n":"長野 善光寺 本堂","k":"寺","lat":36.6622,"lng":138.1883},{"n":"長野 戸隠神社 中社","k":"社","lat":36.74,"lng":138.08},{"n":"長野 諏訪大社 下社春宮","k":"社","lat":36.07,"lng":138.09},{"n":"岐阜 飛騨高山 櫻山八幡宮","k":"社","lat":36.14,"lng":137.25},{"n":"岐阜 飛騨一宮水無神社","k":"社","lat":36.31,"lng":137.21},{"n":"岐阜 白川八幡神社","k":"社","lat":36.27,"lng":136.9},{"n":"静岡 久能山東照宮 本殿","k":"社","lat":34.9594,"lng":138.4672},{"n":"静岡 富士山本宮浅間大社 本殿","k":"社","lat":35.2269,"lng":138.6103},{"n":"静岡 五社神社","k":"社","lat":34.715,"lng":137.73},{"n":"愛知 熱田神宮 宝物館","k":"社","lat":35.1283,"lng":136.9075},{"n":"愛知 名古屋 大須観音","k":"寺","lat":35.1594,"lng":136.9},{"n":"愛知 尾張一宮真清田神社","k":"社","lat":35.3,"lng":136.8},{"n":"愛知 豊川稲荷 本殿","k":"寺","lat":34.8389,"lng":137.3936},{"n":"三重 伊勢神宮 外宮 豊受大神宮","k":"社","lat":34.4894,"lng":136.7086},{"n":"三重 二見 二見興玉神社 夫婦岩","k":"社","lat":34.51,"lng":136.7886},{"n":"三重 伊賀 阿波志神社","k":"社","lat":34.76,"lng":136.12},{"n":"滋賀 多賀大社 本殿","k":"社","lat":35.2214,"lng":136.2867},{"n":"滋賀 近江神宮","k":"社","lat":35.04,"lng":135.85},{"n":"滋賀 石山寺 本堂","k":"寺","lat":34.9603,"lng":135.9072},{"n":"大阪 住吉大社 第一本宮","k":"社","lat":34.6131,"lng":135.4936},{"n":"大阪 大阪天満宮","k":"社","lat":34.695,"lng":135.5128},{"n":"大阪 四天王寺 五重塔","k":"寺","lat":34.6539,"lng":135.5172},{"n":"兵庫 西宮神社 本殿","k":"社","lat":34.7381,"lng":135.3392},{"n":"兵庫 生田神社 本殿","k":"社","lat":34.695,"lng":135.1928},{"n":"兵庫 廣峯神社","k":"社","lat":34.86,"lng":134.65},{"n":"奈良 春日大社 本殿","k":"社","lat":34.6817,"lng":135.8486},{"n":"奈良 東大寺 大仏殿","k":"寺","lat":34.6892,"lng":135.84},{"n":"奈良 大神神社 拝殿","k":"社","lat":34.5356,"lng":135.8533},{"n":"和歌山 金剛峯寺 壇上伽藍","k":"寺","lat":34.2147,"lng":135.585},{"n":"和歌山 熊野本宮大社","k":"社","lat":33.89,"lng":135.77},{"n":"和歌山 熊野速玉大社 本殿","k":"社","lat":33.7306,"lng":135.9844},{"n":"鳥取 白兎神社 本殿","k":"社","lat":35.5172,"lng":134.2839},{"n":"鳥取 樂樂福神社","k":"社","lat":35.49,"lng":134.23},{"n":"島根 出雲大社 本殿","k":"社","lat":35.4022,"lng":132.6861},{"n":"島根 八重垣神社 鏡の池","k":"社","lat":35.4378,"lng":132.9717},{"n":"岡山 吉備津神社 本殿","k":"社","lat":34.6703,"lng":133.8503},{"n":"岡山 吉備津彦神社 本殿","k":"社","lat":34.6653,"lng":133.8694},{"n":"広島 厳島神社 大鳥居","k":"社","lat":34.2961,"lng":132.3203},{"n":"広島 広島護国神社","k":"社","lat":34.3989,"lng":132.4589},{"n":"山口 防府天満宮 本殿","k":"社","lat":34.0531,"lng":131.5756},{"n":"山口 住吉神社(下関)","k":"社","lat":33.96,"lng":130.95},{"n":"徳島 大麻比古神社","k":"社","lat":34.01,"lng":134.55},{"n":"徳島 霊山寺 本堂","k":"寺","lat":34.1322,"lng":134.5314},{"n":"香川 金刀比羅宮 本宮","k":"社","lat":34.1842,"lng":133.8078},{"n":"香川 田村神社","k":"社","lat":34.29,"lng":134.06},{"n":"愛媛 大山祇神社 本殿","k":"社","lat":34.2403,"lng":132.9906},{"n":"愛媛 石鎚神社 成就社","k":"社","lat":33.8492,"lng":133.3108},{"n":"高知 高知八幡宮","k":"社","lat":33.56,"lng":133.53},{"n":"高知 土佐神社","k":"社","lat":33.59,"lng":133.62},{"n":"福岡 太宰府天満宮 本殿","k":"社","lat":33.5222,"lng":130.5356},{"n":"福岡 宗像大社 沖津宮","k":"社","lat":34.2403,"lng":130.1011},{"n":"福岡 香椎宮","k":"社","lat":33.66,"lng":130.44},{"n":"佐賀 祐徳稲荷神社 本殿","k":"社","lat":33.0725,"lng":130.0269},{"n":"佐賀 多久聖廟","k":"史","lat":33.29,"lng":130.11},{"n":"長崎 大浦天主堂 内部","k":"寺","lat":32.7344,"lng":132.8706},{"n":"長崎 諏訪神社","k":"社","lat":32.75,"lng":129.88},{"n":"熊本 阿蘇神社 楼門","k":"社","lat":32.9733,"lng":131.1183},{"n":"熊本 青井阿蘇神社 本殿","k":"社","lat":32.2119,"lng":130.81},{"n":"大分 宇佐神宮 上宮本殿","k":"社","lat":33.5267,"lng":131.3753},{"n":"大分 臼杵 臼杵磨崖仏","k":"寺","lat":33.1236,"lng":131.8075},{"n":"宮崎 高千穂神社 本殿","k":"社","lat":32.7058,"lng":131.3075},{"n":"宮崎 鵜戸神宮 本殿","k":"社","lat":31.6536,"lng":131.4692},{"n":"鹿児島 霧島神宮 本殿","k":"社","lat":31.8583,"lng":130.8728},{"n":"鹿児島 照国神社 本殿","k":"社","lat":31.5969,"lng":130.5553},{"n":"沖縄 波上宮 本殿","k":"社","lat":26.2194,"lng":127.6711},{"n":"沖縄 普天満宮","k":"社","lat":26.29,"lng":127.79},{"n":"桶狭間古戦場","k":"戦","lat":35.0922,"lng":136.9408},{"n":"川中島古戦場","k":"戦","lat":36.6417,"lng":138.1917},{"n":"姉川古戦場","k":"戦","lat":35.4042,"lng":136.3181},{"n":"長篠城址","k":"戦","lat":34.9236,"lng":137.56},{"n":"山崎古戦場(酒解神社)","k":"戦","lat":34.9003,"lng":135.6806},{"n":"関ヶ原 石田三成陣跡(笹尾山)","k":"戦","lat":35.355,"lng":136.4614},{"n":"関ヶ原 徳川家康陣跡(桃配山)","k":"戦","lat":35.3708,"lng":136.4631},{"n":"関ヶ原 小早川秀秋陣跡(松尾山)","k":"戦","lat":35.3572,"lng":136.4472},{"n":"関ヶ原 大谷吉継の墓","k":"戦","lat":35.3542,"lng":136.4572},{"n":"大坂冬の陣 真田丸跡","k":"戦","lat":34.6739,"lng":135.5247},{"n":"大坂夏の陣 安居神社","k":"戦","lat":34.6492,"lng":135.5175},{"n":"島原の乱 原城本丸跡","k":"戦","lat":32.6292,"lng":130.2536},{"n":"函館戦争 五稜郭最後の地","k":"戦","lat":41.7969,"lng":140.7572},{"n":"函館戦争 碧血碑","k":"戦","lat":41.7558,"lng":140.7042},{"n":"戊辰戦争 会津若松城 飯盛山","k":"戦","lat":37.4931,"lng":139.955},{"n":"戊辰戦争 白河口の戦い跡","k":"戦","lat":37.13,"lng":140.22},{"n":"戊辰戦争 宇都宮城址","k":"戦","lat":36.555,"lng":139.885},{"n":"西南戦争 田原坂","k":"戦","lat":32.9067,"lng":130.6714},{"n":"西南戦争 城山 西郷隆盛終焉の地","k":"戦","lat":31.5981,"lng":130.5497},{"n":"鎌倉 畠山重忠の乱 二俣川","k":"戦","lat":35.4639,"lng":139.5367},{"n":"屋島古戦場(源平合戦)","k":"戦","lat":34.3519,"lng":134.1039},{"n":"壇ノ浦古戦場(みもすそ川公園)","k":"戦","lat":33.9617,"lng":130.9508},{"n":"一の谷古戦場(須磨浦公園)","k":"戦","lat":34.6469,"lng":135.1136},{"n":"宇治川合戦 宇治橋","k":"戦","lat":34.8892,"lng":135.8056},{"n":"篠ノ井の戦い 長福寺","k":"戦","lat":36.56,"lng":138.13},{"n":"厩橋の戦い 上杉憲顕","k":"戦","lat":36.39,"lng":139.06},{"n":"長久手古戦場","k":"戦","lat":35.1672,"lng":137.0469},{"n":"小牧山(小牧山城)","k":"戦","lat":35.2911,"lng":136.9156},{"n":"賤ヶ岳古戦場","k":"戦","lat":35.5058,"lng":136.1886},{"n":"耳川古戦場","k":"戦","lat":32.0167,"lng":131.42},{"n":"沖田畷古戦場","k":"戦","lat":32.85,"lng":130.1},{"n":"関ヶ原 島津義弘陣跡","k":"戦","lat":35.3667,"lng":136.4667},{"n":"三方ヶ原古戦場","k":"戦","lat":34.75,"lng":137.6667},{"n":"高天神城跡","k":"戦","lat":34.7333,"lng":138.0333},{"n":"鳥取城 渇え殺しの戦い","k":"戦","lat":35.5069,"lng":134.2383},{"n":"上月城跡","k":"戦","lat":34.905,"lng":134.38},{"n":"忍城跡(行田)","k":"戦","lat":36.1389,"lng":139.4561},{"n":"鉢形城跡","k":"戦","lat":36.15,"lng":139.19},{"n":"大凧の戦い 浜松","k":"戦","lat":34.7114,"lng":137.7261},{"n":"大坂の陣 真田信繁 顕彰碑","k":"戦","lat":34.65,"lng":135.5183},{"n":"新田義貞 藤島の戦い","k":"戦","lat":36.06,"lng":136.2},{"n":"湊川の戦い 湊川神社","k":"戦","lat":34.6908,"lng":135.185},{"n":"楠木正成の墓(観心寺)","k":"墓","lat":34.5167,"lng":135.6089},{"n":"児島高徳の碑(湊川神社)","k":"戦","lat":34.69,"lng":135.1867},{"n":"新田義貞の首塚(称名寺)","k":"墓","lat":35.32,"lng":139.58},{"n":"板橋","k":"宿","lat":35.75349,"lng":139.71009},{"n":"蕨","k":"宿","lat":35.82622,"lng":139.67496},{"n":"浦和","k":"宿","lat":35.86543,"lng":139.65129},{"n":"大宮","k":"宿","lat":35.91453,"lng":139.62476},{"n":"上尾","k":"宿","lat":35.97797,"lng":139.58579},{"n":"桶川","k":"宿","lat":36.00677,"lng":139.55931},{"n":"鴻巣","k":"宿","lat":36.06437,"lng":139.5066},{"n":"熊谷","k":"宿","lat":36.15124,"lng":139.37374},{"n":"深谷","k":"宿","lat":36.19797,"lng":139.26037},{"n":"本庄","k":"宿","lat":36.25133,"lng":139.1671},{"n":"新町","k":"宿","lat":36.28455,"lng":139.09098},{"n":"倉賀野","k":"宿","lat":36.30967,"lng":139.02147},{"n":"高崎","k":"宿","lat":36.33344,"lng":138.96854},{"n":"板鼻","k":"宿","lat":36.32635,"lng":138.89423},{"n":"安中","k":"宿","lat":36.31246,"lng":138.85306},{"n":"松井田","k":"宿","lat":36.32708,"lng":138.75986},{"n":"坂本","k":"宿","lat":36.36967,"lng":138.67987},{"n":"軽井沢","k":"宿","lat":36.34419,"lng":138.57571},{"n":"沓掛","k":"宿","lat":36.32948,"lng":138.52475},{"n":"追分","k":"宿","lat":36.29503,"lng":138.49224},{"n":"小田井","k":"宿","lat":36.26892,"lng":138.45605},{"n":"岩村田","k":"宿","lat":36.27224,"lng":138.41419},{"n":"塩名田","k":"宿","lat":36.26793,"lng":138.35354},{"n":"八幡","k":"宿","lat":36.27138,"lng":138.32314},{"n":"望月","k":"宿","lat":36.25655,"lng":138.28636},{"n":"芦田","k":"宿","lat":36.23262,"lng":138.24555},{"n":"長久保","k":"宿","lat":36.20031,"lng":138.20785},{"n":"和田","k":"宿","lat":36.15243,"lng":138.14731},{"n":"下諏訪","k":"宿","lat":36.09841,"lng":137.99131},{"n":"塩尻","k":"宿","lat":36.05501,"lng":137.89834},{"n":"洗馬","k":"宿","lat":36.01172,"lng":137.85948},{"n":"本山","k":"宿","lat":35.98422,"lng":137.83621},{"n":"贄川","k":"宿","lat":35.93405,"lng":137.78441},{"n":"奈良井","k":"宿","lat":35.88162,"lng":137.75589},{"n":"藪原","k":"宿","lat":35.85592,"lng":137.71148},{"n":"宮ノ越","k":"宿","lat":35.79587,"lng":137.68849},{"n":"福島","k":"宿","lat":35.73353,"lng":137.71418},{"n":"上松","k":"宿","lat":35.68284,"lng":137.6722},{"n":"須原","k":"宿","lat":35.59645,"lng":137.60772},{"n":"野尻","k":"宿","lat":35.5387,"lng":137.58464},{"n":"三留野","k":"宿","lat":35.50036,"lng":137.50719},{"n":"妻籠","k":"宿","lat":35.47663,"lng":137.46672},{"n":"馬籠","k":"宿","lat":35.452,"lng":137.40004},{"n":"落合","k":"宿","lat":35.44607,"lng":137.34775},{"n":"中津川","k":"宿","lat":35.43867,"lng":137.3074},{"n":"大井","k":"宿","lat":35.42628,"lng":137.20871},{"n":"大湫","k":"宿","lat":35.43764,"lng":137.07558},{"n":"細久手","k":"宿","lat":35.43073,"lng":137.00222},{"n":"御嵩","k":"宿","lat":35.40286,"lng":136.89183},{"n":"伏見","k":"宿","lat":35.39766,"lng":136.83721},{"n":"太田","k":"宿","lat":35.40514,"lng":136.76154},{"n":"鵜沼","k":"宿","lat":35.41178,"lng":136.66625},{"n":"加納","k":"宿","lat":35.36972,"lng":136.49921},{"n":"河渡","k":"宿","lat":35.35036,"lng":136.44121},{"n":"美江寺","k":"宿","lat":35.34213,"lng":136.39985},{"n":"赤坂","k":"宿","lat":35.3135,"lng":136.31342},{"n":"垂井","k":"宿","lat":35.27189,"lng":136.28042},{"n":"関ヶ原","k":"宿","lat":35.23288,"lng":136.25435},{"n":"今須","k":"宿","lat":35.20254,"lng":136.23097},{"n":"柏原","k":"宿","lat":35.17204,"lng":136.20765},{"n":"醒ヶ井","k":"宿","lat":35.13885,"lng":136.17161},{"n":"番場","k":"宿","lat":35.11813,"lng":136.13719},{"n":"鳥居本","k":"宿","lat":35.09326,"lng":136.09199},{"n":"高宮","k":"宿","lat":35.06933,"lng":136.03483},{"n":"愛知川","k":"宿","lat":35.02767,"lng":135.9688},{"n":"武佐","k":"宿","lat":35.01808,"lng":135.96079},{"n":"守山","k":"宿","lat":35.01808,"lng":135.96079},{"n":"草津","k":"宿","lat":35.01808,"lng":135.96079},{"n":"大津","k":"宿","lat":35.01808,"lng":135.96079}],"notes":0};
+window.KM2 = window.KM2 || {};
+/* ================= 1. 保存層（唯一のオーナー） ================= */
+(function () {
+var K = { L: 'km2_lines_v1', N: 'km2_notes_v1', P: 'km2_photos_meta_v1', T: 'km2_track_v1', F: 'km2_prefs_v1', M: 'km2_migrated_v1' };
+var MAXL = 8000, MAXP = 8000;
+function g(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function s(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }
+function J(t) { try { return JSON.parse(t || 'null'); } catch (e) { return null; } }
+function uid() { return 'L' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function norm(a) {
+if (!Array.isArray(a)) return null;
+var o = [], i, p;
+for (i = 0; i < a.length && o.length < MAXP; i++) {
+p = a[i];
+if (Array.isArray(p) && typeof p[0] === 'number' && typeof p[1] === 'number') {
+if (p[0] > 20 && p[0] < 50 && p[1] > 120 && p[1] < 155) o.push([p[0], p[1]]);
+} else if (p && typeof p.lat === 'number' && typeof p.lng === 'number') {
+if (p.lat > 20 && p.lat < 50 && p.lng > 120 && p.lng < 155) o.push([p.lat, p.lng]);
+}
+}
+return o.length >= 2 ? o : null;
+}
+function isPts(a) {
+if (!Array.isArray(a) || !a.length) return false;
+var p = a[0];
+return (Array.isArray(p) && typeof p[0] === 'number' && typeof p[1] === 'number') || (p && typeof p.lat === 'number');
+}
+function mk(pts, o) {
+o = o || {};
+return { id: o.id || uid(), pts: pts, color: o.color || '#e53935', width: o.width || 6, name: o.name || '', madeAt: o.madeAt || 0, migrated: !!o.migrated };
+}
+function collect(o, d, acc) {
+if (d > 7 || o === null || o === undefined || acc.length >= MAXL) return;
+var i, v, ks;
+if (Array.isArray(o)) {
+if (isPts(o)) { var p = norm(o); if (p) acc.push(mk(p, { migrated: true })); return; }
+for (i = 0; i < o.length && acc.length < MAXL; i++) {
+v = o[i];
+if (v && typeof v === 'object') {
+if (!Array.isArray(v) && (v.pts || v.points)) {
+var q = norm(v.pts || v.points);
+if (q) { acc.push(mk(q, { color: v.color, width: v.width, name: v.name, migrated: true })); continue; }
+}
+collect(v, d + 1, acc);
+} else if (typeof v === 'string' && v.length > 40 && (v.charCodeAt(0) === 123 || v.charCodeAt(0) === 91)) collect(J(v), d + 1, acc);
+}
+return;
+}
+if (typeof o === 'string') { if (o.length > 40 && (o.charCodeAt(0) === 123 || o.charCodeAt(0) === 91)) collect(J(o), d + 1, acc); return; }
+if (typeof o === 'object') {
+if (Array.isArray(o.pts)) { var r = norm(o.pts); if (r) { acc.push(mk(r, { color: o.color, width: o.width, name: o.name, migrated: true })); return; } }
+ks = Object.keys(o);
+for (i = 0; i < ks.length && acc.length < MAXL; i++) {
+v = o[ks[i]];
+if (v && typeof v === 'object') collect(v, d + 1, acc);
+else if (typeof v === 'string' && v.length > 40 && (v.charCodeAt(0) === 123 || v.charCodeAt(0) === 91)) collect(J(v), d + 1, acc);
+}
+}
+}
+function sig(l) {
+var p = l.pts, m = p[Math.floor(p.length / 2)];
+return p.length + '|' + p[0][0].toFixed(5) + ',' + p[0][1].toFixed(5) + '|' + m[0].toFixed(5) + ',' + m[1].toFixed(5) + '|' + p[p.length - 1][0].toFixed(5) + ',' + p[p.length - 1][1].toFixed(5);
+}
+function dedupe(list) {
+var seen = {}, o = [], i, k;
+for (i = 0; i < list.length; i++) { k = sig(list[i]); if (seen[k]) continue; seen[k] = 1; o.push(list[i]); }
+return o;
+}
+function getLines() {
+var j = J(g(K.L)), o = [], i, p;
+if (!j || !Array.isArray(j.lines)) return [];
+for (i = 0; i < j.lines.length; i++) { p = norm(j.lines[i].pts || j.lines[i]); if (p) o.push(mk(p, j.lines[i])); }
+return o;
+}
+function setLines(lines) {
+var o = [], i;
+for (i = 0; i < lines.length; i++) o.push({ id: lines[i].id, pts: lines[i].pts, color: lines[i].color, width: lines[i].width, name: lines[i].name || '', madeAt: lines[i].madeAt || 0 });
+return s(K.L, JSON.stringify({ v: 2, savedAt: Date.now(), lines: o }));
+}
+function oldKeys() {
+var o = [], i, k;
+try {
+for (i = 0; i < localStorage.length; i++) {
+k = localStorage.key(i);
+if (!k || k.indexOf('km2_') === 0) continue;
+if (k.indexOf('km') === 0 || k.indexOf('kyoto_kumanaku') === 0) o.push(k);
+}
+} catch (e) { }
+return o;
+}
+function migrate() {
+var keys = oldKeys(), found = [], per = [], i, raw, j, before;
+for (i = 0; i < keys.length; i++) {
+raw = g(keys[i]);
+if (!raw || raw.length < 40) continue;
+j = J(raw);
+if (!j) continue;
+before = found.length;
+collect(j, 0, found);
+if (found.length > before) per.push({ k: keys[i], n: found.length - before, bytes: raw.length });
+}
+var ex = getLines(), merged = dedupe(ex.concat(found)), added = merged.length - ex.length;
+if (added > 0) setLines(merged);
+var rep = { at: Date.now(), oldKeys: keys.length, oldKeyList: keys, fromOld: found.length, added: added, total: merged.length, perKey: per.sort(function (a, b) { return b.n - a.n; }).slice(0, 12) };
+s(K.M, JSON.stringify(rep));
+return rep;
+}
+function list(k, d) { var j = J(g(k)); return j === null || j === undefined ? d : j; }
+function put(k, v) { return s(k, JSON.stringify(v)); }
+function stats() {
+var b = 0, n = 0;
+[K.L, K.N, K.P, K.T, K.F, K.M].forEach(function (k) { var v = g(k); if (v) { b += v.length; n++; } });
+return { bytes: b, keys: n };
+}
+KM2.store = {
+K: K, uid: uid, getLines: getLines, setLines: setLines, migrate: migrate, oldKeys: oldKeys, norm: norm, mk: mk, dedupe: dedupe, sig: sig, stats: stats,
+clearLines: function () { setLines([]); var i, ks = oldKeys(); for (i = 0; i < ks.length; i++) { try { localStorage.removeItem(ks[i]); } catch (e) { } } try { localStorage.removeItem(K.M); } catch (e) { } return true; },
+notes: function () { return list(K.N, []); }, setNotes: function (v) { return put(K.N, v); }, getNotes: function () { return list(K.N, []); },
+photos: function () { return list(K.P, []); }, setPhotos: function (v) { return put(K.P, v); }, getPhotos: function () { return list(K.P, []); },
+track: function () { return list(K.T, { v: 2, pts: [] }); }, setTrack: function (v) { return put(K.T, v); }, getTrack: function () { return list(K.T, { v: 2, pts: [] }); },
+prefs: function () { return list(K.F, { erR: 22, color: '#e53935', width: 6 }); }, setPrefs: function (v) { return put(K.F, v); },
+lastMig: function () { return J(g(K.M)); }
+};
+})();
+/* ================= 2. 手描き（ペン／消しゴム／戻す） ================= */
+(function () {
+var S = KM2.store, D = { mode: 'pan', color: '#e53935', width: 6, erR: 22, lines: [], hist: [], fut: [], cur: null, sel: null };
+var layer, live, map, saveT = null, dirty = false, pend = null;
+function toast(m) { KM2.ui.toast(m); }
+function distM(a, b) {
+var t = Math.PI / 180, dla = (b[0] - a[0]) * t, dlo = (b[1] - a[1]) * t * Math.cos((a[0] + b[0]) / 2 * t);
+return Math.sqrt(dla * dla + dlo * dlo) * 6371000;
+}
+function snap() { D.hist.push(JSON.stringify(D.lines)); if (D.hist.length > 30) D.hist.shift(); D.fut.length = 0; }
+/* 消しゴムは「実際に消えたときだけ」履歴を残す */
+function beginEdit() { pend = JSON.stringify(D.lines); }
+function commitEdit() { if (pend === null) return; D.hist.push(pend); if (D.hist.length > 30) D.hist.shift(); D.fut.length = 0; pend = null; }
+function dropEdit() { pend = null; }
+function sched() { dirty = true; if (saveT) clearTimeout(saveT); saveT = setTimeout(function () { saveNow(); }, 600); }
+function saveNow() { if (!dirty) return true; var ok = S.setLines(D.lines); dirty = !ok; if (!ok) toast('保存できませんでした（容量不足かも）'); return ok; }
+function render() {
+layer.clearLayers();
+for (var i = 0; i < D.lines.length; i++) {
+var l = D.lines[i];
+if (!l.pts || l.pts.length < 2) continue;
+L.polyline(l.pts, { color: l.color || '#e53935', weight: l.width || 6, opacity: .95, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(layer);
+}
+KM2.onChange();
+}
+function setMode(m) {
+D.mode = m;
+if (map) { if (m === 'pan') map.dragging.enable(); else map.dragging.disable(); }
+[['bPen', 'pen'], ['bEra', 'era'], ['bPan', 'pan']].forEach(function (p) { var e = document.getElementById(p[0]); if (e) e.className = 't' + (m === p[1] ? ' on' : ''); });
+toast(m === 'pen' ? 'ペン：指でなぞって線を引きます' : m === 'era' ? '消しゴム：なぞった所を消します' : '地図移動モード');
+}
+function ll(e) {
+var src = e;
+if (src && src.originalEvent) src = src.originalEvent;
+if (!src || src.clientX === undefined || src.clientX === null) {
+if (e && e.touches && e.touches[0]) src = e.touches[0];
+else if (e && e.changedTouches && e.changedTouches[0]) src = e.changedTouches[0];
+}
+if (!src || !isFinite(src.clientX) || !isFinite(src.clientY)) return null;
+var r = map.getContainer().getBoundingClientRect();
+return map.containerPointToLatLng(L.point(src.clientX - r.left, src.clientY - r.top));
+}
+function start(p) { D.cur = [[p.lat, p.lng]]; if (live) { map.removeLayer(live); } live = L.polyline(D.cur, { color: D.color, weight: D.width, opacity: .95, interactive: false }).addTo(map); }
+function add(p) {
+if (!D.cur) return;
+var l = D.cur[D.cur.length - 1], q = [p.lat, p.lng];
+if (distM(l, q) < 2) return;
+D.cur.push(q); live.setLatLngs(D.cur);
+}
+function end() {
+if (!D.cur) return;
+var pts = D.cur; D.cur = null;
+if (live) { map.removeLayer(live); live = null; }
+if (pts.length < 2) return;
+snap(); D.lines.push(S.mk(pts, { color: D.color, width: D.width, madeAt: Date.now() })); render(); sched();
+}
+function erase(p) {
+var R = D.erR, ch = false, out = [], i, j;
+for (i = 0; i < D.lines.length; i++) {
+var ln = D.lines[i], segs = [], cur = [];
+for (j = 0; j < ln.pts.length; j++) {
+if (distM(ln.pts[j], [p.lat, p.lng]) <= R) { ch = true; if (cur.length >= 2) segs.push(cur); cur = []; }
+else cur.push(ln.pts[j]);
+}
+if (cur.length >= 2) segs.push(cur);
+if (!segs.length) continue;
+if (segs.length === 1 && segs[0].length === ln.pts.length) { out.push(ln); continue; }
+for (j = 0; j < segs.length; j++) out.push(S.mk(segs[j], { color: ln.color, width: ln.width, name: ln.name, madeAt: ln.madeAt }));
+}
+if (ch) { if (pend !== null) commitEdit(); D.lines = out; render(); sched(); }
+return ch;
+}
+function undo() {
+if (!D.hist.length) { toast('戻せる操作がありません'); return; }
+D.fut.push(JSON.stringify(D.lines)); D.lines = JSON.parse(D.hist.pop()); render(); sched(); toast('戻しました');
+}
+function redo() {
+if (!D.fut.length) { toast('やり直せる操作がありません'); return; }
+D.hist.push(JSON.stringify(D.lines)); D.lines = JSON.parse(D.fut.pop()); render(); sched(); toast('やり直しました');
+}
+function bind() {
+var c = map.getContainer(), down = false, moved = false;
+function dn(e) { if (D.mode === 'pan') return; down = true; moved = false; var p = ll(e); if (!p) return; if (D.mode === 'pen') start(p); else { beginEdit(); erase(p); } }
+function mv(e) { if (!down) return; var p = ll(e); if (!p) return; moved = true; if (D.mode === 'pen') add(p); else erase(p); if (e.cancelable && D.mode !== 'pan') e.preventDefault(); }
+function up() { if (!down) return; down = false; if (D.mode === 'pen') end(); else { if (moved) sched(); dropEdit(); } }
+map.on('mousedown', dn); map.on('mousemove', mv); map.on('mouseup', up);
+c.addEventListener('touchstart', function (e) { if (e.touches.length === 1) dn(e.touches[0]); }, { passive: true });
+c.addEventListener('touchmove', function (e) { if (e.touches.length === 1) mv(e.touches[0]); }, { passive: false });
+c.addEventListener('touchend', function () { up(); }, { passive: true });
+c.addEventListener('touchcancel', function () { up(); }, { passive: true });
+}
+function init(m) {
+map = m; layer = L.layerGroup().addTo(map);
+var eb = document.getElementById('bPoi'); if (eb) eb.className = 't on';
+var f = S.prefs(); D.color = f.color || '#e53935'; D.width = f.width || 6; D.erR = f.erR || 22;
+D.lines = S.getLines(); render(); bind(); setMode('pan');
+return D.lines.length;
+}
+KM2.draw = {
+init: init, state: D, render: render, setMode: setMode, undo: undo, redo: redo, save: saveNow, distM: distM,
+replaceAll: function (ls) { snap(); D.lines = ls; render(); saveNow(); },
+count: function () { var n = 0, i; for (i = 0; i < D.lines.length; i++) n += D.lines[i].pts.length; return { lines: D.lines.length, pts: n }; },
+setColor: function (c) { D.color = c; var f = S.prefs(); f.color = c; S.setPrefs(f); },
+setWidth: function (w) { D.width = w; var f = S.prefs(); f.width = w; S.setPrefs(f); },
+setEr: function (r) { D.erR = r; var f = S.prefs(); f.erR = r; S.setPrefs(f); }
+};
+})();
+/* ================= 3. 名所・史跡・墓マーカー ================= */
+(function () {
+var all = [], layer, map, on = true, t = null, cap = 4000, minZ = 0, maxN = 0;
+function data() {
+if (all.length) return all;
+var d = window.KM2_POIS;
+if (!d || !d.pois) return [];
+for (var i = 0; i < d.pois.length; i++) {
+var p = d.pois[i];
+if (typeof p.lat !== 'number' || typeof p.lng !== 'number') continue;
+var k = String(p.k || '');
+if (k.isdigit && k.isdigit()) k = '宿';
+all.push({ n: p.n || '(名称不明)', k: k, lat: p.lat, lng: p.lng, note: p.note || '' });
+}
+return all;
+}
+function col(k) {
+if (k === '寺') return '#8e24aa'; if (k === '社') return '#2e7d32'; if (k === '城') return '#1565c0';
+if (k === '史') return '#6d4c41'; if (k === '墓') return '#455a64'; if (k === '戦') return '#c62828';
+if (k === '宿') return '#00838f'; return '#ef6c00';
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+function refresh() {
+layer.clearLayers(); maxN = 0;
+if (!on || !map) return 0;
+/* v2.1: 名所は全縮尺で表示 */
+var b = map.getBounds().pad(0.12), d = data(), i, n = 0;
+for (i = 0; i < d.length && n < cap; i++) {
+var p = d[i];
+if (!b.contains([p.lat, p.lng])) continue;
+var m = L.marker([p.lat, p.lng], { keyboard: false, icon: L.divIcon({ className: '', iconSize: [16, 16], iconAnchor: [8, 8], html: '<div style="width:14px;height:14px;border-radius:50%;background:' + col(p.k) + ';border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.5)"></div>' }) });
+m.bindPopup('<b>' + esc(p.n) + '</b><br><span style="color:#666">' + esc(p.k) + '</span>' + (p.note ? '<br>' + esc(p.note) : ''));
+m.addTo(layer); n++;
+}
+maxN = n;
+return n;
+}
+function toggle() {
+on = !on;
+var e = document.getElementById('bPoi'); if (e) e.className = 't' + (on ? ' on' : '');
+var n = refresh();
+KM2.ui.toast(on ? ('名所を表示：' + n + '件（拡大すると増えます）') : '名所を隠しました');
+return on;
+}
+function init(m) {
+map = m; layer = L.layerGroup().addTo(map);
+map.on('moveend', function () { if (t) clearTimeout(t); t = setTimeout(refresh, 400); });
+map.on('zoomend', function () { if (t) clearTimeout(t); t = setTimeout(refresh, 400); });
+setTimeout(refresh, 600);
+map.whenReady(function () { setTimeout(refresh, 300); });
+return data().length;
+}
+function nearest(lat, lng, maxM) {
+var d = data(), best = null, bd = maxM || 3000, i, dd;
+for (i = 0; i < d.length; i++) { dd = KM2.draw.distM([lat, lng], [d[i].lat, d[i].lng]); if (dd < bd) { bd = dd; best = d[i]; best.d = dd; } }
+return best;
+}
+KM2.poi = { init: init, refresh: refresh, toggle: toggle, isOn: function () { return on; }, data: data, nearest: nearest, shown: function () { return maxN; } };
+})();
+/* ================= 4. 写真（IndexedDB）とメモ ================= */
+(function () {
+var S = KM2.store, DB = 'km2', ST = 'photos', db = null, map, layer;
+function toast(m) { KM2.ui.toast(m); }
+function open() {
+return new Promise(function (res, rej) {
+if (db) return res(db);
+if (!window.indexedDB) return rej('IndexedDB不可');
+var r = indexedDB.open(DB, 1);
+r.onupgradeneeded = function () { try { r.result.createObjectStore(ST, { keyPath: 'id' }); } catch (e) { } };
+r.onsuccess = function () { db = r.result; res(db); };
+r.onerror = function () { rej(r.error); };
+});
+}
+function put(rec) {
+return open().then(function (d) {
+return new Promise(function (res, rej) {
+var tx = d.transaction(ST, 'readwrite'); tx.objectStore(ST).put(rec);
+tx.oncomplete = function () { res(true); }; tx.onerror = function () { rej(tx.error); };
+});
+});
+}
+function getAll() {
+return open().then(function (d) {
+return new Promise(function (res, rej) {
+var rq = d.transaction(ST, 'readonly').objectStore(ST).getAll();
+rq.onsuccess = function () { res(rq.result || []); }; rq.onerror = function () { rej(rq.error); };
+});
+});
+}
+function del(id) {
+return open().then(function (d) {
+return new Promise(function (res) {
+var tx = d.transaction(ST, 'readwrite'); tx.objectStore(ST).delete(id);
+tx.oncomplete = function () { res(true); }; tx.onerror = function () { res(false); };
+});
+});
+}
+function shrink(file) {
+return new Promise(function (res, rej) {
+var fr = new FileReader();
+fr.onload = function () {
+var im = new Image();
+im.onload = function () {
+function draw(max, q) {
+var sc = Math.min(1, max / Math.max(im.width, im.height));
+var c = document.createElement('canvas');
+c.width = Math.max(1, Math.round(im.width * sc)); c.height = Math.max(1, Math.round(im.height * sc));
+c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+return c.toDataURL('image/jpeg', q);
+}
+res({ big: draw(1280, .82), thumb: draw(220, .7) });
+};
+im.onerror = function () { rej('画像を読めません'); };
+im.src = fr.result;
+};
+fr.onerror = function () { rej('ファイルを読めません'); };
+fr.readAsDataURL(file);
+});
+}
+function render() {
+layer.clearLayers();
+var ps = S.getPhotos(), ns = S.getNotes(), i;
+for (i = 0; i < ps.length; i++) {
+var p = ps[i];
+L.marker([p.lat, p.lng], { icon: L.divIcon({ className: '', iconSize: [30, 30], iconAnchor: [15, 15], html: '<div style="width:28px;height:28px;border-radius:6px;border:2px solid #fff;background:#fff url(' + p.thumb + ') center/cover;box-shadow:0 1px 4px rgba(0,0,0,.5)"></div>' }) })
+.bindPopup('<img src="' + p.thumb + '" style="max-width:150px"><br><b>' + (p.name || '写真') + '</b><br><span style="color:#666">' + new Date(p.time).toLocaleString('ja-JP') + '</span>').addTo(layer);
+}
+for (i = 0; i < ns.length; i++) {
+var n = ns[i];
+L.marker([n.lat, n.lng], { icon: L.divIcon({ className: '', iconSize: [26, 26], iconAnchor: [13, 13], html: '<div style="width:24px;height:24px;border-radius:50%;background:#ffd54f;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5);font-size:13px;text-align:center;line-height:22px">📝</div>' }) })
+.bindPopup('<b>メモ</b><br>' + String(n.text).replace(/[<>]/g, '') + '<br><span style="color:#666">' + new Date(n.time).toLocaleString('ja-JP') + '</span>').addTo(layer);
+}
+return ps.length + ns.length;
+}
+function addFile(file, ll) {
+return shrink(file).then(function (r) {
+var id = 'P' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+var meta = { id: id, lat: ll.lat, lng: ll.lng, time: Date.now(), name: (file.name || 'photo').slice(0, 40), thumb: r.thumb };
+return put({ id: id, data: r.big }).then(function () {
+var l = S.getPhotos(); l.push(meta); S.setPhotos(l); render(); KM2.onChange();
+return meta;
+});
+});
+}
+function addNote(text, ll) {
+var l = S.getNotes();
+l.push({ id: 'N' + Date.now().toString(36), lat: ll.lat, lng: ll.lng, text: String(text).slice(0, 500), time: Date.now() });
+S.setNotes(l); render(); KM2.onChange(); toast('メモを保存しました');
+}
+function init(m) { map = m; layer = L.layerGroup().addTo(map); render(); return getAll().then(function (a) { return a.length; }).catch(function () { return -1; }); }
+KM2.media = { init: init, render: render, addFile: addFile, addNote: addNote, getAll: getAll, del: del, count: function () { return { photos: S.getPhotos().length, notes: S.getNotes().length }; } };
+})();
+/* ================= 5. GPX / KML / JSON 書き出し・読込 ================= */
+(function () {
+var S = KM2.store;
+function toast(m) { KM2.ui.toast(m); }
+function dl(name, text, mime) {
+try {
+var b = new Blob([text], { type: mime || 'application/octet-stream' }), u = URL.createObjectURL(b), a = document.createElement('a');
+a.href = u; a.download = name; a.style.position = 'fixed'; a.style.left = '-9999px';
+document.body.appendChild(a); a.click();
+setTimeout(function () { try { URL.revokeObjectURL(u); a.remove(); } catch (e) { } }, 5000);
+return true;
+} catch (e) { return false; }
+}
+function stamp() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+function xe(s) { return String(s || '').replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[c]; }); }
+function gpx(ls) {
+var o = ['<?xml version="1.0" encoding="UTF-8"?>', '<gpx version="1.1" creator="kumanaku-v2" xmlns="http://www.topografix.com/GPX/1/1">'];
+for (var i = 0; i < ls.length; i++) {
+o.push('<trk><name>' + xe(ls[i].name || ('手描き線 ' + (i + 1))) + '</name><trkseg>');
+for (var j = 0; j < ls[i].pts.length; j++) o.push('<trkpt lat="' + ls[i].pts[j][0].toFixed(6) + '" lon="' + ls[i].pts[j][1].toFixed(6) + '"></trkpt>');
+o.push('</trkseg></trk>');
+}
+o.push('</gpx>'); return o.join('\n');
+}
+function kml(ls) {
+var o = ['<?xml version="1.0" encoding="UTF-8"?>', '<kml xmlns="http://www.opengis.net/kml/2.2"><Document>'];
+for (var i = 0; i < ls.length; i++) {
+var c = [];
+for (var j = 0; j < ls[i].pts.length; j++) c.push(ls[i].pts[j][1].toFixed(6) + ',' + ls[i].pts[j][0].toFixed(6) + ',0');
+o.push('<Placemark><name>' + xe(ls[i].name || ('手描き線 ' + (i + 1))) + '</name><Style><LineStyle><color>ff0000ff</color><width>4</width></LineStyle></Style><LineString><tessellate>1</tessellate><coordinates>' + c.join(' ') + '</coordinates></LineString></Placemark>');
+}
+o.push('</Document></kml>'); return o.join('\n');
+}
+function expGpx() { var l = KM2.draw.state.lines; if (!l.length) { toast('書き出せる線がありません'); return false; } var ok = dl('kumanaku2_' + stamp() + '.gpx', gpx(l), 'application/gpx+xml'); toast(ok ? ('GPXを書き出しました（' + l.length + '本）') : '書き出せませんでした'); return ok; }
+function expKml() { var l = KM2.draw.state.lines; if (!l.length) { toast('書き出せる線がありません'); return false; } var ok = dl('kumanaku2_' + stamp() + '.kml', kml(l), 'application/vnd.google-earth.kml+xml'); toast(ok ? ('KMLを書き出しました（' + l.length + '本）') : '書き出せませんでした'); return ok; }
+function expAll() {
+var d = { v: 2, app: 'kumanaku-v2', at: new Date().toISOString(), lines: KM2.draw.state.lines, notes: S.getNotes(), photos: S.getPhotos(), track: S.getTrack(), prefs: S.prefs() };
+var ok = dl('kumanaku2_all_' + stamp() + '.json', JSON.stringify(d), 'application/json');
+toast(ok ? 'バックアップJSONを書き出しました' : '書き出せませんでした'); return ok;
+}
+function importText(text) {
+var found = [], n = 0, t = String(text);
+var j = null; try { j = JSON.parse(t); } catch (e) { }
+if (j) {
+(function walk(o, d) {
+if (d > 7 || !o || typeof o !== 'object' || found.length > 8000) return;
+if (Array.isArray(o)) {
+if (o.length && Array.isArray(o[0]) && typeof o[0][0] === 'number') { var p = S.norm(o); if (p) found.push(S.mk(p, { migrated: true })); return; }
+for (var i = 0; i < o.length; i++) {
+var v = o[i];
+if (v && typeof v === 'object' && (v.pts || v.points)) { var q = S.norm(v.pts || v.points); if (q) found.push(S.mk(q, { color: v.color, width: v.width, name: v.name, migrated: true })); }
+else walk(v, d + 1);
+}
+return;
+}
+['lines', 'all', 'keys', 'data', 'draw', 'items'].forEach(function (f) { if (o[f]) walk(o[f], d + 1); });
+})(j, 0);
+if (j.notes && j.notes.length) { var nn = S.getNotes().concat(j.notes); S.setNotes(nn); KM2.media.render(); }
+} else if (/<trkpt|<gpx|<kml|<coordinates/i.test(t)) {
+var re = /<trkpt[^>]*lat="([-\d.]+)"[^>]*lon="([-\d.]+)"/g, m, cur = [];
+while ((m = re.exec(t))) { cur.push([parseFloat(m[1]), parseFloat(m[2])]); }
+if (cur.length > 1) found.push(S.mk(S.norm(cur), { migrated: true }));
+if (!found.length) {
+var re2 = /<coordinates>([\s\S]*?)<\/coordinates>/g, m2;
+while ((m2 = re2.exec(t))) {
+var pts = m2[1].trim().split(/\s+/).map(function (s) { var a = s.split(','); return [parseFloat(a[1]), parseFloat(a[0])]; }).filter(function (p) { return isFinite(p[0]) && isFinite(p[1]); });
+var np = S.norm(pts); if (np) found.push(S.mk(np, { migrated: true }));
+}
+}
+}
+var merged = S.dedupe(KM2.draw.state.lines.concat(found));
+n = merged.length - KM2.draw.state.lines.length;
+if (n > 0) KM2.draw.replaceAll(merged);
+toast(n > 0 ? ('読み込みました：' + n + '本を追加（合計 ' + merged.length + '本）') : '新しい線はありませんでした');
+return n;
+}
+function pick() {
+var f = document.getElementById('fJson');
+f.value = '';
+f.onchange = function () {
+var file = f.files && f.files[0]; if (!file) return;
+var fr = new FileReader();
+fr.onload = function () { importText(fr.result); };
+fr.onerror = function () { toast('ファイルを読めません'); };
+fr.readAsText(file);
+};
+f.click();
+}
+KM2.exp = { gpx: gpx, kml: kml, expGpx: expGpx, expKml: expKml, expAll: expAll, importText: importText, pick: pick, download: dl };
+})();
+/* ================= 6. 線ナビ（追従・音声案内） ================= */
+(function () {
+var map, watchId = null, dot = null, on = false, follow = true, target = null, lastSpoke = 0, lastRemain = -1, done = false, errN = 0;
+function toast(m) { KM2.ui.toast(m); }
+function el(i) { return document.getElementById(i); }
+function speak(t) {
+try { if (!window.speechSynthesis) return; var u = new SpeechSynthesisUtterance(t); u.lang = 'ja-JP'; u.rate = 1.05; window.speechSynthesis.speak(u); } catch (e) { }
+}
+function beep() {
+try {
+var C = window.AudioContext || window.webkitAudioContext; if (!C) return;
+var c = new C(), o = c.createOscillator(), g = c.createGain();
+o.frequency.value = 880; g.gain.value = .12; o.connect(g); g.connect(c.destination); o.start();
+setTimeout(function () { try { o.stop(); c.close(); } catch (e) { } }, 260);
+} catch (e) { }
+}
+function nearLine(p) {
+if (!target || !target.pts.length) return null;
+var bd = 1e9, bi = 0, i, d;
+for (i = 0; i < target.pts.length; i++) { d = KM2.draw.distM([p.lat, p.lng], target.pts[i]); if (d < bd) { bd = d; bi = i; } }
+var rem = 0;
+for (i = bi; i < target.pts.length - 1; i++) rem += KM2.draw.distM(target.pts[i], target.pts[i + 1]);
+return { d: bd, i: bi, rem: rem };
+}
+function pick(p) {
+var ls = KM2.draw.state.lines;
+if (!ls.length) return null;
+if (!p) return ls[ls.length - 1];
+var best = null, bd = 1e9, i, j, d;
+for (i = 0; i < ls.length; i++) {
+var st = Math.max(1, Math.floor(ls[i].pts.length / 40));
+for (j = 0; j < ls[i].pts.length; j += st) { d = KM2.draw.distM([p.lat, p.lng], ls[i].pts[j]); if (d < bd) { bd = d; best = ls[i]; } }
+}
+return best || ls[ls.length - 1];
+}
+function onFix(pos) {
+var lat = pos.coords.latitude, lng = pos.coords.longitude, p = { lat: lat, lng: lng };
+if (!dot) dot = L.marker([lat, lng], { icon: L.divIcon({ className: '', iconSize: [22, 22], iconAnchor: [11, 11], html: '<div class="pdot"></div>' }), keyboard: false, zIndexOffset: 1000 }).addTo(map);
+else dot.setLatLng([lat, lng]);
+if (!target) target = pick(p);
+var r = nearLine(p);
+if (!r) { el('navT').textContent = 'ナビ：手描きの線がありません'; return; }
+var rt = r.rem >= 1000 ? (r.rem / 1000).toFixed(2) + 'km' : Math.round(r.rem) + 'm';
+el('navT').textContent = 'ナビ：残り ' + rt + (r.d > 40 ? '（街道から ' + Math.round(r.d) + 'm 離れています）' : '');
+el('navS').textContent = '目標：' + (target.name || '手描き線') + ' ・ ' + target.pts.length + '点 ・ 精度 ±' + Math.round(pos.coords.accuracy || 0) + 'm';
+if (follow) map.setView([lat, lng], Math.max(map.getZoom(), 15), { animate: false });
+var now = Date.now();
+if (now - lastSpoke > 15000) {
+if (r.d > 60) { speak('街道から ' + Math.round(r.d) + ' メートル離れています'); lastSpoke = now; }
+else if (Math.abs(r.rem - lastRemain) > 40) { speak(r.rem > 200 ? ('残り ' + Math.round(r.rem / 50) * 50 + ' メートルです') : 'まもなく終点です'); lastSpoke = now; lastRemain = r.rem; }
+}
+if (r.rem < 25 && !done) { done = true; speak('終点です'); beep(); }
+KM2.track.onFix(pos);
+}
+function onErr(e) { errN++; el('navT').textContent = 'ナビ：位置情報を取得できません（' + ((e && e.message) || 'エラー') + '）'; if (errN === 1) toast('位置情報の許可を確認してください'); }
+function start() {
+on = true; done = false; lastRemain = -1;
+el('navBar').className = 'show'; el('bNav').className = 't on';
+target = pick(null);
+if (!navigator.geolocation) { el('navT').textContent = 'この端末では位置情報が使えません'; return; }
+if (watchId !== null) { try { navigator.geolocation.clearWatch(watchId); } catch (e) { } }
+watchId = navigator.geolocation.watchPosition(onFix, onErr, { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 });
+toast(target ? 'ナビを開始しました（' + (target.name || '手描き線') + '）' : '線が無いので追従だけ開始しました');
+speak('ナビを開始します');
+}
+function stop() {
+on = false;
+if (watchId !== null) { try { navigator.geolocation.clearWatch(watchId); } catch (e) { } watchId = null; }
+el('navBar').className = ''; el('bNav').className = 't';
+if (dot) { try { map.removeLayer(dot); } catch (e) { } dot = null; }
+try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) { }
+toast('ナビを停止しました');
+}
+function init(m) {
+map = m;
+el('navX').onclick = stop;
+el('navF').onclick = function () { follow = !follow; el('navF').textContent = '追従：' + (follow ? 'ON' : 'OFF'); if (follow && dot) map.setView(dot.getLatLng(), Math.max(map.getZoom(), 15)); };
+return true;
+}
+KM2.nav = { init: init, start: start, stop: stop, isOn: function () { return on; }, state: function () { return { on: on, follow: follow, targetPts: target ? target.pts.length : 0, err: errN }; } };
+})();
+/* ================= 7. 歩行記録とまとめ ================= */
+(function () {
+var S = KM2.store, map, rec = false, watchId = null, line = null, last = null;
+function toast(m) { KM2.ui.toast(m); }
+function T() { var t = S.getTrack(); if (!t || !Array.isArray(t.pts)) t = { v: 2, pts: [] }; return t; }
+function total() { var t = T(), d = 0, i; for (i = 1; i < t.pts.length; i++) d += KM2.draw.distM([t.pts[i - 1][0], t.pts[i - 1][1]], [t.pts[i][0], t.pts[i][1]]); return d; }
+function today() {
+var t = T(), d = 0, i, z = new Date(); z.setHours(0, 0, 0, 0);
+for (i = 1; i < t.pts.length; i++) { if ((t.pts[i][2] || 0) < z.getTime()) continue; d += KM2.draw.distM([t.pts[i - 1][0], t.pts[i - 1][1]], [t.pts[i][0], t.pts[i][1]]); }
+return d;
+}
+function render() {
+var t = T(), p = [], i;
+for (i = 0; i < t.pts.length; i++) p.push([t.pts[i][0], t.pts[i][1]]);
+if (line) { try { map.removeLayer(line); } catch (e) { } line = null; }
+if (p.length > 1) line = L.polyline(p, { color: '#1e88e5', weight: 4, opacity: .8, dashArray: '6 6', interactive: false }).addTo(map);
+}
+function onFix(pos) {
+if (!rec) return;
+var p = [pos.coords.latitude, pos.coords.longitude, Date.now()];
+if (last && KM2.draw.distM([last[0], last[1]], [p[0], p[1]]) < 10) return;
+var t = T(); t.pts.push(p);
+if (t.pts.length > 40000) t.pts = t.pts.slice(-40000);
+S.setTrack(t); last = p; render(); KM2.onChange();
+}
+function start() {
+if (rec) { toast('すでに記録中です'); return; }
+if (!navigator.geolocation) { toast('位置情報が使えません'); return; }
+rec = true; watchId = navigator.geolocation.watchPosition(onFix, function (e) { toast('位置情報エラー：' + (e.message || '')); }, { enableHighAccuracy: true, maximumAge: 3000, timeout: 20000 });
+var b = document.getElementById('bRec'); if (b) b.className = 't on';
+toast('記録を開始しました');
+}
+function stop() {
+rec = false;
+if (watchId !== null) { try { navigator.geolocation.clearWatch(watchId); } catch (e) { } watchId = null; }
+var b = document.getElementById('bRec'); if (b) b.className = 't';
+toast('記録を停止しました');
+}
+function visited() {
+var t = T(), d = KM2.poi.data(), n = 0, i, j, seen = {};
+for (i = 0; i < t.pts.length; i += 2) {
+for (j = 0; j < d.length; j++) {
+if (seen[j]) continue;
+if (KM2.draw.distM([t.pts[i][0], t.pts[i][1]], [d[j].lat, d[j].lng]) < 150) { seen[j] = 1; n++; }
+}
+}
+return n;
+}
+function fmt(m) { return m >= 1000 ? (m / 1000).toFixed(2) + ' km' : Math.round(m) + ' m'; }
+function build() {
+var c = KM2.draw.count(), md = KM2.media.count(), st = S.stats(), mig = S.lastMig(), tot = KM2.poi.data().length, v = visited();
+var rows = [
+['手描きの線', c.lines + ' 本 / ' + c.pts + ' 点'],
+['記録した距離（合計）', fmt(total())],
+['今日の距離', fmt(today())],
+['記録の点数', T().pts.length + ' 点'],
+['訪問した名所', v + ' / ' + tot + ' 件（' + (tot ? (v / tot * 100).toFixed(1) : '0.0') + '%）'],
+['写真 / メモ', md.photos + ' 枚 / ' + md.notes + ' 件'],
+['保存データ', Math.round(st.bytes / 1024) + ' KB（' + st.keys + ' 項目）']
+];
+if (mig) rows.push(['旧アプリからの引き継ぎ', new Date(mig.at).toLocaleString('ja-JP') + ' ・ ' + mig.added + ' 本を追加（合計 ' + mig.total + ' 本）']);
+var h = '';
+for (var i = 0; i < rows.length; i++) h += '<div class="kv"><span>' + rows[i][0] + '</span><b>' + rows[i][1] + '</b></div>';
+h += '<div class="muted" style="margin-top:8px">名所は拡大（ズーム11以上）で表示。訪問は記録した軌跡から150m以内で判定します。</div>';
+return h;
+}
+function init(m) { map = m; render(); return true; }
+KM2.track = { init: init, start: start, stop: stop, onFix: onFix, total: total, today: today, isRec: function () { return rec; }, visited: visited, build: build, render: render };
+})();
+/* ================= 起動とUI ================= */
+(function () {
+var S = KM2.store, map = null;
+function el(i) { return document.getElementById(i); }
+function toast(m, ms) {
+var t = el('toast'); t.textContent = m; t.className = 'show';
+if (toast.t) clearTimeout(toast.t);
+toast.t = setTimeout(function () { t.className = ''; }, ms || 2800);
+}
+function err(m) { var e = el('err'); e.style.display = 'block'; e.textContent = String(m).slice(0, 600); }
+KM2.ui = { toast: toast, err: err };
+function sheet(title, html, after) { el('sTitle').textContent = title; el('sBody').innerHTML = html; el('sheet').className = 'open'; if (after) after(); }
+function close() { el('sheet').className = ''; }
+function hud() {
+var c = KM2.draw.count(), t = KM2.track.total();
+el('hudS').textContent = '線 ' + c.lines + '本 / ' + c.pts + '点 ・ 記録 ' + (t >= 1000 ? (t / 1000).toFixed(2) + 'km' : Math.round(t) + 'm') + (KM2.track.isRec() ? ' ●記録中' : '');
+}
+KM2.onChange = function () { try { hud(); } catch (e) { } };
+function center() { var c = map.getCenter(); return { lat: c.lat, lng: c.lng }; }
+function sheetData() {
+var h = '<div class="row"><button class="primary" id="dSave">💾 保存（線も含む）</button><button id="dLoad">📥 読込（JSON/GPX/KML）</button></div>' +
+'<div class="row"><button id="dGpx">⬇ GPX書き出し</button><button id="dKml">⬇ KML書き出し</button></div>' +
+'<div class="muted">GPX/KMLは線の形をそのまま保つので、OsmAnd・YAMAP・ジオグラフィカ・Googleマイマップ等に読み込んで案内できます。</div>' +
+'<div class="row" style="margin-top:10px"><button id="dUndo">↶ 戻す</button><button id="dRedo">↷ やり直し</button></div>' +
+'<div class="row"><button class="danger" id="dClear">🧨 手描き線を全消去</button></div>' +
+'<div class="muted">全消去は保存線と旧キーを消します（元に戻せません）。先に「保存（線も含む）」で退避してください。</div>';
+sheet('保存・書き出し・全消去', h, function () {
+el('dSave').onclick = function () { KM2.exp.expAll(); };
+el('dLoad').onclick = function () { KM2.exp.pick(); };
+el('dGpx').onclick = function () { KM2.exp.expGpx(); };
+el('dKml').onclick = function () { KM2.exp.expKml(); };
+el('dUndo').onclick = function () { KM2.draw.undo(); hud(); };
+el('dRedo').onclick = function () { KM2.draw.redo(); hud(); };
+el('dClear').onclick = function () {
+if (!confirm('端末の手描き線データをすべて消します。\n（元に戻せません。必要なら先に「保存（線も含む）」で書き出してください）\n\n実行しますか？')) return;
+S.clearLines(); KM2.draw.replaceAll([]); KM2.draw.save(); hud(); toast('手描き線をすべて消しました');
+};
+});
+}
+function sheetStyle() {
+var cols = ['#e53935', '#ef6c00', '#1e88e5', '#2e7d32', '#212121', '#8e24aa'];
+var h = '<div class="muted">線の色（新しく引く線に適用）</div><div class="row">';
+for (var i = 0; i < cols.length; i++) h += '<button data-c="' + cols[i] + '" style="background:' + cols[i] + ';color:#fff;border-color:' + (KM2.draw.state.color === cols[i] ? '#000' : '#fff') + '">' + (KM2.draw.state.color === cols[i] ? '✔' : '　') + '</button>';
+h += '</div><div class="muted">太さ</div><div class="row">';
+[4, 6, 9].forEach(function (w) { h += '<button data-w="' + w + '"' + (KM2.draw.state.width === w ? ' class="primary"' : '') + '>太さ ' + w + '</button>'; });
+h += '</div><div class="muted">消しゴムの半径</div><div class="row">';
+[12, 22, 40].forEach(function (r) { h += '<button data-r="' + r + '"' + (KM2.draw.state.erR === r ? ' class="primary"' : '') + '>半径 ' + r + 'm</button>'; });
+h += '</div>';
+sheet('色・太さ・消しゴム', h, function () {
+var b = el('sBody');
+b.querySelectorAll('button[data-c]').forEach(function (x) { x.onclick = function () { KM2.draw.setColor(x.getAttribute('data-c')); sheetStyle(); }; });
+b.querySelectorAll('button[data-w]').forEach(function (x) { x.onclick = function () { KM2.draw.setWidth(Number(x.getAttribute('data-w'))); sheetStyle(); }; });
+b.querySelectorAll('button[data-r]').forEach(function (x) { x.onclick = function () { KM2.draw.setEr(Number(x.getAttribute('data-r'))); sheetStyle(); }; });
+});
+}
+function sheetPhoto() {
+var ps = S.getPhotos(), h = '<div class="row"><button class="primary" id="pAdd">📷 写真を撮る／選ぶ</button></div><div class="muted">写真は地図の中心に置かれます。画像は IndexedDB に保存します。</div>';
+h += '<div class="item">';
+for (var i = ps.length - 1; i >= 0; i--) h += '<div style="border-bottom:1px solid #eee;padding:6px 0;display:flex;gap:8px;align-items:center"><img src="' + ps[i].thumb + '" style="width:46px;height:46px;object-fit:cover;border-radius:6px"><div style="flex:1"><b>' + (ps[i].name || '写真') + '</b><br><span class="muted">' + new Date(ps[i].time).toLocaleString('ja-JP') + ' / ' + ps[i].lat.toFixed(5) + ',' + ps[i].lng.toFixed(5) + '</span><br><button data-go="' + i + '">地図で見る</button><button data-del="' + ps[i].id + '">消す</button></div></div>';
+h += '</div>';
+if (!ps.length) h += '<div class="muted">まだ写真がありません</div>';
+sheet('写真（' + ps.length + '枚）', h, function () {
+el('pAdd').onclick = function () { el('fPhoto').click(); };
+var b = el('sBody');
+b.querySelectorAll('button[data-del]').forEach(function (x) { x.onclick = function () { var id = x.getAttribute('data-del'); KM2.media.del(id).then(function () { S.setPhotos(S.getPhotos().filter(function (p) { return p.id !== id; })); KM2.media.render(); sheetPhoto(); hud(); }); }; });
+b.querySelectorAll('button[data-go]').forEach(function (x) { x.onclick = function () { var p = S.getPhotos()[Number(x.getAttribute('data-go'))]; if (p) { map.setView([p.lat, p.lng], 17); close(); } }; });
+});
+}
+function sheetMemo() {
+var ns = S.getNotes(), h = '<div class="muted">メモは地図の中心に置かれます。地図を動かしてから書いてください。</div><textarea id="mText" rows="3" placeholder="例：ここで昼休憩／石碑を見つけた"></textarea><div class="row"><button class="primary" id="mSave">📝 保存</button></div>';
+for (var i = ns.length - 1; i >= 0; i--) h += '<div style="border-bottom:1px solid #eee;padding:6px 0">' + String(ns[i].text).replace(/[<>]/g, '') + '<br><span class="muted">' + new Date(ns[i].time).toLocaleString('ja-JP') + '</span><br><button data-go2="' + i + '">地図で見る</button></div>';
+if (!ns.length) h += '<div class="muted">まだメモがありません</div>';
+sheet('メモ（' + ns.length + '件）', h, function () {
+el('mSave').onclick = function () { var v = el('mText').value.trim(); if (!v) { toast('メモが空です'); return; } KM2.media.addNote(v, center()); sheetMemo(); };
+el('sBody').querySelectorAll('button[data-go2]').forEach(function (x) { x.onclick = function () { var p = S.getNotes()[Number(x.getAttribute('data-go2'))]; if (p) { map.setView([p.lat, p.lng], 17); close(); } }; });
+});
+}
+function sheetPoi() {
+var c = center(), n = KM2.poi.nearest(c.lat, c.lng, 3000);
+var h = '<div class="row"><button class="primary" id="poiT">' + (KM2.poi.isOn() ? '👁 名所を隠す' : '👁 名所を表示') + '</button></div>' +
+'<div class="muted">登録：' + KM2.poi.data().length + ' 件（寺・社・城・史跡・墓・戦跡・宿場）</div>';
+if (n) h += '<div class="kv"><span>地図中心の最寄り</span><b>' + n.n + '（' + n.k + '）</b></div><div class="muted">約 ' + Math.round(n.d) + ' m ・ ' + String(n.note || '').slice(0, 150) + '</div><div class="row"><button id="poiGo">地図で見る</button></div>';
+sheet('名所・史跡・墓', h, function () {
+el('poiT').onclick = function () { KM2.poi.toggle(); sheetPoi(); };
+if (el('poiGo')) el('poiGo').onclick = function () { map.setView([n.lat, n.lng], 17); close(); };
+});
+}
+function sheetSum() {
+sheet('まとめ', '<div id="sumBody">' + KM2.track.build() + '</div><div class="row"><button class="primary" id="sumRec">▶ 記録 開始/停止</button><button id="sumRe">再読み込み</button></div>', function () {
+el('sumRec').onclick = function () { if (KM2.track.isRec()) KM2.track.stop(); else KM2.track.start(); el('sumBody').innerHTML = KM2.track.build(); hud(); };
+el('sumRe').onclick = function () { el('sumBody').innerHTML = KM2.track.build(); };
+});
+}
+function wire() {
+el('bPen').onclick = function () { KM2.draw.setMode('pen'); };
+el('bEra').onclick = function () { KM2.draw.setMode('era'); };
+el('bPan').onclick = function () { KM2.draw.setMode('pan'); };
+el('bUndo').onclick = function () { KM2.draw.undo(); };
+el('bRedo').onclick = function () { KM2.draw.redo(); };
+el('bStyle').onclick = sheetStyle;
+el('bPoi').onclick = sheetPoi;
+el('bPhoto').onclick = sheetPhoto;
+el('bMemo').onclick = sheetMemo;
+el('bNav').onclick = function () { if (KM2.nav.isOn()) KM2.nav.stop(); else KM2.nav.start(); };
+el('bRec').onclick = function () { if (KM2.track.isRec()) KM2.track.stop(); else KM2.track.start(); hud(); };
+el('bSum').onclick = sheetSum;
+el('bData').onclick = sheetData;
+el('sClose').onclick = close;
+el('fPhoto').onchange = function () {
+var f = el('fPhoto').files && el('fPhoto').files[0]; if (!f) return;
+KM2.media.addFile(f, center()).then(function () { toast('写真を保存しました'); sheetPhoto(); }).catch(function (e) { toast('写真を保存できません：' + e); });
+el('fPhoto').value = '';
+};
+window.addEventListener('error', function (ev) { err('エラー：' + (ev.message || '不明')); });
+window.addEventListener('unhandledrejection', function (ev) {
+var m = String((ev.reason && ev.reason.message) || ev.reason || '');
+if (/ServiceWorker|sw\.js/i.test(m)) return;
+err('エラー：' + m);
+});
+}
+var tries = 0;
+function boot() {
+if (typeof L === 'undefined') {
+tries++;
+if (tries < 15) { setTimeout(boot, 400); return; }
+err('地図ライブラリ（Leaflet）を読み込めませんでした。通信を確認して再読み込みしてください。'); return;
+}
+try {
+map = L.map('map', { zoomControl: false, preferCanvas: true }).setView([34.99, 135.78], 11);
+L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '国土地理院 標準地図' }).addTo(map);
+var mig = S.migrate();
+try { (function(){ var isFake=function(p){ try{ if(!p||!p.length||p.length<2) return false; var a=p[0], b=p[p.length-1]; var dy=(b[0]-a[0])*111320, dx=(b[1]-a[1])*111320*Math.cos(a[0]*Math.PI/180); var d=Math.sqrt(dx*dx+dy*dy); if(d<20000) return false; var den=Math.sqrt((b[0]-a[0])*(b[0]-a[0])+(b[1]-a[1])*(b[1]-a[1])); if(!den) return false; var mx=0; for(var i=1;i<p.length-1;i++){ var num=Math.abs((b[1]-a[1])*(a[0]-p[i][0])-(b[0]-a[0])*(a[1]-p[i][1])); var dev=(num/den)*111320; if(dev>mx) mx=dev; } return mx<30; }catch(e){ return false; } };
+var cur=S.getLines()||[], keep=[], removed=0, i;
+for(i=0;i<cur.length;i++){ if(isFake(cur[i].pts)){ removed++; } else { keep.push(cur[i]); } }
+if(removed>0){ S.setLines(keep); console.log('[v2.1] 偽の直線を除去: '+removed+'本'); }
+var ks=S.oldKeys(), ch2=0;
+for(i=0;i<ks.length;i++){ try{ var raw=localStorage.getItem(ks[i]); if(!raw) continue; var ob=JSON.parse(raw), ch=false;
+var strip=function(arr){ var out=[]; for(var j=0;j<arr.length;j++){ var it=arr[j]; var pp=it&&(it.pts||it.points||it); if(pp&&pp.length&&Array.isArray(pp[0])&&isFake(pp)){ ch=true; continue; } out.push(it); } return out; };
+if(Array.isArray(ob)){ ob=strip(ob); } else if(ob&&Array.isArray(ob.lines)){ ob.lines=strip(ob.lines); } else if(ob&&Array.isArray(ob.strokes)){ ob.strokes=strip(ob.strokes); }
+if(ch){ try{ localStorage.setItem(ks[i], JSON.stringify(ob)); ch2++; }catch(e){} } }catch(e){} }
+if(ch2) console.log('[v2.1] 旧キー掃除: '+ch2+'件');
+})(); } catch(e) {}
+KM2.draw.init(map); KM2.poi.init(map); KM2.media.init(map); KM2.track.init(map); KM2.nav.init(map);
+wire(); hud();
+if (mig.added > 0) toast('旧データから ' + mig.added + ' 本の線を引き継ぎました（合計 ' + mig.total + ' 本）', 5200);
+else if (mig.total > 0) toast('保存された線 ' + mig.total + ' 本を読み込みました', 3200);
+else toast('v2 起動。右の ✏️ で線を引けます', 4200);
+} catch (e) { err('起動エラー：' + ((e && e.message) || e)); }
+}
+window.__km2 = { map: function () { return map; }, boot: boot, ready: false };
+if (document.readyState === 'complete' || document.readyState === 'interactive') setTimeout(boot, 0);
+else document.addEventListener('DOMContentLoaded', boot);
+})();</script>
+</body>
+</html>
+
+
