@@ -1,6 +1,22 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+<script>/* First capture owner: legacy capture handlers must never intercept panel open. */
+(function(){
+ window.addEventListener('click',function(ev){
+  var b=ev.target&&ev.target.closest?ev.target.closest('button,a,[role="button"]'):null;
+  var api=window.__km216;if(!b||!api||typeof api.open!=='function')return;
+  var id=b.id||'',text=(b.textContent||'').trim(),p=document.getElementById('kmDrawPanel');
+  var inside=p&&p.contains(b);
+  if(!inside&&(id==='drawBtn'||id==='km195Trace'||id==='kmDrawMin'||id==='pnlChip_kmDrawPanel'||id==='pnlShow_kmDrawPanel')){
+   ev.preventDefault();ev.stopImmediatePropagation();api.open();return;
+  }
+  if(inside&&(id==='kmDvMin'||id==='kmDvClose'||id==='pnlClose_kmDrawPanel'||id==='pnlHide_kmDrawPanel'||/^[✕×✖❌]$/.test(text)||text==='閉じる')){
+   ev.preventDefault();ev.stopImmediatePropagation();api.close();
+  }
+ },true);
+})();</script>
+
 
 
 <script>
@@ -1924,7 +1940,7 @@ window.kmEl=function(id){ var e=document.getElementById(id); if(e) return e;
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版8</span><span style="font-size:11px;color:#999;margin-left:4px">10/04</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版9</span><span style="font-size:11px;color:#999;margin-left:4px">10/05</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -5709,7 +5725,7 @@ function ownRender(){
  });
  info('手描きの街道 '+ALL.length+' 件。名前を押すと、その線の場所へ移動します。');
 }
-window.__kmOwnRoutes={rows:ownRows,importText:ownImportText,refresh:function(){renderList();},version:'20261005-own-8'};
+window.__kmOwnRoutes={rows:ownRows,importText:ownImportText,refresh:function(){renderList();},version:'20261005-own-9'};
 
 function renderListCore(){return ownRender();}
 function renderList(){return ownRender();}
@@ -12297,7 +12313,7 @@ function css(){if(CSS)return;CSS=true;try{
  var s=document.createElement('style');s.id='km216css';
  s.textContent='html,body{transform:none !important;}#kmDrawPanel,#kmTracePanel{position:fixed !important;left:5px !important;right:auto !important;width:auto !important;min-width:0 !important;max-width:min(340px,calc(100vw - 10px)) !important;bottom:98px !important;top:auto !important;height:auto !important;max-height:46vh !important;transform:none !important;z-index:2147483600 !important;box-sizing:border-box !important;overflow-y:auto !important;overflow-x:hidden !important;touch-action:pan-y !important;margin:0 !important;visibility:visible !important;opacity:1 !important;pointer-events:auto !important;padding:4px 5px !important;border-radius:11px !important;font:600 10.5px/1.2 system-ui,sans-serif !important;}#kmDrawPanel .hd{font-size:11px !important;}#kmDrawPanel .hd span{font-size:9.5px !important;}#kmDrawPanel .row{gap:4px !important;margin-top:4px !important;}#kmDrawPanel button,#kmDrawPanel .sw,#kmDrawPanel .mz{white-space:nowrap !important;}#kmDrawPanel button.big{min-height:30px !important;font-size:10.5px !important;border-width:1.5px !important;border-radius:8px !important;padding:0 3px !important;}#kmDrawPanel button.sm{min-height:24px !important;font-size:10px !important;border-width:1.5px !important;border-radius:7px !important;padding:0 3px !important;}#kmDrawPanel .sw{width:23px !important;height:21px !important;}#kmDrawPanel .mz{width:27px !important;height:21px !important;font-size:11px !important;}#kmDrawPanel .hint{font-size:9px !important;line-height:1.25 !important;white-space:normal !important;}#km216tag{position:fixed !important;left:5px !important;top:6px !important;z-index:2147483647 !important;background:#065f46 !important;color:#fff !important;font:700 11px/1.4 system-ui,sans-serif !important;padding:2px 7px !important;border-radius:9px !important;pointer-events:auto !important;}';(document.head||document.documentElement).appendChild(s);}catch(e){}}
 function tag(){try{if(document.getElementById('km216tag'))return;var d=document.createElement('div');d.id='km216tag';d.textContent='KM v228 ・ パネル小';d.style.pointerEvents='auto';d.style.cursor='pointer';d.addEventListener('click',function(ev){try{ev.preventDefault();ev.stopPropagation();BIG=!BIG;window.__km216stats.big=BIG;apply('badge');}catch(e){}},true);(document.body||document.documentElement).appendChild(d);}catch(e){}}
-var PROPS=['display','visibility','opacity','position','left','right','top','bottom','width','minWidth','maxWidth','height','maxHeight','transform','zIndex','overflowY','pointerEvents','boxSizing','margin'];
+var PROPS=['cssText','display','visibility','opacity','position','left','right','top','bottom','width','minWidth','maxWidth','height','maxHeight','transform','zIndex','overflowY','pointerEvents','boxSizing','margin'];
 function lock(p){
  if(!p||p.__km216lock)return; p.__km216lock=1;
  for(var i=0;i<PROPS.length;i++){
@@ -12374,6 +12390,8 @@ function bind(){if(BOUND)return;BOUND=true;
  window.addEventListener('resize',function(){if(DEB)clearTimeout(DEB);DEB=setTimeout(function(){apply('resize');},220);},false);
  window.addEventListener('orientationchange',function(){setTimeout(function(){apply('rotate');},320);},false);}
 if(window.visualViewport)window.visualViewport.addEventListener('resize',function(){if(DEB)clearTimeout(DEB);DEB=setTimeout(function(){apply('viewport');},100);});
+window.__kmDrawOpen167=function(){window.__km216.open();return 'open';};
+window.__kmDrawClose167=function(){window.__km216.close();return 'closed';};
 function boot(why){try{var p=P();if(!p)return;bind();apply(why);}catch(e){window.__km216err=String(e);}}
 window.__km216={open:function(){setWant(true,'api');},big:function(v){BIG=!!v;window.__km216stats.big=BIG;apply('big');},fit:function(w){CW=w;apply('fit');},close:function(){setWant(false,'api');},toggle:function(){setWant(!WANT,'api');},
  state:function(){var p=P();return {want:WANT,vis:vis(p),box:bx(p),own:OWNW,blocked:BLOCKED,big:BIG,cw:CW};},
