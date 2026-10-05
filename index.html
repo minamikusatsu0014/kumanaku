@@ -3,12 +3,13 @@
 <head>
 <script>/* First capture owner: legacy capture handlers must never intercept panel open. */
 (function(){
+ window.__kmNativeGet=Storage.prototype.getItem;window.__kmNativeSet=Storage.prototype.setItem;
  window.addEventListener('click',function(ev){
   var b=ev.target&&ev.target.closest?ev.target.closest('button,a,[role="button"]'):null;
   var api=window.__km216;if(!b||!api||typeof api.open!=='function')return;
   var id=b.id||'',text=(b.textContent||'').trim(),p=document.getElementById('kmTraceControls')||document.getElementById('kmDrawPanel');
   var inside=p&&p.contains(b);
-  if(!inside&&(id==='drawBtn'||id==='km195Trace'||id==='kmDrawMin'||id==='pnlChip_kmDrawPanel'||id==='pnlShow_kmDrawPanel')){
+  if(!inside&&(id==='kmTraceReopen'||id==='drawBtn'||id==='km195Trace'||id==='kmDrawMin'||id==='pnlChip_kmDrawPanel'||id==='pnlShow_kmDrawPanel')){
    ev.preventDefault();ev.stopImmediatePropagation();api.open();return;
   }
   if(inside&&(id==='kmDvMin'||id==='kmDvClose'||id==='pnlClose_kmDrawPanel'||id==='pnlHide_kmDrawPanel'||/^[✕×✖❌]$/.test(text)||text==='閉じる')){
@@ -1940,7 +1941,7 @@ window.kmEl=function(id){ var e=document.getElementById(id); if(e) return e;
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版12</span><span style="font-size:11px;color:#999;margin-left:4px">10/05</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版13</span><span style="font-size:11px;color:#999;margin-left:4px">10/05</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -7131,7 +7132,7 @@ setTimeout(hideSplash, 3500);
       var host=document.getElementById('kmTCollapseHost');
       if(!host){ host=document.createElement('div'); host.id='kmTCollapseHost';
         host.style.cssText='position:fixed;z-index:20001;right:8px;top:calc(8px + env(safe-area-inset-top));display:flex;gap:4px';
-        document.body.appendChild(host); }
+        document.documentElement.appendChild(host); }
       var mini=document.createElement('button'); mini.id='kmTMini'; mini.textContent='🧭 トレース';
       mini.style.cssText='display:none;padding:6px 8px;font-size:11px;border-radius:8px;border:1.5px solid #be123c;background:#fff;color:#be123c;box-shadow:0 2px 6px rgba(0,0,0,.3)';
       var col=document.createElement('button'); col.id='kmTCollapse'; col.textContent='▼ 最小化';
@@ -7650,9 +7651,20 @@ setTimeout(hideSplash, 3500);
   }
   try{ kmLSMigrate('km_draw_main','km_draw'); kmLSMigrate('km_icon_main','km_icon_off'); kmLSMigrate('km_panel_main','km_panel_pos'); }catch(e){}
 
-  function save(){ try{
-      localStorage.setItem(LS,JSON.stringify({v:96,lines:st.lines,delBase:(st.delBase||{}),color:st.color,width:st.width,kaitoCopied:!!st.kaitoCopied,kaitoCount:st.kaitoCount||0,editedBase:!!st.editedBase})); }catch(e){} }
-  function load(){ try{ var j=JSON.parse(localStorage.getItem(LS)||'null');
+  function save(){
+    if(!window.__kmLoaded)return false;
+    try{
+      var text=JSON.stringify({v:96,lines:st.lines,delBase:st.delBase||{},color:st.color,width:st.width,kaitoCopied:!!st.kaitoCopied,kaitoCount:st.kaitoCount||0,editedBase:!!st.editedBase,savedAt:Date.now()});
+      window.__kmNativeSet.call(localStorage,'km_draw_latest_v13',text);
+      if(window.__kmNativeGet.call(localStorage,'km_draw_latest_v13')!==text)throw new Error('保存内容の確認に失敗');
+      window.__kmSave13={ok:true,lines:st.lines.length,at:Date.now()};
+      var status=document.getElementById('kmSave13Status');if(status)status.textContent='保存済み '+st.lines.length+'本 '+new Date().toLocaleTimeString('ja-JP');
+      try{localStorage.setItem(LS,text);}catch(e){}
+      return true;
+    }catch(e){window.__kmSave13={ok:false,error:e.message};var status=document.getElementById('kmSave13Status');if(status)status.textContent='保存できません：'+e.message;return false;}
+  }
+  window.kmSave13=save;
+  function load(){ if(window.__kmLoaded)return;try{ var latest=window.__kmNativeGet.call(localStorage,'km_draw_latest_v13');var j=JSON.parse(latest||localStorage.getItem(LS)||'null');
     if(j&&j.lines){
       st.lines=j.lines; if(j.delBase) st.delBase=j.delBase; if(j.color)st.color=j.color; if(j.width)st.width=j.width;
       if(j.kaitoCount) st.kaitoCount=j.kaitoCount;
@@ -7698,7 +7710,7 @@ setTimeout(hideSplash, 3500);
   var __saveT=null, __rdT=null, __sig='';
   function kmSig(){ return JSON.stringify(st.lines); }
   function saveSoon(){ if(__saveT) return; __saveT=setTimeout(function(){ __saveT=null; try{ save(); }catch(e){} },500); }
-  function kmFlush(){ if(__saveT){ clearTimeout(__saveT); __saveT=null; try{ save(); }catch(e){} } }
+  function kmFlush(){if(__saveT){clearTimeout(__saveT);__saveT=null;}return save();}
   window.kmSaveFlush=kmFlush;
   function kmRedrawSoon(){ if(__rdT) return; __rdT=setTimeout(function(){ __rdT=null; try{ redraw(); }catch(e){} },140); }
   /* 線の点を間引く（1.2m 未満しか離れていない点を落とす。始点と終点は必ず残す） */
@@ -8004,8 +8016,8 @@ setTimeout(hideSplash, 3500);
   document.addEventListener('pointermove',function(e){ try{window.__kmLastPtr={x:e.clientX,y:e.clientY};}catch(x){} },{capture:true,passive:true});
   document.addEventListener('pointerdown',function(e){ if(__kmSkipDraw(e)) return; onDown(e); },{capture:true,passive:false});
   document.addEventListener('pointermove',function(e){ if(__kmSkipDraw(e)) return; window.__kmThrMove(e,onMove); },{capture:true,passive:false});
-  document.addEventListener('pointerup',function(e){ if(__kmSkipDraw(e)) return; onUp(e); },{capture:true});
-  document.addEventListener('pointercancel',function(e){ if(__kmSkipDraw(e)) return; onUp(e); },{capture:true});
+  document.addEventListener('pointerup',function(e){ if(__kmSkipDraw(e)) return; onUp(e); kmFlush(); },{capture:true});
+  document.addEventListener('pointercancel',function(e){ if(__kmSkipDraw(e)) return; onUp(e); kmFlush(); },{capture:true});
   function kmSelfTest(){ try{
       var pts=st.lines.reduce(function(a,l){return a+l.pts.length;},0);
       var out=[]; out.push('版='+BTAG); out.push('描画線='+st.lines.length); out.push('点数='+pts);
@@ -8020,7 +8032,7 @@ setTimeout(hideSplash, 3500);
 
   /* ---- UI ---- */
   function build(){
-    if(document.getElementById('kmDrawPanel')) return;
+    if(document.getElementById('kmDrawPanel')||document.getElementById('kmTraceControls')) return;
     var css=document.createElement('style');
     css.textContent=
       '#kmTracePanel{display:none !important}'
@@ -8174,7 +8186,7 @@ setTimeout(hideSplash, 3500);
   }
   var tries=0, t=setInterval(function(){
     try{ if(window.map&&window.L){ map=window.map; Lg=window.L; } }catch(e){}
-    if(map&&Lg&&!document.getElementById('kmDrawPanel')){ load(); redraw(); build(); }
+    if(map&&Lg&&!document.getElementById('kmDrawPanel')&&!document.getElementById('kmTraceControls')){ load(); redraw(); build(); }
     if(++tries>40) clearInterval(t);
   },300);
   window.addEventListener('load',function(){ setTimeout(function(){ try{ if(window.map&&window.L){ map=window.map;Lg=window.L; load(); redraw(); build(); } }catch(e){} },400); });
@@ -15638,7 +15650,7 @@ setInterval(addBtn,2500);
    ['km_draw_main','km_draw_mine_v1','km_draw_main_bak','km_draw_mine_bak'].forEach(function(k){localStorage.setItem(k,empty);});
    localStorage.setItem('km_clear_at',String(Date.now()));
    if(window.kmRedraw)window.kmRedraw();
-   button.textContent='🗑 全消去';window.__kmRepairClear.done=true;window.__kmRepairClear.lines=st&&st.lines.length;
+   if(window.kmSave13)window.kmSave13();button.textContent='🗑 全消去';window.__kmRepairClear.done=true;window.__kmRepairClear.lines=st&&st.lines.length;
   }catch(e){button.textContent='🗑 全消去';if(window.__kmBanner)window.__kmBanner('全消去を保存できませんでした: '+e.message);}
  },true);
 })();
@@ -15656,4 +15668,28 @@ setInterval(addBtn,2500);
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
 })();
 </script>
-</html>
+<script>
+(function(){
+ function install(){var p=document.getElementById('kmTraceControls')||document.getElementById('kmDrawPanel');if(!p||document.getElementById('kmSave13Status'))return;
+ var row=document.createElement('div');row.className='row';var b=document.createElement('button');b.type='button';b.className='sm';b.id='kmSave13Button';b.textContent='💾 今の線を保存';b.onclick=function(){if(window.kmSave13)window.kmSave13();};
+ var t=document.createElement('span');t.id='kmSave13Status';t.textContent='描き終えると保存します';row.appendChild(b);row.appendChild(t);p.appendChild(row);}
+ setInterval(install,500);
+})();
+</script><style id="kmSimple13">
+#drawBtn,#kmDrawMin,#kmMiniBar,#km195Fab,#km195,#km191Chip,#km187Chip,#kmRecChip,#kmEdChip,#kmGeomChip,#kmDvMineExp,#kmDvMineImp,#kmDvEraBack,#kmDvRest,#kmV79Back{display:none!important}
+#kmTraceControls .hd{flex-wrap:wrap}#kmTraceControls .row{flex-wrap:wrap}
+#kmTraceControls details{margin-top:6px;border-top:1px solid #ccc;padding-top:5px}
+#kmTraceControls summary{cursor:pointer;font-weight:700;padding:6px}
+#kmSave13Status{font-size:11px;overflow-wrap:anywhere}
+</style><script>
+(function(){
+ function simplify(){var p=document.getElementById('kmTraceControls')||document.getElementById('kmDrawPanel');if(!p)return;
+ var detail=document.getElementById('kmAdvanced13');if(!detail){detail=document.createElement('details');detail.id='kmAdvanced13';var summary=document.createElement('summary');summary.textContent='その他の編集・ファイル操作';detail.appendChild(summary);p.appendChild(detail);}
+ var ids=['kmDvClr','kmDvExp','kmDvImp','kmIconBtn','kmIconReset','kmMoveBtn','kmV79Sel','kmV79Del','kmV79App'];
+ ids.forEach(function(id){var b=document.getElementById(id);if(!b||detail.contains(b))return;var row=document.createElement('div');row.className='row';row.appendChild(b);detail.appendChild(row);});
+ p.querySelectorAll('.row').forEach(function(row){if(row.children.length===0)row.remove();});
+ var min=document.getElementById('kmDvMin');if(min){min.textContent='✕';min.title='閉じる';}
+ }
+ setInterval(simplify,700);
+})();
+</script></html>
