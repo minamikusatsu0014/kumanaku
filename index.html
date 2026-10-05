@@ -6,7 +6,7 @@
  window.addEventListener('click',function(ev){
   var b=ev.target&&ev.target.closest?ev.target.closest('button,a,[role="button"]'):null;
   var api=window.__km216;if(!b||!api||typeof api.open!=='function')return;
-  var id=b.id||'',text=(b.textContent||'').trim(),p=document.getElementById('kmDrawPanel');
+  var id=b.id||'',text=(b.textContent||'').trim(),p=document.getElementById('kmTraceControls')||document.getElementById('kmDrawPanel');
   var inside=p&&p.contains(b);
   if(!inside&&(id==='drawBtn'||id==='km195Trace'||id==='kmDrawMin'||id==='pnlChip_kmDrawPanel'||id==='pnlShow_kmDrawPanel')){
    ev.preventDefault();ev.stopImmediatePropagation();api.open();return;
@@ -1671,7 +1671,7 @@ window.__km227api={state:function(){return S},candidates:candidates,exportAll:ex
 })();
 
 </script>
-</head>
+<style></style></head>
 <body>
 <script id="km_el_v142">
 /* KM_EL_V142 : 削除した要素への参照を安全にする */
@@ -1940,7 +1940,7 @@ window.kmEl=function(id){ var e=document.getElementById(id); if(e) return e;
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版10</span><span style="font-size:11px;color:#999;margin-left:4px">10/05</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版11</span><span style="font-size:11px;color:#999;margin-left:4px">10/05</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -5725,7 +5725,7 @@ function ownRender(){
  });
  info('手描きの街道 '+ALL.length+' 件。名前を押すと、その線の場所へ移動します。');
 }
-window.__kmOwnRoutes={rows:ownRows,importText:ownImportText,refresh:function(){renderList();},version:'20261005-own-10'};
+window.__kmOwnRoutes={rows:ownRows,importText:ownImportText,refresh:function(){renderList();},version:'20261005-own-11'};
 
 function renderListCore(){return ownRender();}
 function renderList(){return ownRender();}
@@ -12297,13 +12297,13 @@ setInterval(tick,1500);
 </script>
 <script>/* Single trace panel host, independent of legacy panel visibility. */
 (function(){
- var want=false,host=null,panel=null,pending=0,big=false,width=350,own=0;
+ var want=false,host=null,panel=null,pending=0,big=false,width=280,own=0;
  window.__km216stats={own:0,blocked:0,enforce:0,want:false,big:false};window.__km216log=[];
  function dims(){var v=window.visualViewport;return {w:v?v.width:window.innerWidth,h:v?v.height:window.innerHeight,x:v?v.offsetLeft||0:0,y:v?v.offsetTop||0:0};}
  function set(el,name,value){if(el.style.getPropertyValue(name)!==value||el.style.getPropertyPriority(name)!=='important')el.style.setProperty(name,value,'important');}
  function create(){
-  panel=document.getElementById('kmDrawPanel');if(!panel)return false;
-  if(!host){host=document.createElement('div');host.id='kmTraceHost';host.setAttribute('popover','manual');host.setAttribute('aria-label','手描きトレースパネル');document.body.appendChild(host);
+  panel=panel||document.getElementById('kmDrawPanel');if(!panel)return false;
+  if(!host){var original=panel;panel=document.createElement('div');panel.id='kmTraceControls';panel.className=original.className;panel.style.cssText=original.style.cssText;while(original.firstChild)panel.appendChild(original.firstChild);original.removeAttribute('id');original.replaceWith(panel);host=document.createElement('div');host.id='kmTraceHost';host.setAttribute('popover','manual');host.setAttribute('aria-label','手描きトレースパネル');document.body.appendChild(host);
    var observer=new MutationObserver(schedule);observer.observe(panel,{attributes:true,attributeFilter:['style','hidden','class','data-km195hide','data-km196hide','data-km213off']});observer.observe(host,{childList:true});
   }return true;
  }
@@ -12311,14 +12311,14 @@ setInterval(tick,1500);
   if(!create())return;
   if(panel.parentNode!==host)host.appendChild(panel);
   if(!want)return;
-  var d=dims(),w=Math.max(100,Math.min(big?d.w-16:width,d.w-16)),top=Math.max(8,Math.min(90,d.h*.12)),h=Math.max(60,d.h-top-110);
+  var d=dims(),w=Math.max(100,Math.min(big?d.w-16:width,d.w-16)),top=Math.max(8,Math.min(90,d.h*.12)),h=Math.max(60,Math.min(d.h-top-110,big?d.h:Math.round(d.h*.42)));
   host.hidden=false;panel.hidden=false;
   ['data-km195hide','data-km196hide','data-km213off'].forEach(function(k){if(panel.hasAttribute(k))panel.removeAttribute(k);});
   var hs={display:'block',position:'fixed',left:(d.x+8)+'px',top:(d.y+top)+'px',right:'auto',bottom:'auto',width:w+'px','max-width':w+'px','max-height':h+'px',height:'auto',margin:'0',padding:'0',border:'0',background:'transparent','overflow-y':'auto','z-index':'2147483647','box-sizing':'border-box',visibility:'visible',opacity:'1','pointer-events':'auto',transform:'none'};
   Object.keys(hs).forEach(function(k){set(host,k,hs[k]);});
-  var ps={display:'block',position:'relative',left:'auto',right:'auto',top:'auto',bottom:'auto',width:'100%','max-width':'none','min-width':'0',height:'auto','max-height':'none',margin:'0',transform:'none',zoom:'1',visibility:'visible',opacity:'1','pointer-events':'auto','box-sizing':'border-box','overflow-y':'visible'};
+  var ps={display:'block',position:'relative',left:'auto',right:'auto',top:'auto',bottom:'auto',width:'100%','max-width':'none','min-width':'0',height:'auto','max-height':'none',margin:'0',transform:'none',zoom:big?'1':'0.8',visibility:'visible',opacity:'1','pointer-events':'auto','box-sizing':'border-box','overflow-y':'visible'};
   Object.keys(ps).forEach(function(k){set(panel,k,ps[k]);});
-  if(typeof host.showPopover==='function'){if(!host.matches(':popover-open'))try{host.showPopover();}catch(e){host.removeAttribute('popover');set(host,'display','block');}}
+  if(typeof host.showPopover==='function'){try{if(!host.matches(':popover-open'))host.showPopover();}catch(e){host.removeAttribute('popover');set(host,'display','block');}}
   else {host.removeAttribute('popover');set(host,'display','block');}
   own++;window.__km216stats.own=own;
  }
@@ -12333,8 +12333,8 @@ setInterval(tick,1500);
  }
  window.__km216={open:open,close:close,toggle:function(){if(want)close();else open();},big:function(v){big=!!v;schedule();},fit:function(v){width=v;schedule();},state:function(){var r=host&&host.getBoundingClientRect();return {want:want,vis:!!(want&&host&&!host.hidden&&panel&&getComputedStyle(panel).display!=='none'),box:r?[r.left,r.top,r.width,r.height]:null,own:own,big:big,cw:width};},stats:function(){return window.__km216stats;},log:function(){return window.__km216log;}};
  window.__kmDrawOpen167=function(){open();return 'open';};window.__kmDrawClose167=function(){close();return 'closed';};
- window.addEventListener('resize',schedule);if(window.visualViewport){window.visualViewport.addEventListener('resize',schedule);window.visualViewport.addEventListener('scroll',schedule);}
- window.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('#kmDrawPanel button'):null;if(b&&(b.id==='kmDvMin'||b.id==='pnlClose_kmDrawPanel'||/^[✕×✖❌]$/.test(b.textContent.trim()))){e.preventDefault();e.stopImmediatePropagation();close();}},true);
+ window.addEventListener('resize',function(){if(want)layout();});if(window.visualViewport){window.visualViewport.addEventListener('resize',schedule);window.visualViewport.addEventListener('scroll',schedule);}
+ window.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('#kmTraceControls button'):null;if(b&&(b.id==='kmDvMin'||b.id==='pnlClose_kmDrawPanel'||/^[✕×✖❌]$/.test(b.textContent.trim()))){e.preventDefault();e.stopImmediatePropagation();close();}},true);
 })();</script><script>/* KM_LINEKEEP_V218 : 線データの唯一の門番。空データでの上書き/削除を拒否し、消えたらスナップショットから復帰する。 */
 (function(){
 if(window.__km218)return;window.__km218=1;
