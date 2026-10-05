@@ -1924,7 +1924,7 @@ window.kmEl=function(id){ var e=document.getElementById(id); if(e) return e;
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版7</span><span style="font-size:11px;color:#999;margin-left:4px">10/04</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版8</span><span style="font-size:11px;color:#999;margin-left:4px">10/04</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -5709,7 +5709,7 @@ function ownRender(){
  });
  info('手描きの街道 '+ALL.length+' 件。名前を押すと、その線の場所へ移動します。');
 }
-window.__kmOwnRoutes={rows:ownRows,importText:ownImportText,refresh:function(){renderList();},version:'20261004-own-7'};
+window.__kmOwnRoutes={rows:ownRows,importText:ownImportText,refresh:function(){renderList();},version:'20261005-own-8'};
 
 function renderListCore(){return ownRender();}
 function renderList(){return ownRender();}
@@ -12321,18 +12321,20 @@ function write(p){
   p.style.setProperty('position','fixed','important');
   p.style.setProperty('left','6px','important');
   p.style.setProperty('right',BIG?'6px':'auto','important');
-  p.style.setProperty('top','auto','important');
-  p.style.setProperty('bottom','112px','important');
-  p.style.setProperty('width',(BIG?Math.max(240,VW())-12:Math.min(CW,Math.max(240,VW())-12))+'px','important');
+  var width=Math.max(120,VW()-12),height=VH(),offset=window.visualViewport?window.visualViewport.offsetTop||0:0;
+  var top=Math.min(96,Math.max(8,height*.12));
+  p.style.setProperty('top',(offset+top)+'px','important');
+  p.style.setProperty('bottom','auto','important');
+  p.style.setProperty('width',(BIG?width:Math.min(CW,width))+'px','important');
   p.style.setProperty('min-width','0','important');
   p.style.setProperty('max-width','none','important');
   p.style.setProperty('height','auto','important');
-  p.style.setProperty('max-height',(BIG?Math.max(150,VH()-200):Math.max(170,Math.round(Math.min(VH()*0.46,400))))+'px','important');
+  p.style.setProperty('max-height',Math.max(60,Math.min(height-top-100,BIG?height:400))+'px','important');
   p.style.setProperty('overflow-y','auto','important');
   p.style.setProperty('overflow-x','hidden','important');
   p.style.setProperty('touch-action','pan-y','important');
   p.style.setProperty('transform','none','important');
-  p.style.setProperty('z-index','2147483600','important');
+  p.style.setProperty('z-index','2147483645','important');
   p.style.setProperty('box-sizing','border-box','important');
   p.style.setProperty('visibility','visible','important');
   p.style.setProperty('opacity','1','important');
@@ -12347,7 +12349,15 @@ function apply(why){var p=P();if(!p)return;css();tag();
  p.removeAttribute('data-km196hide');p.removeAttribute('data-km195hide');p.removeAttribute('data-km213off');
  var a=p.parentNode,n=0;while(a&&a.nodeType===1&&n<12){try{a.removeAttribute('data-km196hide');a.removeAttribute('data-km195hide');}catch(e){}a=a.parentNode;n++;}
  try{var tb=document.getElementById('km216tag');if(tb)tb.textContent=BIG?'KM v228 ・ パネル大':'KM v228 ・ パネル小';}catch(e){}log((WANT?'open:':'close:')+why);}
-function setWant(v,why){WANT=!!v; if(!WANT){try{var state=window.KM_DRAW_STATE;if(state)state.mode='pan';var m=window.__kmGetMap&&window.__kmGetMap();if(m&&m.dragging)m.dragging.enable();if(m&&m.getContainer)m.getContainer().style.touchAction='pan-x pan-y';}catch(e){}} window.__km216stats.want=WANT;apply(why||'set');}
+function setWant(v,why){WANT=!!v;
+ if(WANT){
+  ['kmDrawPanel','drawPanel','kmTracePanel'].forEach(function(id){if(window.__kmClosedClear)window.__kmClosedClear(id);});
+  var p=P();if(p){p.hidden=false;p.removeAttribute('hidden');p.scrollTop=0;
+   p.querySelectorAll('[data-km195hide],[data-km196hide],[data-km213off]').forEach(function(e){e.removeAttribute('data-km195hide');e.removeAttribute('data-km196hide');e.removeAttribute('data-km213off');});}
+  var menu=document.getElementById('km195'),close=document.getElementById('km195Close');
+  if(menu&&getComputedStyle(menu).display!=='none'){if(close&&typeof close.onclick==='function')close.onclick.call(close);menu.style.setProperty('display','none','important');var fab=document.getElementById('km195Fab');if(fab)fab.style.display='block';}
+ }
+ if(!WANT){try{var state=window.KM_DRAW_STATE;if(state)state.mode='pan';var m=window.__kmGetMap&&window.__kmGetMap();if(m&&m.dragging)m.dragging.enable();if(m&&m.getContainer)m.getContainer().style.touchAction='pan-x pan-y';}catch(e){}} window.__km216stats.want=WANT;apply(why||'set');}
 function bind(){if(BOUND)return;BOUND=true;
  window.addEventListener('click',function(ev){try{
   var target=ev.target, p=P();
@@ -12358,11 +12368,12 @@ function bind(){if(BOUND)return;BOUND=true;
     ev.preventDefault();ev.stopImmediatePropagation();setWant(false,'x');return;
   }
   if(!inPanel&&(button.id==='drawBtn'||button.id==='km195Trace'||button.id==='kmDrawMin'||button.id==='pnlChip_kmDrawPanel'||txt==='✏️ 手描き'||txt==='手描き'||txt==='編集パネル')){
-    ev.preventDefault();ev.stopImmediatePropagation();setWant(!WANT,'tap');
+    ev.preventDefault();ev.stopImmediatePropagation();setWant(true,'tap');
   }
  }catch(e){}},true);
  window.addEventListener('resize',function(){if(DEB)clearTimeout(DEB);DEB=setTimeout(function(){apply('resize');},220);},false);
  window.addEventListener('orientationchange',function(){setTimeout(function(){apply('rotate');},320);},false);}
+if(window.visualViewport)window.visualViewport.addEventListener('resize',function(){if(DEB)clearTimeout(DEB);DEB=setTimeout(function(){apply('viewport');},100);});
 function boot(why){try{var p=P();if(!p)return;bind();apply(why);}catch(e){window.__km216err=String(e);}}
 window.__km216={open:function(){setWant(true,'api');},big:function(v){BIG=!!v;window.__km216stats.big=BIG;apply('big');},fit:function(w){CW=w;apply('fit');},close:function(){setWant(false,'api');},toggle:function(){setWant(!WANT,'api');},
  state:function(){var p=P();return {want:WANT,vis:vis(p),box:bx(p),own:OWNW,blocked:BLOCKED,big:BIG,cw:CW};},
