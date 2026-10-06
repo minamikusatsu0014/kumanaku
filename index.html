@@ -1685,7 +1685,7 @@ window.__km227api={state:function(){return S},candidates:candidates,exportAll:ex
 })();
 
 </script>
-<style></style><style>.km-memo-place-name{background:#fffef4;border:1px solid #b7791f;color:#34291d;font:700 12px system-ui;padding:3px 6px;border-radius:5px;white-space:normal;max-width:170px}</style></head>
+<style></style><style>.km-memo-place-name{background:#fffef4;border:1px solid #b7791f;color:#34291d;font:var(--km-memo-weight,700) 12px system-ui;padding:3px 6px;border-radius:5px;white-space:normal;max-width:170px}</style></head>
 <body>
 <script id="km_el_v142">
 /* KM_EL_V142 : 削除した要素への参照を安全にする */
@@ -1955,7 +1955,7 @@ window.kmEl=function(id){ var e=document.getElementById(id); if(e) return e;
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版18</span><span style="font-size:11px;color:#999;margin-left:4px">10/06</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版19</span><span style="font-size:11px;color:#999;margin-left:4px">10/06</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -2032,6 +2032,15 @@ window.kmEl=function(id){ var e=document.getElementById(id); if(e) return e;
 <div id="memoModal">
   <div class="card">
     <h2>🗒 訪問メモ一覧</h2>
+    <div style="border:1px solid #ddd;border-radius:8px;padding:8px;margin-bottom:10px">
+      <label for="memoFontWeight">地図上の場所名の字の太さ</label>
+      <select id="memoFontWeight" style="font-size:16px;padding:7px;width:100%;margin-top:5px">
+        <option value="400">標準</option><option value="500">やや太い</option><option value="700" selected>太字</option><option value="900">極太</option>
+      </select>
+      <div id="memoWeightPreview" style="margin-top:6px">表示例：草津宿のメモ</div>
+      <small>すべてのメモの場所名に反映します。</small>
+      <output id="memoWeightStatus" aria-live="polite" style="display:block;font-size:11px"></output>
+    </div>
     <div class="memo-row">
       <button id="memoExportBtn" class="memo-btn memo-save">💾 全記録を出力</button>
       <button id="memoImportBtn" class="memo-btn">📂 バックアップ読込</button>
@@ -12677,6 +12686,18 @@ setInterval(addBtn,2500);
 #kaidoModal,#memoModal,#memoAddModal,#photoModal,#photoView,#photoNudge {z-index:2147483646!important;}
 #kaidoModal .krow {flex-wrap:wrap;gap:8px;}
 </style>
+<script id="kmMemoWeight19">
+(function(){
+ var select=document.getElementById('memoFontWeight'),hint=document.getElementById('memoWeightStatus'),preview=document.getElementById('memoWeightPreview'),current=700,seq=0;
+ function valid(v){return [400,500,700,900].indexOf(Number(v))>=0;}
+ function apply(v){current=Number(v);document.documentElement.style.setProperty('--km-memo-weight',String(current));select.value=String(current);preview.style.fontWeight=String(current);}
+ async function db(){await window.KM_STORE17.loading;if(!window.KM_STORE17.db)throw new Error('設定の保存先を利用できません');return window.KM_STORE17.db;}
+ var ready=db().then(function(d){return new Promise(function(resolve,reject){var tx=d.transaction('drawing','readonly'),r=tx.objectStore('drawing').get('memo-font-weight19');r.onsuccess=function(){if(!seq&&valid(r.result))apply(r.result);};tx.oncomplete=resolve;tx.onabort=tx.onerror=function(){reject(new Error('設定を読み出せません'));};});}).catch(function(e){hint.textContent=e.message;});
+ select.onchange=async function(){var v=select.value;if(!valid(v))return;var n=++seq;apply(v);hint.textContent='保存中…';try{await ready;var d=await db();await new Promise(function(resolve,reject){var tx=d.transaction('drawing','readwrite');tx.objectStore('drawing').put(Number(v),'memo-font-weight19');tx.oncomplete=resolve;tx.onabort=tx.onerror=function(){reject(new Error('設定を保存できません'));};});if(n===seq)hint.textContent='保存済み';}catch(e){if(n===seq)hint.textContent=e.message;}};
+ apply(current);
+})();
+
+</script>
 </body>
 
 
