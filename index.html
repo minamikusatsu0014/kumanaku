@@ -1955,7 +1955,7 @@ window.kmEl=function(id){ var e=document.getElementById(id); if(e) return e;
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版19</span><span style="font-size:11px;color:#999;margin-left:4px">10/06</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版20</span><span style="font-size:11px;color:#999;margin-left:4px">10/06</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -2021,6 +2021,7 @@ window.kmEl=function(id){ var e=document.getElementById(id); if(e) return e;
     <div id="memoAddPos"></div>
     <input id="memoAddName" placeholder="場所の名前(例: 草津宿本陣)">
     <textarea id="memoAddText" rows="3" placeholder="見たもの・感想・日付など"></textarea>
+    <div id="memoAddStyle"></div>
     <div class="memo-row">
       <button id="memoAddSave" class="memo-btn memo-save">💾 保存</button>
       <button id="memoAddCancel" class="memo-btn">キャンセル</button>
@@ -2033,12 +2034,12 @@ window.kmEl=function(id){ var e=document.getElementById(id); if(e) return e;
   <div class="card">
     <h2>🗒 訪問メモ一覧</h2>
     <div style="border:1px solid #ddd;border-radius:8px;padding:8px;margin-bottom:10px">
-      <label for="memoFontWeight">地図上の場所名の字の太さ</label>
+      <label for="memoFontWeight">場所名の全体設定（個別指定がないメモ）</label>
       <select id="memoFontWeight" style="font-size:16px;padding:7px;width:100%;margin-top:5px">
         <option value="400">標準</option><option value="500">やや太い</option><option value="700" selected>太字</option><option value="900">極太</option>
       </select>
       <div id="memoWeightPreview" style="margin-top:6px">表示例：草津宿のメモ</div>
-      <small>すべてのメモの場所名に反映します。</small>
+      <small>個別に指定した太さが優先されます。</small>
       <output id="memoWeightStatus" aria-live="polite" style="display:block;font-size:11px"></output>
     </div>
     <div class="memo-row">
@@ -2173,8 +2174,8 @@ function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.get
 if (data.todayDate !== todayStr()) { data.todayDate = todayStr(); data.todayDist = 0; }
 
 function save(){
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
-  catch(e){ notice('⚠ 保存容量がいっぱいです。保存出力でバックアップを'); }
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); return true; }
+  catch(e){ notice('⚠ 保存容量がいっぱいです。保存出力でバックアップを'); return false; }
 }
 
 function cellKey(lat, lon){
@@ -4272,10 +4273,27 @@ function memoEsc(s){
 }
 function cpMemoKey(c){ return 'cp:'+c[0]+'|'+c[2]+','+c[3]; }
 function memoOf(key){ return (data.memo && data.memo[key]) ? data.memo[key] : null; }
+function memoStyleOptions(kind,value){
+  const items=kind==='size'?[[0,'全体設定（12px）'],[10,'小（10px）'],[12,'標準（12px）'],[14,'やや大（14px）'],[16,'大（16px）'],[20,'特大（20px）'],[24,'最大（24px）']]:[[0,'全体設定に合わせる'],[400,'標準'],[500,'やや太い'],[700,'太字'],[900,'極太']];
+  return items.map(function(x){return '<option value="'+x[0]+'"'+(Number(value||0)===x[0]?' selected':'')+'>'+x[1]+'</option>';}).join('');
+}
+function memoStyleControls(key){
+  const m=memoOf(key)||{};
+  return '<div class="memo-style-controls" style="border:1px solid #ddd;border-radius:7px;padding:7px;margin:6px 0"><b>この場所名の文字</b><label style="display:block">大きさ <select class="memo-font-size" style="font-size:16px;max-width:100%">'+memoStyleOptions('size',m.fontSize)+'</select></label><label style="display:block;margin-top:5px">太さ <select class="memo-font-weight" style="font-size:16px;max-width:100%">'+memoStyleOptions('weight',m.fontWeight)+'</select></label><small>「メモ保存」でこのメモだけに反映します。</small></div>';
+}
+function memoLabel(name,key){
+  const m=memoOf(key)||{},size=[10,12,14,16,20,24].indexOf(Number(m.fontSize))>=0?Number(m.fontSize)+'px':'inherit',weight=[400,500,700,900].indexOf(Number(m.fontWeight))>=0?Number(m.fontWeight):'inherit';
+  return '<span style="font-size:'+size+';font-weight:'+weight+'">'+memoEsc(name)+'</span>';
+}
+function memoReadStyle(el){
+  const a=el.querySelector('.memo-font-size'),b=el.querySelector('.memo-font-weight');
+  return {fontSize:a?Number(a.value):0,fontWeight:b?Number(b.value):0};
+}
 function memoBox(key, val){
   return '<div class="memo-box">'
     + '<div class="memo-lbl">🗒 訪問メモ(この端末に保存)</div>'
     + '<textarea class="memo-ta" data-key="'+memoEsc(key)+'" rows="3" placeholder="見たもの・感想・日付など">'+memoEsc(val||'')+'</textarea>'
+    + memoStyleControls(key)
     + '<div class="memo-row"><button class="memo-btn memo-save">💾 メモ保存</button><button class="memo-btn memo-del">🗑 削除</button></div>'
     + '<div class="memo-note">書き込むと🗒バッジが付きます。データは端末のブラウザ内のみ(サーバー送信なし)。</div>'
     + '</div>';
@@ -4292,7 +4310,7 @@ function addFreeMarker(f){
       + memoBox(key, me?me.t:'')
       + '<div class="memo-row"><button class="memo-btn memo-unpin">📍 この地点のピンを削除</button></div>';
   }, {maxWidth:300, minWidth:240});
-  m.bindTooltip(memoEsc(f.name||'メモ地点'),{permanent:true,direction:'right',offset:[10,0],className:'km-memo-place-name'});
+  m.bindTooltip(memoLabel(f.name||'メモ地点',key),{permanent:true,direction:'right',offset:[10,0],className:'km-memo-place-name'});
   freeMarkers[f.id] = m;
   return m;
 }
@@ -4306,19 +4324,20 @@ function refreshMemoIcons(){
     const c = CHECKPOINTS[i];
     cpMarkers[i].setIcon(cpIcon(!!data.cp[i], c[1], c[0], !!memoOf(cpMemoKey(c))));
     if(memoOf(cpMemoKey(c))){
-      cpMarkers[i].bindTooltip(memoEsc(c[0]),{permanent:true,direction:'right',offset:[10,0],className:'km-memo-place-name'});
+      cpMarkers[i].bindTooltip(memoLabel(c[0],cpMemoKey(c)),{permanent:true,direction:'right',offset:[10,0],className:'km-memo-place-name'});
     }else if(cpMarkers[i].getTooltip() && cpMarkers[i].getTooltip().options.className==='km-memo-place-name'){
       cpMarkers[i].unbindTooltip();
     }
   }
 }
-function afterMemoChange(){ updateStats(); refreshMemoIcons(); }
-function saveMemo(key, text){
+function afterMemoChange(){ updateStats(); refreshMemoIcons(); (data.free||[]).forEach(function(f){if(freeMarkers[f.id])freeMarkers[f.id].setTooltipContent(memoLabel(f.name||'メモ地点','free:'+f.id));}); }
+function saveMemo(key, text, style){
   const t = String(text==null?'':text).trim();
   if(!data.memo) data.memo = {};
-  if(!t){ if(data.memo[key]) delMemo(key); else notice('メモが空のままです'); return; }
-  data.memo[key] = {t:t, d:todayStr(), u:Date.now()};
-  save(); afterMemoChange(); notice('💾 メモを保存しました(端末内)');
+  if(!t && !style){ if(data.memo[key]) delMemo(key); else notice('メモが空のままです'); return; }
+  const old=data.memo[key]||{};
+  data.memo[key] = Object.assign({},old,{t:t, d:todayStr(), u:Date.now()},style||{});
+  const ok=save(); afterMemoChange(); if(ok)notice('💾 メモを保存しました(端末内)');
 }
 function delMemo(key){
   if(!data.memo || !data.memo[key]) return;
@@ -4382,6 +4401,7 @@ function openMemoAdd(latlng){
   document.getElementById('memoAddPos').textContent = '位置: '+latlng.lat.toFixed(5)+', '+latlng.lng.toFixed(5);
   document.getElementById('memoAddName').value = '';
   document.getElementById('memoAddText').value = '';
+  document.getElementById('memoAddStyle').innerHTML=memoStyleControls('');
   document.getElementById('memoAddModal').style.display = 'flex';
 }
 /* ポップアップ内のメモ操作を配線 */
@@ -4390,7 +4410,7 @@ map.on('popupopen', function(e){
   const ta = el.querySelector('.memo-ta'); if(!ta) return;
   const key = ta.getAttribute('data-key');
   const sb = el.querySelector('.memo-save');
-  if(sb) sb.addEventListener('click', function(){ saveMemo(key, ta.value); });
+  if(sb) sb.addEventListener('click', function(){ saveMemo(key, ta.value, memoReadStyle(el)); });
   const db = el.querySelector('.memo-del');
   if(db) db.addEventListener('click', function(){ if(confirm('このメモを削除しますか?')) delMemo(key); });
   const ub = el.querySelector('.memo-unpin');
@@ -4426,7 +4446,7 @@ document.getElementById('memoAddSave').addEventListener('click', function(){
   data.free = data.free || [];
   data.free.push({id:id, name:nm||'メモ地点', lat:+pendingLatLng.lat.toFixed(6), lon:+pendingLatLng.lng.toFixed(6)});
   data.memo = data.memo || {};
-  data.memo['free:'+id] = {t:tx, d:todayStr(), u:Date.now()};
+  data.memo['free:'+id] = Object.assign({t:tx, d:todayStr(), u:Date.now()},memoReadStyle(document.getElementById('memoAddStyle')));
   save();
   addFreeMarker(data.free[data.free.length-1]);
   updateStats();
