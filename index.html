@@ -1963,7 +1963,7 @@ window.kmEl=function(id){ var e=document.getElementById(id); if(e) return e;
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版26</span><span style="font-size:11px;color:#999;margin-left:4px">10/06</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版27</span><span style="font-size:11px;color:#999;margin-left:4px">10/06</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -5729,6 +5729,8 @@ function renderTabs(){var t=el("kaidoTabs");t.innerHTML="";REGDEF.forEach(functi
 function ownState(){return window.KM_DRAW_STATE||{lines:[]};}
 function ownValid(p){return Array.isArray(p)&&p.length>=2&&p.every(function(q){return Array.isArray(q)&&q.length>=2&&Number.isFinite(q[0])&&Number.isFinite(q[1])&&Math.abs(q[0])<=90&&Math.abs(q[1])<=180;});}
 function ownSignature(l){return JSON.stringify([l.color||'#e53935',l.width||3,l.pts||l.p]);}
+var ownExpandUnnamed27=false;
+function ownRouteName27(name){return String(name||'').trim().replace(/(?:\/分割\d+|\/断片\d+|\(追記\))+$/g,'');}
 function ownRows(){
  var rows=[],groups=Object.create(null),seen=new Set();
  function add(name,pts,color,ref){
@@ -5738,13 +5740,13 @@ function ownRows(){
   row.segs.push(pts);if(ref)row.refs.push(ref);
   for(var i=1;i<pts.length;i++){row.km+=map.distance(pts[i-1],pts[i])/1000;}
  }
- (ownState().lines||[]).forEach(function(l,i){if(l&&!l.base)add(l.name||('手描きの線 '+(i+1)),l.pts||l.p,l.color,l);});
+ (ownState().lines||[]).forEach(function(l,i){if(l&&!l.base)add(ownRouteName27(l.name)||(ownExpandUnnamed27?('手描きの線 '+(i+1)):'名前未設定の線'),l.pts||l.p,l.color,l);});
  var api=MDAPI();if(api&&api.confirmedNames&&api.confirmed){api.confirmedNames().forEach(function(n){(api.confirmed(n)||[]).forEach(function(p){add(n,p,'#e53935',null);});});}
  rows.forEach(function(r){r.chains=r.segs.length;r.km=Math.round(r.km*100)/100;});return rows;
 }
-function ownPersist(){
- if(window.kmRedraw)window.kmRedraw();if(window.kmSaveFlush)window.kmSaveFlush();
- var state=ownState();localStorage.setItem('km_draw_main',JSON.stringify({v:96,lines:state.lines,delBase:state.delBase||{},color:state.color,width:state.width,kaitoCopied:!!state.kaitoCopied,kaitoCount:state.kaitoCount||0,editedBase:!!state.editedBase}));
+async function ownPersist(){
+ if(!window.kmSave17 || !await window.kmSave17())throw new Error((window.__kmSave13||{}).error||'線の保存先を利用できません');
+ if(window.kmRedraw)window.kmRedraw();
 }
 function ownFileLines(o){
  if(o&&o.draw&&Array.isArray(o.draw.lines))return o.draw.lines;
@@ -5753,7 +5755,7 @@ function ownFileLines(o){
  if(Array.isArray(o))return o;
  throw new Error('手描きの線が入った保存JSONを選んでください。');
 }
-function ownImportText(text){
+async function ownImportText(text){
  var source=ownFileLines(JSON.parse(text)),state=window.KM_DRAW_STATE;
  if(!state)throw new Error('アプリの起動が完了してから読み込んでください。');
  var invalid=source.filter(function(l){return !l||!ownValid(l.pts||l.p);});
@@ -5761,18 +5763,18 @@ function ownImportText(text){
  var seen=new Set((state.lines||[]).map(ownSignature)),added=[];
  source.forEach(function(l){var copy={pts:(l.pts||l.p).map(function(p){return [p[0],p[1]];}),color:l.color||l.c||'#e53935',width:l.width||l.w||3,base:false};if(l.name)copy.name=String(l.name);var key=ownSignature(copy);if(!seen.has(key)){seen.add(key);added.push(copy);}});
  if(!added.length)return 0;
- // Save the complete intended result before changing the drawing state.
+ var previous=state.lines;
  var next=(state.lines||[]).concat(added);
- localStorage.setItem('km_own_routes_before_import',JSON.stringify({at:new Date().toISOString(),lines:state.lines||[]}));
- localStorage.setItem('km_draw_main',JSON.stringify({v:96,lines:next,delBase:state.delBase||{},color:state.color,width:state.width,kaitoCopied:!!state.kaitoCopied,editedBase:!!state.editedBase}));
- if(window.kmSnap)window.kmSnap();state.lines=next;if(window.kmRedraw)window.kmRedraw();return added.length;
+ if(window.kmSnap)window.kmSnap();state.lines=next;
+ try{await ownPersist();}catch(e){state.lines=previous;throw e;}
+ return added.length;
 }
 function ownImportControl(){
  var label=document.createElement('label');label.textContent='📥 手描きの線を読み込む';
  label.style.cssText='position:relative;display:inline-flex;align-items:center;padding:12px;font-size:14px;border:1px solid #bbb;border-radius:8px;background:white;cursor:pointer;min-height:44px;box-sizing:border-box';
  var input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.setAttribute('aria-label','手描きの線を読み込む');
  input.style.cssText='position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px';
- input.onchange=function(){var f=this.files&&this.files[0];this.value='';if(!f)return;info('読み込み中… '+f.name);var r=new FileReader();r.onload=function(){try{var n=ownImportText(r.result);renderList();info('手描きの線を '+n+' 本追加しました。');}catch(e){info('読み込みできませんでした。'+e.message);}};r.onerror=function(){info('ファイルを読み込めませんでした。');};r.readAsText(f);};
+ input.onchange=function(){var f=this.files&&this.files[0];this.value='';if(!f)return;info('読み込み中… '+f.name);var r=new FileReader();r.onload=async function(){try{var n=await ownImportText(r.result);renderList();info('手描きの線を '+n+' 本追加しました。');}catch(e){info('読み込みできませんでした。'+e.message);}};r.onerror=function(){info('ファイルを読み込めませんでした。');};r.readAsText(f);};
  label.appendChild(input);return label;
 }
 function ownFit(row){
@@ -5787,6 +5789,7 @@ function ownRender(){
  var actions=document.createElement('div');actions.style.cssText='display:flex;gap:8px;flex-wrap:wrap;padding:10px';
  function button(text,fn){var b=document.createElement('button');b.type='button';b.textContent=text;b.style.cssText='padding:10px;font-size:14px;border:1px solid #bbb;border-radius:8px;background:white';b.onclick=fn;return b;}
  actions.appendChild(ownImportControl());
+ if(ownExpandUnnamed27)actions.appendChild(button('街道ごとにまとめる',function(){ownExpandUnnamed27=false;renderList();}));
  actions.appendChild(button('✏️ 新しい線を描く',function(){closeKaidoPanel();if(window.__km216)window.__km216.open();}));
  list.appendChild(actions);
  var rows=ALL.filter(function(r){return !q||r.name.includes(q);});
@@ -5794,9 +5797,10 @@ function ownRender(){
  rows.forEach(function(row){
   var item=document.createElement('div');item.className='krow';
   var name=button(row.name,function(){ownFit(row);});name.style.flex='1';name.style.textAlign='left';name.style.color=row.color;item.appendChild(name);
-  item.appendChild(button('🧭 ナビ',function(){closeKaidoPanel();if(window.__km216)window.__km216.close();if(window.__kmNav165OpenRoute)window.__kmNav165OpenRoute(row.segs,row.name);else info('ナビの起動を待ってからもう一度押してください。');}));
+  if(row.name!=='名前未設定の線')item.appendChild(button('🧭 ナビ',function(){closeKaidoPanel();if(window.__km216)window.__km216.close();if(window.__kmNav165OpenRoute)window.__kmNav165OpenRoute(row.segs,row.name);else info('ナビの起動を待ってからもう一度押してください。');}));
   var count=document.createElement('span');count.textContent=row.segs.length+'区間 / '+row.km+' km';item.appendChild(count);
-  if(row.refs.length){item.appendChild(button('名前変更',function(){var value=prompt('街道名を入力してください',row.name);if(value===null||!value.trim())return;var previous=row.refs.map(function(l){return l.name;});row.refs.forEach(function(l){l.name=value.trim();});try{ownPersist();renderList();}catch(e){row.refs.forEach(function(l,i){if(previous[i]===undefined)delete l.name;else l.name=previous[i];});info('名前を保存できませんでした。'+e.message);}}));}
+  if(row.name==='名前未設定の線'){item.appendChild(button('区間ごとに名前を付ける',function(){ownExpandUnnamed27=true;renderList();}));}
+  else if(row.refs.length){item.appendChild(button('名前変更',async function(){var value=prompt('街道名を入力してください',row.name);if(value===null||!value.trim())return;var previous=row.refs.map(function(l){return l.name;});row.refs.forEach(function(l){l.name=value.trim();});try{await ownPersist();renderList();}catch(e){row.refs.forEach(function(l,i){if(previous[i]===undefined)delete l.name;else l.name=previous[i];});info('名前を保存できませんでした。'+e.message);}}));}
   list.appendChild(item);
  });
  info('手描きの街道 '+ALL.length+' 件。名前を押すと、その線の場所へ移動します。');
@@ -7652,7 +7656,7 @@ setTimeout(hideSplash, 3500);
           else if(typeof v==='string'){ var c=v.split(','); if(c.length>=2) p.push([+c[0],+c[1]]); }
         }
         if(p.length>=2 && isFinite(p[0][0]) && isFinite(p[0][1])){
-          st.lines.push({color:(L[i].color||st.color), width:(L[i].width||st.width), pts:p}); n++;
+          st.lines.push({color:(L[i].color||st.color), width:(L[i].width||st.width), pts:p,name:L[i].name?String(L[i].name):undefined}); n++;
         }
       }
       if(n){ try{ st.redo=[]; }catch(e){} try{ redraw(); }catch(e){} try{ save(); }catch(e){} }
@@ -7663,7 +7667,7 @@ setTimeout(hideSplash, 3500);
     /* v228: 同期・受け渡し用。merge は重複を除いて追加、clear は全消去 */
     merge:function(L){
       var sig={}, ex=st.lines, i, j;
-      for(i=0;i<ex.length;i++){ try{ sig[JSON.stringify([ex[i].color,ex[i].width,ex[i].pts])]=1; }catch(e){} }
+      for(i=0;i<ex.length;i++){ try{ sig[JSON.stringify([ex[i].color,ex[i].width,ex[i].pts])]=ex[i]; }catch(e){} }
       var keep=[];
       for(j=0;j<L.length;j++){
         var it=L[j], pts=[], raw=(it&&it.pts)?it.pts:(it||[]);
@@ -7674,10 +7678,10 @@ setTimeout(hideSplash, 3500);
         }
         if(pts.length<2) continue;
         var key=JSON.stringify([it.color||st.color, it.width||st.width, pts]);
-        if(sig[key]) continue;
-        sig[key]=1; keep.push({color:it.color||st.color, width:it.width||st.width, pts:pts});
+        if(sig[key]){if(!sig[key].name && it.name)sig[key].name=String(it.name);continue;}
+        var line={color:it.color||st.color,width:it.width||st.width,pts:pts};if(it.name)line.name=String(it.name);sig[key]=line;keep.push(line);
       }
-      if(!keep.length) return 0;
+      if(!keep.length){save();return 0;}
       for(var m2=0;m2<keep.length;m2++) st.lines.push(keep[m2]);
       try{ st.redo=[]; }catch(e){} try{ redraw(); }catch(e){} try{ save(); }catch(e){}
       return keep.length;
