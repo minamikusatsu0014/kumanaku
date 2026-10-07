@@ -1963,7 +1963,7 @@ window.kmEl=function(id){ var e=document.getElementById(id); if(e) return e;
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版25</span><span style="font-size:11px;color:#999;margin-left:4px">10/06</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版26</span><span style="font-size:11px;color:#999;margin-left:4px">10/06</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -3878,9 +3878,10 @@ map.on('zoomend', function(){
 });
 
 
-function cpIcon(done, type, name, hasMemo, lo){
+function cpIcon(done, type, name, hasMemo, lo, mark){
   let e = TYPE_ICON[type] || '📍';
   if(type==='道' && name && (name.indexOf('宿')!==-1 || name.indexOf('大橋')!==-1)) e='🏮';
+  if(hasMemo && memoMarkSymbol(mark))e=memoMarkSymbol(mark);
   const badge = hasMemo ? '<span class="cp-badge">🗒</span>' : '';
   return L.divIcon({className:'', html:'<div class="cp-wrap'+(lo?' cp-lo':'')+'"><div class="cp'+(done?' cp-done':'')+'">'+e+'</div>'+badge+'</div>', iconSize:[20,20], iconAnchor:[10,10]});
 }
@@ -3912,7 +3913,7 @@ var KM_THIN = kmBuildThinSet(CHECKPOINTS);
 window.__kmThinCount = Object.keys(KM_THIN).length;
 const cpMarkers = [];
 CHECKPOINTS.forEach(function(c, idx){
-  const m = L.marker([c[2],c[3]], {icon: cpIcon(!!data.cp[idx], c[1], c[0], !!memoOf(cpMemoKey(c)), !KM_THIN[idx])}).addTo(cpLayer);
+  const m = L.marker([c[2],c[3]], {icon: cpIcon(!!data.cp[idx], c[1], c[0], !!memoOf(cpMemoKey(c)), !KM_THIN[idx], (memoOf(cpMemoKey(c))||{}).mark)}).addTo(cpLayer);
   m.bindPopup(function(){ return cpPopup(idx); }, {maxWidth:300, minWidth:240});
   cpMarkers.push(m);
 });
@@ -4039,7 +4040,7 @@ function checkCp(lat, lon){
     if(data.cp[idx]) return;
     if(haversine([lat,lon],[c[2],c[3]]) <= CP_RADIUS){
       data.cp[idx]=1; changed=true;
-      cpMarkers[idx].setIcon(cpIcon(true, c[1], c[0], !!memoOf(cpMemoKey(c))));
+      cpMarkers[idx].setIcon(cpIcon(true, c[1], c[0], !!memoOf(cpMemoKey(c)),false,(memoOf(cpMemoKey(c))||{}).mark));
       notice((TYPE_ICON[c[1]]||'📍')+' 「'+c[0]+'」に到達!');
     }
   });
@@ -4282,13 +4283,17 @@ function memoEsc(s){
 }
 function cpMemoKey(c){ return 'cp:'+c[0]+'|'+c[2]+','+c[3]; }
 function memoOf(key){ return (data.memo && data.memo[key]) ? data.memo[key] : null; }
+function memoMarkItems(){return [['','元のマーク'],['memo','📝 メモ'],['castle','🏯 城・城跡'],['honjin','🏠 本陣・脇本陣'],['shrine','⛩️ 神社'],['temple','🛕 寺院'],['historic','🪨 史跡・碑'],['food','🍴 食事'],['rest','☕ 休憩']];}
+function memoMarkSymbol(value){const row=memoMarkItems().find(function(x){return x[0]===value && value!=='';});return row?row[1].split(' ')[0]:'';}
+function memoMarkOptions(value){return memoMarkItems().map(function(x){return '<option value="'+x[0]+'"'+(x[0]===(value||'')?' selected':'')+'>'+x[1]+'</option>';}).join('');}
+function memoSetMarkerIcon(marker,icon){if(!marker.options.icon || marker.options.icon.options.html!==icon.options.html)marker.setIcon(icon);}
 function memoStyleOptions(kind,value){
   const items=kind==='size'?[[0,'全体設定（12px）'],[10,'小（10px）'],[12,'標準（12px）'],[14,'やや大（14px）'],[16,'大（16px）'],[20,'特大（20px）'],[24,'最大（24px）']]:[[0,'全体設定に合わせる'],[400,'標準'],[500,'やや太い'],[700,'太字'],[900,'極太']];
   return items.map(function(x){return '<option value="'+x[0]+'"'+(Number(value||0)===x[0]?' selected':'')+'>'+x[1]+'</option>';}).join('');
 }
 function memoStyleControls(key){
   const m=memoOf(key)||{};
-  return '<div class="memo-style-controls" style="border:1px solid #ddd;border-radius:7px;padding:7px;margin:6px 0"><b>この場所名の文字</b><label style="display:block">大きさ <select class="memo-font-size" style="font-size:16px;max-width:100%">'+memoStyleOptions('size',m.fontSize)+'</select></label><label style="display:block;margin-top:5px">太さ <select class="memo-font-weight" style="font-size:16px;max-width:100%">'+memoStyleOptions('weight',m.fontWeight)+'</select></label><small>「メモ保存」でこのメモだけに反映します。</small></div>';
+  return '<div class="memo-style-controls" style="border:1px solid #ddd;border-radius:7px;padding:7px;margin:6px 0"><b>このメモの表示</b><label style="display:block;margin-bottom:6px">マーク <select class="memo-mark" style="font-size:16px;max-width:100%">'+memoMarkOptions(m.mark)+'</select></label><label style="display:block">大きさ <select class="memo-font-size" style="font-size:16px;max-width:100%">'+memoStyleOptions('size',m.fontSize)+'</select></label><label style="display:block;margin-top:5px">太さ <select class="memo-font-weight" style="font-size:16px;max-width:100%">'+memoStyleOptions('weight',m.fontWeight)+'</select></label><small>「メモ保存」でこのメモだけに反映します。</small></div>';
 }
 function memoLabel(name,key){
   const m=memoOf(key)||{},size=[10,12,14,16,20,24].indexOf(Number(m.fontSize))>=0?Number(m.fontSize)+'px':'inherit',weight=[400,500,700,900].indexOf(Number(m.fontWeight))>=0?Number(m.fontWeight):'inherit';
@@ -4296,7 +4301,8 @@ function memoLabel(name,key){
 }
 function memoReadStyle(el){
   const a=el.querySelector('.memo-font-size'),b=el.querySelector('.memo-font-weight');
-  return {fontSize:a?Number(a.value):0,fontWeight:b?Number(b.value):0};
+  const mark=el.querySelector('.memo-mark');
+  return {fontSize:a?Number(a.value):0,fontWeight:b?Number(b.value):0,mark:mark&&memoMarkItems().some(function(x){return x[0]===mark.value;})?mark.value:''};
 }
 function memoBox(key, val){
   return '<div class="memo-box">'
@@ -4307,15 +4313,15 @@ function memoBox(key, val){
     + '<div class="memo-note">書き込むと🗒バッジが付きます。データは端末のブラウザ内のみ(サーバー送信なし)。</div>'
     + '</div>';
 }
-function freeIcon(){
-  return L.divIcon({className:'', html:'<div class="cp memo-pin">📝</div>', iconSize:[20,20], iconAnchor:[10,10]});
+function freeIcon(key){
+  return L.divIcon({className:'', html:'<div class="cp memo-pin">'+(memoMarkSymbol((memoOf(key)||{}).mark)||'📝')+'</div>', iconSize:[20,20], iconAnchor:[10,10]});
 }
 function addFreeMarker(f){
   const key = 'free:'+f.id;
-  const m = L.marker([f.lat,f.lon], {icon:freeIcon()}).addTo(memoLayer);
+  const m = L.marker([f.lat,f.lon], {icon:freeIcon(key)}).addTo(memoLayer);
   m.bindPopup(function(){
     const me = memoOf(key);
-    return '<b>📝 '+memoEsc(f.name||'メモ地点')+'</b><br><span class="memo-sub">'+f.lat.toFixed(5)+', '+f.lon.toFixed(5)+'</span>'
+    return '<b>'+(memoMarkSymbol((me||{}).mark)||'📝')+' '+memoEsc(f.name||'メモ地点')+'</b><br><span class="memo-sub">'+f.lat.toFixed(5)+', '+f.lon.toFixed(5)+'</span>'
       + memoBox(key, me?me.t:'')
       + '<div class="memo-row"><button class="memo-btn memo-unpin">📍 この地点のピンを削除</button></div>';
   }, {maxWidth:300, minWidth:240});
@@ -4337,12 +4343,12 @@ function memoUpdateLabel(marker,name,key){
 function refreshMemoIcons(key){
   if(key && key.indexOf('free:')===0){
     const id=key.slice(5),f=(data.free||[]).find(function(x){return String(x.id)===id;});
-    if(f&&freeMarkers[id])memoUpdateLabel(freeMarkers[id],f.name||'メモ地点',key);
+    if(f&&freeMarkers[id]){memoSetMarkerIcon(freeMarkers[id],freeIcon(key));memoUpdateLabel(freeMarkers[id],f.name||'メモ地点',key);}
     return;
   }
   for(let i=0;i<cpMarkers.length;i++){
     const c=CHECKPOINTS[i],k=cpMemoKey(c);if(key && k!==key)continue;
-    const has=!!memoOf(k),marker=cpMarkers[i],icon=cpIcon(!!data.cp[i],c[1],c[0],has);
+    const has=!!memoOf(k),marker=cpMarkers[i],icon=cpIcon(!!data.cp[i],c[1],c[0],has,false,(memoOf(k)||{}).mark);
     const old=marker.options.icon;
     if(!old || String(old.options.html).replace(/ cp-lo/g,'')!==icon.options.html)marker.setIcon(icon);
     if(has)memoUpdateLabel(marker,c[0],k);
