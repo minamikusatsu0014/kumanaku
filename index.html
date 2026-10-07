@@ -1963,7 +1963,7 @@ window.kmEl=function(id){ var e=document.getElementById(id); if(e) return e;
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版24</span><span style="font-size:11px;color:#999;margin-left:4px">10/06</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版25</span><span style="font-size:11px;color:#999;margin-left:4px">10/06</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -7778,7 +7778,7 @@ setTimeout(hideSplash, 3500);
   var __saveT=null, __rdT=null, __sig='';
   function kmSig(){ return JSON.stringify(st.lines); }
   function saveSoon(){ if(__saveT) return; __saveT=setTimeout(function(){ __saveT=null; try{ save(); }catch(e){} },500); }
-  function kmFlush(){if(__saveT){clearTimeout(__saveT);__saveT=null;}return save();}
+  function kmFlush(){if(!__saveT)return true;clearTimeout(__saveT);__saveT=null;return save();}
   window.kmSaveFlush=kmFlush;
   function kmRedrawSoon(){ if(__rdT) return; __rdT=setTimeout(function(){ __rdT=null; try{ redraw(); }catch(e){} },140); }
   /* 線の点を間引く（1.2m 未満しか離れていない点を落とす。始点と終点は必ず残す） */
@@ -7802,7 +7802,6 @@ setTimeout(hideSplash, 3500);
   /* ===== KM_PERF_V112_END ===== */
   /* v228: 再描画はスケジューラ経由（地図操作中は後まわし・1フレーム 1回） */
   function redraw(){
-    saveSoon();
     if(window.__kmRedrawSched) return window.__kmRedrawSched(redrawRaw);
     return redrawRaw();
   }
@@ -7813,12 +7812,14 @@ setTimeout(hideSplash, 3500);
     if(!map)map=window.map;if(!Lg)Lg=window.L;if(!map||!Lg)return;
     if(!layer){layer=Lg.layerGroup().addTo(map);}else if(!map.hasLayer(layer)){layer.addTo(map);}
     if(!canvasChecked24){canvasChecked24=true;try{if(Lg.Browser.canvas&&document.createElement('canvas').getContext('2d'))drawRenderer24=Lg.canvas({padding:0.3});}catch(e){}}
+    var drawingChanged25=false;
     var present=new Set(st.lines);
-    drawnEntries.forEach(function(entry,ln){if(!present.has(ln)){layer.removeLayer(entry.group);drawnEntries.delete(ln);}});
+    drawnEntries.forEach(function(entry,ln){if(!present.has(ln)){layer.removeLayer(entry.group);drawnEntries.delete(ln);drawingChanged25=true;}});
     st.lines.forEach(function(ln){
       if(!ln)return;if(!ln.pts&&ln.p)ln.pts=ln.p;if(!ln.pts||!ln.pts.length)return;
       var key=JSON.stringify([ln.pts,ln.color,ln.width,!window.__kmShowEndPts||window.__kmShowEndPts()]),old=drawnEntries.get(ln);
       if(old&&old.key===key){if(!layer.hasLayer(old.group))old.group.addTo(layer);old.group.eachLayer(function(child){if(!map.hasLayer(child))child.addTo(map);});return;}
+      drawingChanged25=true;
       if(old)layer.removeLayer(old.group);
       var g=Lg.layerGroup();
       if(ln.pts.length===1)Lg.circleMarker(ln.pts[0],{renderer:drawRenderer24||undefined,radius:3,color:ln.color,fillColor:ln.color,fillOpacity:1}).addTo(g);
@@ -7833,7 +7834,7 @@ setTimeout(hideSplash, 3500);
       g.addTo(layer);drawnEntries.set(ln,{key:key,group:g});
     });
     window.KM_DRAW_LAYER=layer;window.KM_DRAW_LINES=st.lines;window.kmRedraw=redraw;
-    stat();saveSoon();
+    if(drawingChanged25){stat();saveSoon();}
   }
   function applyMode(){
     try{
@@ -11670,7 +11671,7 @@ function boot(){ apply(); addBtn2(); label(); }
   window.__kmRec186HandleFiles=handleFiles;
   window.__kmRec186Box=BOX;
 
-  autoSnap(); try{ setInterval(autoSnap,4000); }catch(e){}
+  autoSnap(); /* Changes are durably saved by kmSave17; manual backup remains available. */
   try{ window.addEventListener('load',function(){ setTimeout(function(){ if(!document.getElementById('kmRec186')) panel(); },2200); }); }catch(e){}
   try{ if(document.readyState==='complete') setTimeout(function(){ if(!document.getElementById('kmRec186')) panel(); },2200); }catch(e){}
 })();
