@@ -1,7 +1,7 @@
 /* 街道ウォーキング: repair 2026-10-04 */
 'use strict';
 const APP_PREFIX='kumanaku-';
-const CACHE='kumanaku-own-20261007-21';
+const CACHE='kumanaku-own-20261007-22';
 const TILE='kumanaku-tiles-v187';
 const TILE_CAP=260;
 const CORE=['./','./index.html','./kaido_data.json','./manifest.json','./icon-192.png','./icon-512.png'];

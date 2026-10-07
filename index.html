@@ -1685,7 +1685,7 @@ window.__km227api={state:function(){return S},candidates:candidates,exportAll:ex
 })();
 
 </script>
-<style></style><style>.km-memo-place-name{background:#fffef4;border:1px solid #b7791f;color:#34291d;font:var(--km-memo-weight,700) 12px system-ui;padding:3px 6px;border-radius:5px;white-space:normal;max-width:170px}</style></head>
+<style></style><style>.km-memo-place-name{background:#fffef4;border:1px solid #b7791f;color:#34291d;font:var(--km-memo-weight,700) 12px system-ui;padding:3px 6px;border-radius:5px;white-space:nowrap;max-width:none;width:max-content;writing-mode:horizontal-tb;line-height:1.35}</style></head>
 <body>
 <script id="km_el_v142">
 /* KM_EL_V142 : 削除した要素への参照を安全にする */
@@ -1955,7 +1955,7 @@ window.kmEl=function(id){ var e=document.getElementById(id); if(e) return e;
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版21</span><span style="font-size:11px;color:#999;margin-left:4px">10/06</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版22</span><span style="font-size:11px;color:#999;margin-left:4px">10/06</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -4319,25 +4319,36 @@ function rebuildFreeMarkers(){
   for(const k in freeMarkers) delete freeMarkers[k];
   (data.free||[]).forEach(addFreeMarker);
 }
-function refreshMemoIcons(){
+function memoUpdateLabel(marker,name,key){
+  const content=memoLabel(name,key),tooltip=marker.getTooltip();
+  if(tooltip && tooltip.options.className==='km-memo-place-name'){
+    if(tooltip.getContent()!==content)marker.setTooltipContent(content);
+  }else marker.bindTooltip(content,{permanent:true,direction:'right',offset:[10,0],className:'km-memo-place-name'});
+}
+function refreshMemoIcons(key){
+  if(key && key.indexOf('free:')===0){
+    const id=key.slice(5),f=(data.free||[]).find(function(x){return String(x.id)===id;});
+    if(f&&freeMarkers[id])memoUpdateLabel(freeMarkers[id],f.name||'メモ地点',key);
+    return;
+  }
   for(let i=0;i<cpMarkers.length;i++){
-    const c = CHECKPOINTS[i];
-    cpMarkers[i].setIcon(cpIcon(!!data.cp[i], c[1], c[0], !!memoOf(cpMemoKey(c))));
-    if(memoOf(cpMemoKey(c))){
-      cpMarkers[i].bindTooltip(memoLabel(c[0],cpMemoKey(c)),{permanent:true,direction:'right',offset:[10,0],className:'km-memo-place-name'});
-    }else if(cpMarkers[i].getTooltip() && cpMarkers[i].getTooltip().options.className==='km-memo-place-name'){
-      cpMarkers[i].unbindTooltip();
-    }
+    const c=CHECKPOINTS[i],k=cpMemoKey(c);if(key && k!==key)continue;
+    const has=!!memoOf(k),marker=cpMarkers[i],icon=cpIcon(!!data.cp[i],c[1],c[0],has);
+    const old=marker.options.icon;
+    if(!old || String(old.options.html).replace(/ cp-lo/g,'')!==icon.options.html)marker.setIcon(icon);
+    if(has)memoUpdateLabel(marker,c[0],k);
+    else if(marker.getTooltip() && marker.getTooltip().options.className==='km-memo-place-name')marker.unbindTooltip();
+    if(key)break;
   }
 }
-function afterMemoChange(){ updateStats(); refreshMemoIcons(); (data.free||[]).forEach(function(f){if(freeMarkers[f.id])freeMarkers[f.id].setTooltipContent(memoLabel(f.name||'メモ地点','free:'+f.id));}); }
+function afterMemoChange(key){ updateStats(); refreshMemoIcons(key); }
 function saveMemo(key, text, style){
   const t = String(text==null?'':text).trim();
   if(!data.memo) data.memo = {};
   if(!t && !style){ if(data.memo[key]) delMemo(key); else notice('メモが空のままです'); return; }
   const old=data.memo[key]||{};
   data.memo[key] = Object.assign({},old,{t:t, d:todayStr(), u:Date.now()},style||{});
-  const ok=save(); afterMemoChange(); if(ok)notice('💾 メモを保存しました(端末内)');
+  const ok=save(); afterMemoChange(key); if(ok)notice('💾 メモを保存しました(端末内)');
 }
 function delMemo(key){
   if(!data.memo || !data.memo[key]) return;
@@ -4347,7 +4358,7 @@ function delMemo(key){
     data.free = (data.free||[]).filter(function(x){ return String(x.id)!==id; });
     if(freeMarkers[id]){ memoLayer.removeLayer(freeMarkers[id]); delete freeMarkers[id]; }
   }
-  save(); afterMemoChange(); notice('🗑 メモを削除しました');
+  save(); afterMemoChange(key); notice('🗑 メモを削除しました');
 }
 function memoTarget(k){
   if(k.indexOf('cp:')===0){
