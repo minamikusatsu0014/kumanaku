@@ -1,7 +1,7 @@
 /* 街道ウォーキング: repair 2026-10-04 */
 'use strict';
 const APP_PREFIX='kumanaku-';
-const CACHE='kumanaku-own-20261007-23';
+const CACHE='kumanaku-own-20261007-24';
 const TILE='kumanaku-tiles-v187';
 const TILE_CAP=260;
 const CORE=['./','./index.html','./kaido_data.json','./manifest.json','./icon-192.png','./icon-512.png'];
@@ -10,6 +10,14 @@ const scopeURL=new URL(self.registration.scope);
 function owned(k){return k.startsWith(APP_PREFIX);}
 async function put(cache,req,res){if(res&&(res.ok||res.type==='opaque'))await cache.put(req,res.clone());}
 async function prune(cache){const keys=await cache.keys();await Promise.all(keys.slice(0,Math.max(0,keys.length-TILE_CAP)).map(k=>cache.delete(k)));}
+let tileWrites24=0,lastPrune24=0,pruning24=null;
+function maintainTiles24(cache){
+ tileWrites24++;
+ if(pruning24)return pruning24;
+ if(tileWrites24<32 && Date.now()-lastPrune24<15000)return Promise.resolve();
+ tileWrites24=0;lastPrune24=Date.now();
+ pruning24=prune(cache).finally(()=>{pruning24=null;});return pruning24;
+}
 self.addEventListener('install',e=>{
  e.waitUntil((async()=>{const c=await caches.open(CACHE);await Promise.all(CORE.map(async path=>{
   const u=new URL(path,scopeURL).href;try{await put(c,u,await fetch(u,{cache:'reload'}));}catch(_){}
@@ -22,7 +30,7 @@ self.addEventListener('fetch',e=>{
  const req=e.request;if(req.method!=='GET')return;const url=new URL(req.url);
  if(TILE_HOSTS.includes(url.hostname)){
   e.respondWith((async()=>{const c=await caches.open(TILE),hit=await c.match(req);if(hit)return hit;
-   try{const r=await fetch(req);e.waitUntil(put(c,req,r).then(()=>prune(c)).catch(()=>{}));return r;}catch(_){return new Response('',{status:504});}
+   try{const r=await fetch(req);e.waitUntil(put(c,req,r).then(()=>maintainTiles24(c)).catch(()=>{}));return r;}catch(_){return new Response('',{status:504});}
   })());return;
  }
  if(url.origin!==scopeURL.origin||!url.pathname.startsWith(scopeURL.pathname))return;
