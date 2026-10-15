@@ -1963,7 +1963,7 @@ window.kmEl=function(id){ var e=document.getElementById(id); if(e) return e;
 </div>
 
 <div id="stats" class="panel">
-  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版27</span><span style="font-size:11px;color:#999;margin-left:4px">10/06</span></div>
+  <div class="appname"><span class="app-ico">🏮</span><span class="app-t">街道ウォーキング</span> <span class="ver">手描き版29</span><span style="font-size:11px;color:#999;margin-left:4px">10/06</span></div>
   <div class="big"><b id="muni">0</b> 市町村</div>
   <div class="sub">都道府県 <b id="prefs">0</b>/47 ・ 名所 <b id="cps">0</b>/<span id="cptotal">0</span></div>
   <div class="sub2">京都市内踏破率 <b id="rate">0.0</b>% ・ 🗒 メモ <b id="memocnt">0</b> ・ 📷 <b id="photocnt">0</b></div>
@@ -1984,7 +1984,7 @@ window.kmEl=function(id){ var e=document.getElementById(id); if(e) return e;
   <button class="menu-btn" id="photoBtn">📷 写真</button>
   <button class="menu-btn" id="impBtn">📂 読込（線も戻す）</button>
   <button class="menu-btn" id="clearBtn">🗑 消去</button>
-  <input type="file" id="impFile" accept=".json" style="display:none">
+  <input type="file" id="combinedFile29" accept=".json" style="display:none">
   <input type="file" id="photoFile" accept="image/*" capture="environment" style="display:none">
   <input type="file" id="photoImpFile" accept=".json" style="display:none">
 </div>
@@ -2051,10 +2051,10 @@ window.kmEl=function(id){ var e=document.getElementById(id); if(e) return e;
       <output id="memoWeightStatus" aria-live="polite" style="display:block;font-size:11px"></output>
     </div>
     <div class="memo-row">
-      <button id="memoExportBtn" class="memo-btn memo-save">💾 全記録を出力</button>
-      <button id="memoImportBtn" class="memo-btn">📂 バックアップ読込</button>
+      <button id="memoExportBtn" class="memo-btn memo-save">💾 メモと線をまとめて保存</button>
+      <button id="combinedImportBtn29" class="memo-btn">📂 メモと線を読み込む</button><button id="memoImportBtn" class="memo-btn">📂 メモだけ読み込む</button><input id="memoOnlyFile28" type="file" accept=".json,application/json" hidden>
     </div>
-    <div class="memo-note">メモは端末のブラウザ内に保存されます(サーバー送信なし)。「全記録を出力」でJSONに保存すると、機種変更やデータ消去のあとに「📂 バックアップ読込」で復元できます。</div>
+    <div class="memo-note">メモは端末のブラウザ内に保存されます(サーバー送信なし)。「メモと線をまとめて保存」で両方を1ファイルに保存できます。復元は「メモと線を読み込む」を使います。メモだけを戻したい場合は、「メモだけ読み込む」で復元できます。全記録のJSONからもメモだけを読み込み、手描き線と歩行記録は変更しません。</div>
     <div id="memoList" style="margin-top:8px"></div>
     <button class="close" id="memoModalClose">閉じる</button>
   </div>
@@ -4229,44 +4229,42 @@ document.getElementById('kaidoBtn').addEventListener('click',function(){
   this.style.background = kaidoOn ? '#fff' : '#ddd';
   this.style.color = kaidoOn ? '#333' : '#888';
 });
-document.getElementById('expBtn').addEventListener('click',function(){
-  const blob=new Blob([JSON.stringify((function(){var o;try{o=JSON.parse(JSON.stringify(data));}catch(e){o=data;}try{if(window.__kmDrawAPI)o.draw={lines:window.__kmDrawAPI.lines()};}catch(e){}return o;})())],{type:'application/json'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='kumanaku_walk_'+todayStr()+'.json';
-  a.click();
-  var __nl=0;try{__nl=window.__kmDrawAPI?window.__kmDrawAPI.count():0;}catch(e){}
-  notice('💾 記録と手描きの線（'+__nl+'本）をダウンロードしました');
-});
-document.getElementById('impBtn').addEventListener('click',function(){ document.getElementById('impFile').click(); });
-document.getElementById('impFile').addEventListener('change',function(){
-  const f=this.files[0]; if(!f) return;
-  const r=new FileReader();
-  r.onload=function(){ try{
-      const d=JSON.parse(r.result);
-      if(d.cells&&d.track){
-        data=Object.assign({totalDist:0,todayDist:0,todayDate:todayStr(),muni:{},memo:{},free:[],photos:[]},d);
-        if(!data.memo) data.memo={}; if(!data.free) data.free=[]; if(!data.photos) data.photos=[];
-        if(typeof photoMigrate==='function') photoMigrate();
-        cellLayer.clearLayers(); for(const k in drawnCells) delete drawnCells[k];
-        Object.keys(data.cells).forEach(drawCell);
-        trackLayer.clearLayers();
-        trackLine=L.polyline(data.track,{color:'#e53935',weight:3,opacity:.8}).addTo(trackLayer);
-        rebuildFreeMarkers(); refreshMemoIcons(); renderPhotoLayer();
-        updateStats(); save();
-        /* v228: ファイルに手描きの線が入っていれば、既存の線を消さずに追加で戻す */
-        var __nd=0;
-        try{
-          if(d.draw && d.draw.lines && d.draw.lines.length && window.__kmDrawAPI){
-            var __cur=window.__kmDrawAPI.count();
-            var __go = __cur>0 ? confirm('手描きの線が今 '+__cur+'本あります。ファイルの '+d.draw.lines.length+'本を追加しますか？（今の線は残ります）') : true;
-            if(__go) __nd=window.__kmDrawAPI.add(d.draw.lines);
-          }
-        }catch(e){}
-        notice(__nd ? ('📂 記録と手描きの線を'+__nd+'本 読み込みました') : '📂 記録を読み込みました');
-      }else notice('⚠ ファイル形式が違います');
-    }catch(e){ notice('⚠ 読み込みに失敗しました'); } };
-  r.readAsText(f);
+window.__kmCombined29=true;
+function combinedSnapshot29(){
+ if(!window.KM_DRAW_STATE || !window.__kmLoaded)throw new Error('手描き線の読み込み完了をお待ちください');
+ const result=JSON.parse(JSON.stringify(data));
+ result.type='kumanaku-combined';result.backupVersion=29;result.exportedAt=new Date().toISOString();
+ const st=window.KM_DRAW_STATE;
+ result.draw=JSON.parse(JSON.stringify({lines:st.lines,delBase:st.delBase||{},color:st.color,width:st.width}));
+ return result;
+}
+async function exportCombined29(){
+ try{
+  if(window.KM_STORE17)await window.KM_STORE17.loading;
+  const snapshot=combinedSnapshot29();
+  const blob=new Blob([JSON.stringify(snapshot)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='kumanaku_memo_lines_'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';a.click();setTimeout(function(){URL.revokeObjectURL(url);},60000);
+  notice('💾 メモ '+Object.keys(snapshot.memo||{}).length+'件・線 '+snapshot.draw.lines.length+'本を一緒に書き出しました');
+ }catch(e){notice('⚠ 書き出せませんでした：'+e.message);}
+}
+function combinedLineValid29(l){const pts=l&&(l.pts||l.p);return Array.isArray(pts)&&pts.length>=2&&pts.every(function(p){return Array.isArray(p)&&Number.isFinite(p[0])&&Number.isFinite(p[1])&&Math.abs(p[0])<=90&&Math.abs(p[1])<=180;});}
+async function importCombined29(source){
+ if(!source || typeof source!=='object')throw new Error('保存JSONを選んでください');
+ const lines=source.draw && source.draw.lines;
+ if(lines!==undefined && (!Array.isArray(lines)||!lines.every(function(l){return combinedLineValid29(l);})))throw new Error('手描き線の座標を確認できません。読み込んでいません');
+ if(!source.memo && !Array.isArray(lines))throw new Error('メモまたは手描き線の入ったJSONを選んでください');
+ if(!window.__kmLoaded)throw new Error('手描き線の読み込み完了をお待ちください');
+ let added=0,memos=0;
+ if(Array.isArray(lines)&&lines.length){added=window.__kmDrawAPI.merge(lines);if(!await window.kmSave17())throw new Error('線を端末に保存できませんでした。メモは読み込んでいません');}
+ if(source.memo)memos=memoImportOnly28(source);
+ return {memos:memos,lines:added};
+}
+document.getElementById('expBtn').addEventListener('click',exportCombined29);
+document.getElementById('impBtn').addEventListener('click',function(){document.getElementById('combinedFile29').click();});
+document.getElementById('combinedFile29').addEventListener('change',function(){
+ const f=this.files&&this.files[0];this.value='';if(!f)return;const r=new FileReader();
+ r.onload=async function(){try{const result=await importCombined29(JSON.parse(r.result));notice('📂 メモ '+result.memos+'件・線 '+result.lines+'本を追加しました。現在のデータも残しています');}catch(e){notice('⚠ '+e.message);}};
+ r.onerror=function(){notice('⚠ ファイルを読み込めませんでした');};r.readAsText(f);
 });
 document.getElementById('clearBtn').addEventListener('click',function(){
   if(!confirm('すべての記録を消去しますか? (元に戻せません。先に「保存出力」推奨)')) return;
@@ -4487,16 +4485,33 @@ document.getElementById('memoListBtn').addEventListener('click', function(){
 document.getElementById('memoModalClose').addEventListener('click', function(){
   document.getElementById('memoModal').style.display='none';
 });
-document.getElementById('memoExportBtn').addEventListener('click', function(){
-  const blob = new Blob([JSON.stringify(data,null,1)], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'kumanaku_memo_'+todayStr()+'.json';
-  a.click();
-  notice('💾 メモを含む全記録を出力しました');
-});
-document.getElementById('memoImportBtn').addEventListener('click', function(){
-  document.getElementById('impFile').click();
+function memoImportOnly28(source){
+ if(!source||!source.memo||typeof source.memo!=='object'||Array.isArray(source.memo)||source.free && !Array.isArray(source.free))throw new Error('メモの入った保存JSONを選んでください');
+ const nextMemo=Object.assign({},data.memo||{}),nextFree=(data.free||[]).map(function(f){return Object.assign({},f);});
+ const accepted=new Set();let count=0;
+ Object.keys(source.memo).forEach(function(k){
+   if(k.indexOf('free:')!==0 && k.indexOf('cp:')!==0)return;
+   const m=source.memo[k];if(!m||typeof m!=='object'||typeof m.t!=='string')return;
+   const old=nextMemo[k];if(old && Number(old.u||0)>Number(m.u||0))return;
+   nextMemo[k]=Object.assign({},m);accepted.add(k);count++;
+ });
+ (source.free||[]).forEach(function(f){
+   if(!f||f.id==null||!Number.isFinite(f.lat)||!Number.isFinite(f.lon)||Math.abs(f.lat)>90||Math.abs(f.lon)>180)return;
+   if(!accepted.has('free:'+f.id))return;
+   const idx=nextFree.findIndex(function(x){return String(x.id)===String(f.id);});
+   if(idx>=0)nextFree[idx]=Object.assign({},f);else nextFree.push(Object.assign({},f));
+ });
+ const previousMemo=data.memo,previousFree=data.free;
+ data.memo=nextMemo;data.free=nextFree;
+ if(!save()){data.memo=previousMemo;data.free=previousFree;throw new Error('メモを保存できませんでした');}
+ rebuildFreeMarkers();refreshMemoIcons();updateStats();memoListRender();return count;
+}
+document.getElementById('memoExportBtn').addEventListener('click',exportCombined29);
+document.getElementById('combinedImportBtn29').addEventListener('click',function(){document.getElementById('combinedFile29').click();});
+document.getElementById('memoImportBtn').addEventListener('click',function(){document.getElementById('memoOnlyFile28').click();});
+document.getElementById('memoOnlyFile28').addEventListener('change',function(){
+ const f=this.files&&this.files[0];this.value='';if(!f)return;
+ const r=new FileReader();r.onload=function(){try{const n=memoImportOnly28(JSON.parse(r.result));notice('📂 メモ '+n+'件を読み込みました。手描き線は変更していません');}catch(e){notice('⚠ '+e.message);}};r.onerror=function(){notice('⚠ ファイルを読み込めませんでした');};r.readAsText(f);
 });
 rebuildFreeMarkers();
 refreshMemoIcons();
